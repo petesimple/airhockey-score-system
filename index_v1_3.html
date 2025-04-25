@@ -196,7 +196,7 @@
         ...gameHistory.map((g, i) => `Game ${i + 1}: ${g}`),
         `Total Match Time: ${document.getElementById('timer').textContent.replace('Match Time: ', '')}`
       ];
-      return lines.join('\\n');
+      return lines.join('\n');
     }
 
     function exportSummary() {
