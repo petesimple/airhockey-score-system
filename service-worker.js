@@ -3,13 +3,13 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open('airhockey-cache').then((cache) => {
       return cache.addAll([
-        '/',
-        '/index.html',
-        '/index_v1_3.html',
-        '/manifest.json',
-        '/service-worker.js',
-        '/icon-192.png',
-        '/icon-512.png'
+        './',
+        './index.html',
+        './index_v1_3.html',
+        './manifest.json',
+        './service-worker.js',
+        './icon-192.png',
+        './icon-512.png'
       ]);
     })
   );
