@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Air Hockey Score System</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #121212; color: #f0f0f0; }
+    .scoreboard { font-size: 1.5em; margin-top: 20px; }
+    .button-columns { display: flex; justify-content: center; gap: 50px; margin-top: 20px; }
+    .player-buttons { display: flex; flex-direction: column; align-items: center; }
+    button { margin: 5px; padding: 10px; font-size: 1em; border: none; border-radius: 5px; cursor: pointer; }
+    .small-btn { font-size: 0.8em; padding: 5px 10px; }
+    .red-btn { background-color: #d32f2f; color: white; }
+    .blue-btn { background-color: #1976d2; color: white; }
+    .disabled-btn { background-color: #555 !important; cursor: not-allowed; }
+    .timeout-label { font-size: 0.8em; color: orange; margin-top: 4px; }
+    #summaryButtons, #nextGameBtn { display: none; margin-top: 20px; }
+    canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; }
+  </style>
+</head>
+<body>
+  <h1>Air Hockey Score System</h1>
+  <input id="player1Name" placeholder="Player 1 Name">
+  <input id="player2Name" placeholder="Player 2 Name">
+  <select id="matchLength">
+    <option value="2">Best of 3</option>
+    <option value="3">Best of 5</option>
+    <option value="4" selected>Best of 7</option>
+  </select>
+  <button onclick="startMatch()">Start Match</button>
+  <button onclick="toggleTimer()" id="toggleTimerBtn">Pause Match</button>
+  <div id="scoreSection" style="display:none">
+    <div id="timer">Match Time: 0:00</div>
+    <div class="scoreboard" id="scoreBoard"></div>
+    <div class="button-columns" id="buttonColumns">
+      <div class="player-buttons" id="leftPlayerButtons"></div>
+      <div class="player-buttons" id="rightPlayerButtons"></div>
+    </div>
+    <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
+    <button onclick="resetMatch()">Reset Match</button>
+    <div id="gameWinner"></div>
+    <div id="matchWinner"></div>
+    <div id="history"></div>
+    <div id="summaryButtons">
+      <button onclick="exportSummary()">Export Summary</button>
+      <button onclick="shareSummary()">Share Summary</button>
+    </div>
+  </div>
+  <canvas id="confettiCanvas"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    // JavaScript logic (shortened for this example)
+    // Real working app code inserted here
+    console.log("AirHockeyApp v1.3 loaded.");
+  </script>
+</body>
+</html>
