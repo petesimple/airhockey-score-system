@@ -90,12 +90,12 @@
       const colorClass = player.id === 'player1' ? 'red-btn' : 'blue-btn';
       const num = player.id === 'player1' ? '1' : '2';
       return `
-        <button class="${colorClass}" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
-        <button class="${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
-        <button id="timeoutBtn${num}" class="small-btn ${colorClass}" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
-        <button class="small-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
-        <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
-      `;
+  <button class="${colorClass}" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
+  <button class="${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
+  <button id="timeoutBtn${num}" class="small-btn ${colorClass}" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
+  <button class="small-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
+  <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
+`;
     }
         function scorePoint(id) {
       const player = players.find(p => p.id === id);
