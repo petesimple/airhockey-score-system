@@ -212,8 +212,29 @@
     }
 
     function shareSummary() {
-      alert('Sharing only works on supported browsers or mobile, ScreenShot the results and send to tournament director.');
-    }
+  const summary = getMatchSummary();
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Air Hockey Match Summary',
+      text: summary,
+    }).then(() => {
+      console.log('Thanks for sharing!');
+    }).catch((error) => {
+      console.error('Error sharing:', error);
+      alert('Could not share automatically. Please screenshot your match summary instead.');
+    });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(summary).then(() => {
+      alert('Summary copied to clipboard! You can now paste it in a message to the tournament director.');
+    }).catch(err => {
+      console.error('Could not copy text:', err);
+      alert('Copy failed. Please screenshot the match results and send manually.');
+    });
+  } else {
+    alert('Sharing not supported. Please screenshot the match results and send manually.');
+  }
+}
 
     document.addEventListener('keydown', (event) => {
       if (!document.getElementById('scoreSection').style.display.includes('block')) return;
