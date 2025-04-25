@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Air Hockey Score System</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #121212; color: #f0f0f0; }
@@ -35,12 +34,10 @@
   <div id="scoreSection" style="display:none">
     <div id="timer">Match Time: 0:00</div>
     <div class="scoreboard" id="scoreBoard"></div>
-
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
       <div class="player-buttons" id="rightPlayerButtons"></div>
     </div>
-
     <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
     <button onclick="resetMatch()">Reset Match</button>
     <div id="gameWinner"></div>
@@ -53,6 +50,7 @@
   </div>
 
   <canvas id="confettiCanvas"></canvas>
+
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script>
     let players = [
@@ -84,11 +82,8 @@
     function renderButtons() {
       const left = isPlayer1Left ? players[0] : players[1];
       const right = isPlayer1Left ? players[1] : players[0];
-      const leftDiv = document.getElementById('leftPlayerButtons');
-      const rightDiv = document.getElementById('rightPlayerButtons');
-
-      leftDiv.innerHTML = generateButtonHTML(left);
-      rightDiv.innerHTML = generateButtonHTML(right);
+      document.getElementById('leftPlayerButtons').innerHTML = generateButtonHTML(left);
+      document.getElementById('rightPlayerButtons').innerHTML = generateButtonHTML(right);
     }
 
     function generateButtonHTML(player) {
@@ -202,7 +197,7 @@
         ...gameHistory.map((g, i) => `Game ${i + 1}: ${g}`),
         `Total Match Time: ${document.getElementById('timer').textContent.replace('Match Time: ', '')}`
       ];
-      return lines.join('\n');
+      return lines.join('\\n');
     }
 
     function exportSummary() {
@@ -218,29 +213,10 @@
     }
 
     function shareSummary() {
-  const summary = getMatchSummary();
-  if (navigator.share) {
-    navigator.share({
-      title: 'Air Hockey Match Summary',
-      text: summary
-    }).catch(console.error);
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(summary).then(() => {
-      alert('Match summary copied to clipboard! You can now paste it anywhere.');
-    }).catch(() => {
-      alert('Sharing not supported. Could not copy to clipboard either.');
-    });
-  } else {
-    alert('Sharing not supported in this browser.');
-  }
-}).catch(console.error);
-      } else {
-        alert('Sharing not supported in this browser.');
-      }
+      alert('Sharing only works on supported browsers or mobile.');
     }
 
     document.addEventListener('keydown', (event) => {
-      const nextGameBtn = document.getElementById('nextGameBtn');
       if (!document.getElementById('scoreSection').style.display.includes('block')) return;
       const leftPlayer = isPlayer1Left ? 'player1' : 'player2';
       const rightPlayer = isPlayer1Left ? 'player2' : 'player1';
@@ -248,7 +224,6 @@
       if (event.key === 'ArrowRight') scorePoint(rightPlayer);
       if (event.key.toLowerCase() === 'a') callTimeout(leftPlayer);
       if (event.key.toLowerCase() === 'd') callTimeout(rightPlayer);
-      if (event.key === ' ' && nextGameBtn && nextGameBtn.style.display !== 'none') nextGameBtn.click();
     });
   </script>
 </body>
