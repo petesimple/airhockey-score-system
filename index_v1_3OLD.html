@@ -17,6 +17,12 @@
     .timeout-label { font-size: 0.8em; color: orange; margin-top: 4px; }
     #summaryButtons, #nextGameBtn { display: none; margin-top: 20px; }
     canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; }
+    #timer {
+  font-size: 3em;
+  font-weight: bold;
+  margin-top: 20px;
+  color: #4caf50;
+}
   </style>
 </head>
 <body>
@@ -140,6 +146,7 @@
         clearInterval(timerInterval);
         timerRunning = false;
         document.getElementById('toggleTimerBtn').textContent = 'Resume Match';
+        document.getElementById('timer').style.color = 'red';
       } else {
         startTimer();
       }
@@ -149,6 +156,7 @@
       timerInterval = setInterval(() => { timeElapsed++; updateTimer(); }, 1000);
       timerRunning = true;
       document.getElementById('toggleTimerBtn').textContent = 'Pause Match';
+      document.getElementById('timer').style.color = '#4caf50';
     }
 
     function callTimeout(id) {
