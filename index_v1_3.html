@@ -17,6 +17,22 @@
     .timeout-label { font-size: 0.8em; color: orange; margin-top: 4px; }
     #summaryButtons, #nextGameBtn { display: none; margin-top: 20px; }
     canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; }
+    #timer {
+  font-size: 3em;
+  font-weight: bold;
+  margin-top: 20px;
+  color: #4caf50;
+}
+
+@keyframes pulse {
+  0%   { transform: scale(1); opacity: 1; }
+  50%  { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#timer.running {
+  animation: pulse 1s infinite;
+}
   </style>
 </head>
 <body>
@@ -135,20 +151,29 @@
     }
 
     function toggleTimer() {
-      if (timerRunning) {
-        clearInterval(timerInterval);
-        timerRunning = false;
-        document.getElementById('toggleTimerBtn').textContent = 'Resume Match';
-      } else {
-        startTimer();
-      }
-    }
+  const timer = document.getElementById('timer');
+  if (timerRunning) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    document.getElementById('toggleTimerBtn').textContent = 'Resume Match';
+    timer.style.color = 'red';
+    timer.classList.remove('running');
+  } else {
+    startTimer();
+  }
+}
 
     function startTimer() {
-      timerInterval = setInterval(() => { timeElapsed++; updateTimer(); }, 1000);
-      timerRunning = true;
-      document.getElementById('toggleTimerBtn').textContent = 'Pause Match';
-    }
+  timerInterval = setInterval(() => {
+    timeElapsed++;
+    updateTimer();
+  }, 1000);
+  timerRunning = true;
+  document.getElementById('toggleTimerBtn').textContent = 'Pause Match';
+  const timer = document.getElementById('timer');
+  timer.style.color = '#4caf50';
+  timer.classList.add('running');
+}
 
     function callTimeout(id) {
       const player = players.find(p => p.id === id);
