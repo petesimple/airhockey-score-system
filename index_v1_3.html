@@ -49,6 +49,7 @@
 
   <div id="scoreSection" style="display:none">
     <div id="timer">Match Time: 0:00</div>
+    <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
     <div class="scoreboard" id="scoreBoard"></div>
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
@@ -176,24 +177,26 @@
 }
 
     function callTimeout(id) {
-      const player = players.find(p => p.id === id);
-      const num = id === 'player1' ? '1' : '2';
-      if (!player.timeoutUsed) {
-        player.timeoutUsed = true;
-        document.getElementById(`timeoutBtn${num}`).disabled = true;
-        document.getElementById(`timeoutBtn${num}`).classList.add('disabled-btn');
-        document.getElementById(`timeoutLabel${num}`).textContent = 'Timeout Used';
-      }
-    }
+  const player = players.find(p => p.id === id);
+  const num = id === 'player1' ? '1' : '2';
+  if (!player.timeoutUsed) {
+    player.timeoutUsed = true;
+    document.getElementById(`timeoutBtn${num}`).disabled = true;
+    document.getElementById(`timeoutBtn${num}`).classList.add('disabled-btn');
+    document.getElementById(`timeoutLabel${num}`).textContent = 'Timeout Used';
+    startTimeoutTimer(); // 🔥 Start countdown
+  }
+}
 
     function undoTimeout(id) {
-      const player = players.find(p => p.id === id);
-      const num = id === 'player1' ? '1' : '2';
-      player.timeoutUsed = false;
-      document.getElementById(`timeoutBtn${num}`).disabled = false;
-      document.getElementById(`timeoutBtn${num}`).classList.remove('disabled-btn');
-      document.getElementById(`timeoutLabel${num}`).textContent = '';
-    }
+  const player = players.find(p => p.id === id);
+  const num = id === 'player1' ? '1' : '2';
+  player.timeoutUsed = false;
+  document.getElementById(`timeoutBtn${num}`).disabled = false;
+  document.getElementById(`timeoutBtn${num}`).classList.remove('disabled-btn');
+  document.getElementById(`timeoutLabel${num}`).textContent = '';
+  clearTimeoutTimer(); // 🔥 Cancel timeout timer if active
+}
 
     function updateHistory() {
       const html = gameHistory.map((g, i) => `<li>Game ${i + 1}: ${g}</li>`).join('');
@@ -224,6 +227,36 @@
       return lines.join('\n');
     }
 
+    let timeoutCountdown = null;
+    let timeoutTimeLeft = 0;
+
+function startTimeoutTimer() {
+  if (timeoutCountdown) return;
+  timeoutTimeLeft = 10;
+  const el = document.getElementById('timeoutTimer');
+  el.textContent = `Timeout: ${timeoutTimeLeft}`;
+  el.style.display = 'block';
+
+  timeoutCountdown = setInterval(() => {
+    timeoutTimeLeft--;
+    if (timeoutTimeLeft <= 0) {
+      clearTimeoutTimer();
+    } else {
+      el.textContent = `Timeout: ${timeoutTimeLeft}`;
+    }
+  }, 1000);
+}
+
+function clearTimeoutTimer() {
+  if (timeoutCountdown) {
+    clearInterval(timeoutCountdown);
+    timeoutCountdown = null;
+  }
+  document.getElementById('timeoutTimer').style.display = 'none';
+}
+
+document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTimer);
+    
     function exportSummary() {
       const blob = new Blob([getMatchSummary()], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
