@@ -325,14 +325,18 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 }
 
     document.addEventListener('keydown', (event) => {
-      if (!document.getElementById('scoreSection').style.display.includes('block')) return;
-      const leftPlayer = isPlayer1Left ? 'player1' : 'player2';
-      const rightPlayer = isPlayer1Left ? 'player2' : 'player1';
-      if (event.key === 'ArrowLeft') scorePoint(leftPlayer);
-      if (event.key === 'ArrowRight') scorePoint(rightPlayer);
-      if (event.key.toLowerCase() === 'a') callTimeout(leftPlayer);
-      if (event.key.toLowerCase() === 'd') callTimeout(rightPlayer);
-    });
+  const target = event.target;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+  if (!document.getElementById('scoreSection').style.display.includes('block')) return;
+
+  const leftPlayer = isPlayer1Left ? 'player1' : 'player2';
+  const rightPlayer = isPlayer1Left ? 'player2' : 'player1';
+  if (event.key === 'ArrowLeft') scorePoint(leftPlayer);
+  if (event.key === 'ArrowRight') scorePoint(rightPlayer);
+  if (event.key.toLowerCase() === 'a') callTimeout(leftPlayer);
+  if (event.key.toLowerCase() === 'd') callTimeout(rightPlayer);
+});
   </script>
   <script>
   if ('serviceWorker' in navigator) {
