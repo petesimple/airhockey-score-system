@@ -75,6 +75,11 @@
   border: none;
   width: 160px;
 }
+    .fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
   </style>
 </head>
 <body>
@@ -126,21 +131,40 @@
     let isPlayer1Left = true;
 
     function startMatch() {
-      players[0].name = document.getElementById('player1Name').value || 'Player 1';
-      players[1].name = document.getElementById('player2Name').value || 'Player 2';
-      winGames = parseInt(document.getElementById('matchLength').value);
-      players.forEach(p => { p.points = 0; p.games = 0; p.timeoutUsed = false });
-      gameHistory = [];
-      timeElapsed = 0;
-      updateTimer();
-      updateScore();
-      document.getElementById('scoreSection').style.display = 'block';
-      document.getElementById('matchWinner').textContent = '';
-      document.getElementById('gameWinner').textContent = '';
-      document.getElementById('summaryButtons').style.display = 'none';
-      renderButtons();
-      startTimer();
-    }
+  // Set player names and match length
+  players[0].name = document.getElementById('player1Name').value || 'Player 1';
+  players[1].name = document.getElementById('player2Name').value || 'Player 2';
+  winGames = parseInt(document.getElementById('matchLength').value);
+  players.forEach(p => { p.points = 0; p.games = 0; p.timeoutUsed = false });
+  gameHistory = [];
+  timeElapsed = 0;
+
+  // Update UI
+  updateTimer();
+  updateScore();
+  renderButtons();
+  document.getElementById('matchWinner').textContent = '';
+  document.getElementById('gameWinner').textContent = '';
+  document.getElementById('summaryButtons').style.display = 'none';
+  document.getElementById('scoreSection').style.display = 'block';
+
+  // Fade out setup UI
+  document.querySelector('img[alt="Air Hockey Score System Logo"]').classList.add('fade-out');
+  document.querySelector('.name-entry').classList.add('fade-out');
+  document.getElementById('matchLength').classList.add('fade-out');
+  document.querySelector('button[onclick="startMatch()"]').classList.add('fade-out');
+
+  // Hide after fade completes
+  setTimeout(() => {
+    document.querySelector('img[alt="Air Hockey Score System Logo"]').style.display = 'none';
+    document.querySelector('.name-entry').style.display = 'none';
+    document.getElementById('matchLength').style.display = 'none';
+    document.querySelector('button[onclick="startMatch()"]').style.display = 'none';
+  }, 600);
+
+  // Start the match timer
+  startTimer();
+}
 
     function renderButtons() {
       const left = isPlayer1Left ? players[0] : players[1];
