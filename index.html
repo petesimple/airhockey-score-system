@@ -225,9 +225,11 @@ function formatPlayerScore(player) {
   const nameHTML = last
     ? `<div>${first}<br><small style="font-size: 0.7em;">${last}</small></div>`
     : `<div>${first}</div>`;
+  const color = player.id === 'player1' ? '#d32f2f' : '#1976d2';
   return `<div style="text-align:center;">
     ${nameHTML}
-    <div style="margin-top:5px;">(${player.points}) Games: ${player.games}</div>
+    <div style="font-size: 3em; font-weight: bold; color: ${color}; margin: 10px 0;">${player.points}</div>
+    <div style="font-size: 0.9em;">Games: ${player.games}</div>
   </div>`;
 }
 
