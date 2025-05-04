@@ -76,6 +76,14 @@
   pointer-events: none;
   margin: 0 !important;
 }
+    #fullscoreboard {
+  border: 2px solid #888;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 30px;
+  display: inline-block;
+  background-color: #000;
+}
     
   </style>
 </head>
@@ -95,9 +103,11 @@
   <button onclick="startMatch()">Start Match</button>
 
   <div id="scoreSection" style="display:none">
-    <div id="timer">Match Time: 0:00</div>
-    <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
-    <div class="scoreboard" id="scoreBoard"></div>
+    <div id="fullscoreboard">
+  <div id="scoreBoard" class="scoreboard"></div>
+  <div id="timer">Match Time: 0:00</div>
+</div>
+<div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
       <div class="player-buttons" id="rightPlayerButtons"></div>
