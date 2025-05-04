@@ -1,20 +1,451 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="theme-color" content="#121212">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Air Hockey Score System</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#121212">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker Registered'));
-    }
-  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+
+.scoreboard {
+  font-family: 'Arial Black', sans-serif;
+  font-size: 2.5em;
+  background-color: #000;
+  color: #f0f0f0;
+  padding: 20px 40px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-top: 20px;
+  border: 2px solid #444;
+}
+
+#timer {
+  font-family: 'Arial Black', sans-serif;
+  font-size: 3em;
+  font-weight: bold;
+  background-color: #000;
+  color: #4caf50;
+  padding: 10px 30px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-top: 20px;
+  border: 2px solid #444;
+  cursor: pointer;
+}
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #121212; color: #f0f0f0; }
+    .button-columns { display: flex; justify-content: center; gap: 50px; margin-top: 20px; }
+    .player-buttons { display: flex; flex-direction: column; align-items: center; }
+    button { margin: 5px; padding: 10px; font-size: 1em; border: none; border-radius: 5px; cursor: pointer; }
+    .small-btn { font-size: 0.8em; padding: 5px 10px; }
+    .red-btn { background-color: #d32f2f; color: white; }
+    .blue-btn { background-color: #1976d2; color: white; }
+    .disabled-btn { background-color: #555 !important; cursor: not-allowed; }
+    .timeout-label { font-size: 0.8em; color: orange; margin-top: 4px; }
+    #summaryButtons, #nextGameBtn { display: none; margin-top: 20px; }
+    canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; }
+
+@keyframes pulse {
+  0%   { transform: scale(1); opacity: 1; }
+  50%  { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#timer.running {
+  animation: pulse 1s infinite;
+}
+    .name-entry {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.name-entry input {
+  padding: 10px;
+  font-size: 1em;
+  border-radius: 5px;
+  border: none;
+  width: 160px;
+}
+    .fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease, margin 0.6s ease;
+  pointer-events: none;
+  margin: 0 !important;
+}
+    
+  </style>
 </head>
 <body>
-  <script>window.location.href = 'index_v1_3.html';</script>
+  <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+  <img src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
+</div>
+  <div class="name-entry">
+  <input id="player1Name" placeholder="Player 1">
+  <input id="player2Name" placeholder="Player 2">
+</div>
+  <select id="matchLength">
+    <option value="2" selected>Best of 3</option>
+    <option value="3">Best of 5</option>
+    <option value="4">Best of 7</option>
+  </select>
+  <button onclick="startMatch()">Start Match</button>
+
+  <div id="scoreSection" style="display:none">
+    <div id="timer">Match Time: 0:00</div>
+    <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
+    <div class="scoreboard" id="scoreBoard"></div>
+    <div class="button-columns" id="buttonColumns">
+      <div class="player-buttons" id="leftPlayerButtons"></div>
+      <div class="player-buttons" id="rightPlayerButtons"></div>
+    </div>
+    <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
+    <button onclick="resetMatch()">Reset Match</button>
+    <div id="gameWinner"></div>
+    <div id="matchWinner"></div>
+    <div id="history"></div>
+    <div id="summaryButtons">
+      <button onclick="exportSummary()">Export Summary</button>
+      <button onclick="shareSummary()">Share Summary</button>
+      <button onclick="generateCSV()">Export CSV</button>
+    </div>
+  </div>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    let players = [
+      { id: 'player1', name: '', points: 0, games: 0, timeoutUsed: false },
+      { id: 'player2', name: '', points: 0, games: 0, timeoutUsed: false }
+    ];
+    let gameHistory = [];
+    let timerInterval, timeElapsed = 0, timerRunning = false;
+    let winGames = 4;
+    let isPlayer1Left = true;
+
+    function startMatch() {
+  // Set player names and match length
+  players[0].name = document.getElementById('player1Name').value || 'Player 1';
+  players[1].name = document.getElementById('player2Name').value || 'Player 2';
+  winGames = parseInt(document.getElementById('matchLength').value);
+  players.forEach(p => { p.points = 0; p.games = 0; p.timeoutUsed = false });
+  gameHistory = [];
+  timeElapsed = 0;
+
+  // Update UI
+  updateTimer();
+  updateScore();
+  renderButtons();
+  document.getElementById('matchWinner').textContent = '';
+  document.getElementById('gameWinner').textContent = '';
+  document.getElementById('summaryButtons').style.display = 'none';
+  document.getElementById('scoreSection').style.display = 'block';
+
+  // Fade out setup UI
+  document.querySelector('img[alt="Air Hockey Score System Logo"]').classList.add('fade-out');
+  document.querySelector('.name-entry').classList.add('fade-out');
+  document.getElementById('matchLength').classList.add('fade-out');
+  document.querySelector('button[onclick="startMatch()"]').classList.add('fade-out');
+
+  // Hide after fade completes
+  setTimeout(() => {
+    document.querySelector('img[alt="Air Hockey Score System Logo"]').style.display = 'none';
+    document.querySelector('.name-entry').style.display = 'none';
+    document.getElementById('matchLength').style.display = 'none';
+    document.querySelector('button[onclick="startMatch()"]').style.display = 'none';
+  }, 600);
+
+  // Start the match timer
+  startTimer();
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('timer').addEventListener('click', toggleTimer);
+});
+    
+    function renderButtons() {
+      const left = isPlayer1Left ? players[0] : players[1];
+      const right = isPlayer1Left ? players[1] : players[0];
+      document.getElementById('leftPlayerButtons').innerHTML = generateButtonHTML(left);
+      document.getElementById('rightPlayerButtons').innerHTML = generateButtonHTML(right);
+    }
+
+    function generateButtonHTML(player) {
+      const colorClass = player.id === 'player1' ? 'red-btn' : 'blue-btn';
+      const num = player.id === 'player1' ? '1' : '2';
+      return `
+  <button class="${colorClass}" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
+  <button class="${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
+  <button id="timeoutBtn${num}" class="small-btn ${colorClass}" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
+  <button class="small-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
+  <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
+`;
+    }
+        function scorePoint(id) {
+      const player = players.find(p => p.id === id);
+      if (player.points >= 7) return;
+      player.points++;
+      updateScore();
+      if (player.points === 7) {
+        player.games++;
+        document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
+        gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
+        document.getElementById('nextGameBtn').style.display = 'inline-block';
+        updateHistory();
+        if (player.games === winGames) {
+          document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
+          clearInterval(timerInterval);
+          document.getElementById('summaryButtons').style.display = 'block';
+          confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+        }
+      }
+    }
+
+    function removePoint(id) {
+      const player = players.find(p => p.id === id);
+      if (player.points > 0) player.points--;
+      updateScore();
+    }
+
+    function updateScore() {
+      const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+      document.getElementById('scoreBoard').textContent = `${left.name}: ${left.points} (${left.games}) | ${right.name}: ${right.points} (${right.games})`;
+    }
+
+    function updateTimer() {
+  const min = Math.floor(timeElapsed / 60);
+  const sec = timeElapsed % 60;
+  const timer = document.getElementById('timer');
+  timer.textContent = `Match Time: ${min}:${sec.toString().padStart(2, '0')}` + (timerRunning ? '' : ' (Paused)');
+}
+
+   function toggleTimer() {
+  const timer = document.getElementById('timer');
+
+  if (timerRunning) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    timer.style.color = 'red';
+    timer.classList.remove('running');
+  } else {
+    startTimer();
+  }
+
+  updateTimer(); // <-- This ensures proper paused/resume label
+}
+
+    function startTimer() {
+  timerInterval = setInterval(() => {
+    timeElapsed++;
+    updateTimer();
+  }, 1000);
+
+  timerRunning = true;
+  const timer = document.getElementById('timer');
+  timer.style.color = '#4caf50';
+  timer.classList.add('running');
+  updateTimer(); // Ensure timer text is refreshed without "(Paused)"
+}
+
+    function callTimeout(id) {
+  const player = players.find(p => p.id === id);
+  const num = id === 'player1' ? '1' : '2';
+  if (!player.timeoutUsed) {
+    player.timeoutUsed = true;
+    document.getElementById(`timeoutBtn${num}`).disabled = true;
+    document.getElementById(`timeoutBtn${num}`).classList.add('disabled-btn');
+    document.getElementById(`timeoutLabel${num}`).textContent = 'Timeout Used';
+    startTimeoutTimer(); // 🔥 Start countdown
+  }
+}
+
+    function undoTimeout(id) {
+  const player = players.find(p => p.id === id);
+  const num = id === 'player1' ? '1' : '2';
+  player.timeoutUsed = false;
+  document.getElementById(`timeoutBtn${num}`).disabled = false;
+  document.getElementById(`timeoutBtn${num}`).classList.remove('disabled-btn');
+  document.getElementById(`timeoutLabel${num}`).textContent = '';
+  clearTimeoutTimer(); // 🔥 Cancel timeout timer if active
+}
+
+    function updateHistory() {
+      const html = gameHistory.map((g, i) => `<li>Game ${i + 1}: ${g}</li>`).join('');
+      document.getElementById('history').innerHTML = `<h3>Previous Games:</h3><ul>${html}</ul>`;
+    }
+
+    function startNextGame() {
+      players.forEach(p => { p.points = 0; p.timeoutUsed = false });
+      document.getElementById('nextGameBtn').style.display = 'none';
+      document.getElementById('gameWinner').textContent = '';
+      isPlayer1Left = !isPlayer1Left;
+      renderButtons();
+      updateScore();
+    }
+
+    function resetMatch() {
+  const confirmReset = confirm("Do you really want to reset the match?");
+  if (confirmReset) {
+    location.reload();
+  }
+}
+
+    function getMatchSummary() {
+      const [p1, p2] = players;
+      const lines = [
+        `Match between ${p1.name} and ${p2.name}`,
+        `Final Score: ${p1.name} ${p1.games} - ${p2.games} ${p2.name}`,
+        '',
+        'Game History:',
+        ...gameHistory.map((g, i) => `Game ${i + 1}: ${g}`),
+        `Total Match Time: ${document.getElementById('timer').textContent.replace('Match Time: ', '')}`
+      ];
+      return lines.join('\n');
+    }
+
+    let timeoutCountdown = null;
+    let timeoutTimeLeft = 0;
+
+function startTimeoutTimer() {
+  if (timeoutCountdown) return;
+  timeoutTimeLeft = 10;
+  const el = document.getElementById('timeoutTimer');
+  el.textContent = `Timeout: ${timeoutTimeLeft}`;
+  el.style.display = 'block';
+
+  timeoutCountdown = setInterval(() => {
+    timeoutTimeLeft--;
+    if (timeoutTimeLeft <= 0) {
+      clearTimeoutTimer();
+    } else {
+      el.textContent = `Timeout: ${timeoutTimeLeft}`;
+    }
+  }, 1000);
+}
+
+function clearTimeoutTimer() {
+  if (timeoutCountdown) {
+    clearInterval(timeoutCountdown);
+    timeoutCountdown = null;
+  }
+  document.getElementById('timeoutTimer').style.display = 'none';
+}
+
+document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTimer);
+    
+    function exportSummary() {
+      const blob = new Blob([getMatchSummary()], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `AirHockeyMatchSummary.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function shareSummary() {
+  const summary = getMatchSummary();
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Air Hockey Match Summary',
+      text: summary,
+    }).then(() => {
+      console.log('Thanks for sharing!');
+    }).catch((error) => {
+      console.error('Error sharing:', error);
+      alert('Could not share automatically. Please screenshot your match summary instead.');
+    });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(summary).then(() => {
+      alert('Summary copied to clipboard! You can now paste it in a message to the tournament director.');
+    }).catch(err => {
+      console.error('Could not copy text:', err);
+      alert('Copy failed. Please screenshot the match results and send manually.');
+    });
+  } else {
+    alert('Sharing not supported. Please screenshot the match results and send manually.');
+  }
+}
+
+    document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+  if (!document.getElementById('scoreSection').style.display.includes('block')) return;
+
+  const leftPlayer = isPlayer1Left ? 'player1' : 'player2';
+  const rightPlayer = isPlayer1Left ? 'player2' : 'player1';
+  if (event.key === 'ArrowLeft') scorePoint(leftPlayer);
+  if (event.key === 'ArrowRight') scorePoint(rightPlayer);
+  if (event.key.toLowerCase() === 'a') callTimeout(leftPlayer);
+  if (event.key.toLowerCase() === 'd') callTimeout(rightPlayer);
+});
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('Service Worker Registered'));
+  }
+    function generateCSV() {
+  const [p1, p2] = players;
+  const winner = p1.games > p2.games ? p1.name : p2.name;
+  const loser = p1.games > p2.games ? p2.name : p1.name;
+
+  const finalScore = `${p1.points}-${p2.points}`;
+  const gamesRecord = `${p1.games}-${p2.games}`;
+  const totalTime = `${Math.floor(timeElapsed / 60)
+    .toString()
+    .padStart(2, '0')}:${(timeElapsed % 60).toString().padStart(2, '0')}`;
+
+  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+
+  const headers = [
+    'Date',
+    'Player 1',
+    'Player 2',
+    'Score',
+    'Games (P1-P2)',
+    'Winner',
+    'Loser',
+    'Total Time (mm:ss)',
+    'Location',
+    'Referee',
+    'Notes'
+  ];
+
+  const row = [
+    today,
+    p1.name,
+    p2.name,
+    finalScore,
+    gamesRecord,
+    winner,
+    loser,
+    totalTime,
+    '', // Location (leave blank or fill later)
+    '', // Referee (leave blank or fill later)
+    ''  // Notes
+  ];
+
+  const csvContent = [headers, row].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `AirHockeyMatch_${today}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+</script>
 </body>
 </html>
