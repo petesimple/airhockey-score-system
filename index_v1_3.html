@@ -61,14 +61,30 @@
 #timer.running {
   animation: pulse 1s infinite;
 }
+    .name-entry {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.name-entry input {
+  padding: 10px;
+  font-size: 1em;
+  border-radius: 5px;
+  border: none;
+  width: 160px;
+}
   </style>
 </head>
 <body>
   <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
   <img src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
 </div>
+  <div class="name-entry">
   <input id="player1Name" placeholder="Player 1 Name">
   <input id="player2Name" placeholder="Player 2 Name">
+</div>
   <select id="matchLength">
     <option value="2" selected>Best of 3</option>
     <option value="3">Best of 5</option>
