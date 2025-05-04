@@ -84,7 +84,20 @@
   display: inline-block;
   background-color: #000;
 }
-    
+    #fullscoreboard.locked-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  margin: 0 auto;
+  border-radius: 0;
+  width: 100%;
+  padding: 10px 0;
+}
+    body.locked-body {
+  padding-top: 200px; /* leave space so content isn't hidden */
+}
   </style>
 </head>
 <body>
@@ -108,6 +121,10 @@
   <div id="timer">Match Time: 0:00</div>
 </div>
 <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
+    <label style="display: block; margin-top: 20px;">
+  <input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" />
+  Lock Scoreboard to Top
+</label>
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
       <div class="player-buttons" id="rightPlayerButtons"></div>
@@ -475,6 +492,19 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+    function toggleLockTop() {
+  const checkbox = document.getElementById('lockTopToggle');
+  const board = document.getElementById('fullscoreboard');
+  const body = document.body;
+
+  if (checkbox.checked) {
+    board.classList.add('locked-top');
+    body.classList.add('locked-body');
+  } else {
+    board.classList.remove('locked-top');
+    body.classList.remove('locked-body');
+  }
 }
 </script>
 </body>
