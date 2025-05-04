@@ -258,7 +258,12 @@
       updateScore();
     }
 
-    function resetMatch() { location.reload(); }
+    function resetMatch() {
+  const confirmReset = confirm("Do you really want to reset the match?");
+  if (confirmReset) {
+    location.reload();
+  }
+}
 
     function getMatchSummary() {
       const [p1, p2] = players;
