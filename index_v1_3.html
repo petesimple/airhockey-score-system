@@ -36,7 +36,6 @@
   cursor: pointer;
 }
     body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #121212; color: #f0f0f0; }
-    .scoreboard { font-size: 1.5em; margin-top: 20px; }
     .button-columns { display: flex; justify-content: center; gap: 50px; margin-top: 20px; }
     .player-buttons { display: flex; flex-direction: column; align-items: center; }
     button { margin: 5px; padding: 10px; font-size: 1em; border: none; border-radius: 5px; cursor: pointer; }
@@ -163,7 +162,9 @@
   startTimer();
 }
 
-    document.getElementById('timer').addEventListener('click', toggleTimer);
+    document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('timer').addEventListener('click', toggleTimer);
+});
     
     function renderButtons() {
       const left = isPlayer1Left ? players[0] : players[1];
