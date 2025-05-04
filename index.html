@@ -212,9 +212,24 @@
     }
 
     function updateScore() {
-      const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
-      document.getElementById('scoreBoard').textContent = `${left.name}: ${left.points} (${left.games}) | ${right.name}: ${right.points} (${right.games})`;
-    }
+  const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+  document.getElementById('scoreBoard').innerHTML = `
+    <div style="display: flex; justify-content: space-around; gap: 40px;">
+      ${formatPlayerScore(left)}
+      ${formatPlayerScore(right)}
+    </div>`;
+}
+
+function formatPlayerScore(player) {
+  const [first, last] = player.name.split(' ');
+  const nameHTML = last
+    ? `<div>${first}<br><small style="font-size: 0.7em;">${last}</small></div>`
+    : `<div>${first}</div>`;
+  return `<div style="text-align:center;">
+    ${nameHTML}
+    <div style="margin-top:5px;">(${player.points}) Games: ${player.games}</div>
+  </div>`;
+}
 
     function updateTimer() {
   const min = Math.floor(timeElapsed / 60);
