@@ -110,6 +110,7 @@
     <div id="summaryButtons">
       <button onclick="exportSummary()">Export Summary</button>
       <button onclick="shareSummary()">Share Summary</button>
+      <button onclick="generateCSV()">Export CSV</button>
     </div>
   </div>
 
@@ -392,6 +393,59 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     navigator.serviceWorker.register('service-worker.js')
       .then(() => console.log('Service Worker Registered'));
   }
+    function generateCSV() {
+  const [p1, p2] = players;
+  const winner = p1.games > p2.games ? p1.name : p2.name;
+  const loser = p1.games > p2.games ? p2.name : p1.name;
+
+  const finalScore = `${p1.points}-${p2.points}`;
+  const gamesRecord = `${p1.games}-${p2.games}`;
+  const totalTime = `${Math.floor(timeElapsed / 60)
+    .toString()
+    .padStart(2, '0')}:${(timeElapsed % 60).toString().padStart(2, '0')}`;
+
+  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+
+  const headers = [
+    'Date',
+    'Player 1',
+    'Player 2',
+    'Score',
+    'Games (P1-P2)',
+    'Winner',
+    'Loser',
+    'Total Time (mm:ss)',
+    'Location',
+    'Referee',
+    'Notes'
+  ];
+
+  const row = [
+    today,
+    p1.name,
+    p2.name,
+    finalScore,
+    gamesRecord,
+    winner,
+    loser,
+    totalTime,
+    '', // Location (leave blank or fill later)
+    '', // Referee (leave blank or fill later)
+    ''  // Notes
+  ];
+
+  const csvContent = [headers, row].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `AirHockeyMatch_${today}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>
