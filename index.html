@@ -526,6 +526,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   // Prompt user for missing info
   const location = prompt("Enter match location:", "") || "";
   const referee = prompt("Enter referee name (if any):", "") || "";
+  const notes = prompt("Additional notes:", "") || "";
 
   // Extract up to 7 games for columns O–U
   const gameResults = gameHistory.map(g => g).slice(0, 7);
@@ -533,13 +534,13 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   const headers = [
     'Date', 'Player 1', 'Player 2', '', '', 'Referee', '', '', 'Location', 'Winner',
-    '', '', 'Player 1 Game Count', 'Player 2 Game Count',
+    '', 'Notes', 'Player 1 Game Count', 'Player 2 Game Count',
     'Game 1', 'Game 2', 'Game 3', 'Game 4', 'Game 5', 'Game 6', 'Game 7'
   ];
 
   const row = [
     today, p1.name, p2.name, '', '', referee, '', '', location, winner,
-    '', '', p1.games, p2.games,
+    '', notes, p1.games, p2.games,
     ...gameResults
   ];
 
