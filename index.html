@@ -93,12 +93,14 @@
   right: 0;
   z-index: 999;
   margin: 0 auto;
-  border-radius: 0;
-  width: calc(100% - 40px); /* subtracts 20px from each side */
+  width: calc(100% - 40px);
   padding: 10px 0;
   padding-left: 20px;
   padding-right: 20px;
   box-sizing: border-box;
+
+  /* keep corners rounded! */
+  border-radius: 10px;
 }
     body.locked-body {
   padding-top: 200px; /* leave space so content isn't hidden */
@@ -284,7 +286,7 @@ function formatPlayerScore(player) {
   const min = Math.floor(timeElapsed / 60);
   const sec = timeElapsed % 60;
   const timer = document.getElementById('timer');
-  timer.textContent = `Match Time: ${min}:${sec.toString().padStart(2, '0')}` + (timerRunning ? '' : ' (Paused)');
+  timer.textContent = `${min}:${sec.toString().padStart(2, '0')}` + (timerRunning ? '' : ' (Paused)');
 }
 
    function toggleTimer() {
