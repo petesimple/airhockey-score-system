@@ -30,3 +30,52 @@ Clone this repo and open the `index.html` file in your browser:
 git clone https://github.com/petesimple/airhockey-score-system.git
 cd airhockey-score-system
 open index.html
+```
+
+---
+
+## 🎯 Usage
+
+1. Enter player names and match length.
+2. Click “Start Match” — the scoreboard appears.
+3. Tap player buttons to score points or call timeouts.
+4. Use the **Lock to Top** option for streaming or fixed-view display.
+5. Tap the timer to pause/resume.
+6. Export the match summary or CSV once the match concludes.
+
+---
+
+## 💡 Development Notes
+
+- Built with vanilla HTML, CSS, and JavaScript.
+- Uses `localStorage` to persist scoreboard lock state.
+- PWA-ready with offline caching (via `service-worker.js`).
+- Designed for fast input and clean mobile responsiveness.
+
+---
+
+## 📦 Changelog
+
+See [CHANGELOG_v1.4.5.md](CHANGELOG_v1.4.5.md) for the latest updates.
+
+---
+
+## 🤝 Contributing
+
+Suggestions, bug reports, and pull requests are welcome! Please:
+- Fork the repo
+- Create a branch
+- Make your changes
+- Submit a PR
+
+---
+
+## 🧠 Inspiration
+
+Created by Pete Lippincott — blending code, music, and competitive air hockey since day one.
+
+---
+
+## 📜 License
+
+[MIT License](LICENSE)
