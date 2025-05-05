@@ -517,38 +517,23 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   const finalScore = `${p1.points}-${p2.points}`;
   const gamesRecord = `${p1.games}-${p2.games}`;
-  const totalTime = `${Math.floor(timeElapsed / 60)
-    .toString()
-    .padStart(2, '0')}:${(timeElapsed % 60).toString().padStart(2, '0')}`;
+  const totalTime = `${Math.floor(timeElapsed / 60).toString().padStart(2, '0')}:${(timeElapsed % 60).toString().padStart(2, '0')}`;
 
-  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+  const today = new Date().toISOString().split('T')[0];
+
+  // 📝 Prompt user for missing info
+  const location = prompt("Enter match location:", "") || "";
+  const referee = prompt("Enter referee name (if any):", "") || "";
+  const notes = prompt("Additional notes:", "") || "";
 
   const headers = [
-    'Date',
-    'Player 1',
-    'Player 2',
-    'Score',
-    'Games (P1-P2)',
-    'Winner',
-    'Loser',
-    'Total Time (mm:ss)',
-    'Location',
-    'Referee',
-    'Notes'
+    'Date', 'Player 1', 'Player 2', 'Score', 'Games (P1-P2)',
+    'Winner', 'Loser', 'Total Time (mm:ss)', 'Location', 'Referee', 'Notes'
   ];
 
   const row = [
-    today,
-    p1.name,
-    p2.name,
-    finalScore,
-    gamesRecord,
-    winner,
-    loser,
-    totalTime,
-    '', // Location (leave blank or fill later)
-    '', // Referee (leave blank or fill later)
-    ''  // Notes
+    today, p1.name, p2.name, finalScore, gamesRecord,
+    winner, loser, totalTime, location, referee, notes
   ];
 
   const csvContent = [headers, row].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
