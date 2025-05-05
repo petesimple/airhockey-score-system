@@ -121,6 +121,7 @@
   <div id="timer">Match Time: 0:00</div>
 </div>
 <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
+    <div id="scoreboardSpacer" style="height: 0;"></div>
     <label style="display: block; margin-top: 20px;">
   <input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" />
   Lock Scoreboard to Top
@@ -497,15 +498,29 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   const checkbox = document.getElementById('lockTopToggle');
   const board = document.getElementById('fullscoreboard');
   const body = document.body;
+  const spacer = document.getElementById('scoreboardSpacer');
 
   if (checkbox.checked) {
     board.classList.add('locked-top');
     body.classList.add('locked-body');
+    const height = board.offsetHeight;
+    spacer.style.height = height + 'px';
+    localStorage.setItem('scoreboardLocked', 'true');
   } else {
     board.classList.remove('locked-top');
     body.classList.remove('locked-body');
+    spacer.style.height = '0';
+    localStorage.setItem('scoreboardLocked', 'false');
   }
 }
+    document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('timer').addEventListener('click', toggleTimer);
+
+  if (localStorage.getItem('scoreboardLocked') === 'true') {
+    document.getElementById('lockTopToggle').checked = true;
+    toggleLockTop(); // applies the spacer too
+  }
+});
 </script>
 </body>
 </html>
