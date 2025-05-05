@@ -207,6 +207,7 @@
   document.querySelector('img[alt="Air Hockey Score System Logo"]').classList.add('fade-out');
   document.querySelector('.name-entry').classList.add('fade-out');
   document.getElementById('setupControls').classList.add('fade-out');
+      document.getElementById('versionLabel').style.display = 'none';
 
   // Hide after fade completes
   setTimeout(() => {
@@ -584,5 +585,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   }
 });
 </script>
+  <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
+  ver1.5.5 – PLAY PUCK
+</div>
 </body>
 </html>
