@@ -340,9 +340,59 @@ function formatPlayerScore(player) {
 
     function resetMatch() {
   const confirmReset = confirm("Do you really want to reset the match?");
-  if (confirmReset) {
-    location.reload();
+  if (!confirmReset) return;
+
+  // Reset player data
+  players = [
+    { id: 'player1', name: '', points: 0, games: 0, timeoutUsed: false },
+    { id: 'player2', name: '', points: 0, games: 0, timeoutUsed: false }
+  ];
+  gameHistory = [];
+  timeElapsed = 0;
+  timerRunning = false;
+  isPlayer1Left = true;
+
+  // Clear timers
+  clearInterval(timerInterval);
+  clearTimeoutTimer();
+
+  // Reset UI inputs
+  document.getElementById('player1Name').value = '';
+  document.getElementById('player2Name').value = '';
+  document.getElementById('matchLength').value = '2';
+
+  // Show setup UI
+  const logo = document.querySelector('img[alt="Air Hockey Score System Logo"]');
+  const nameEntry = document.querySelector('.name-entry');
+  const matchLength = document.getElementById('matchLength');
+  const startButton = document.querySelector('button[onclick="startMatch()"]');
+
+  [logo, nameEntry, matchLength, startButton].forEach(el => {
+    el.classList.remove('fade-out');
+    el.style.display = 'block';
+  });
+
+  // Hide game section
+  document.getElementById('scoreSection').style.display = 'none';
+  document.getElementById('matchWinner').textContent = '';
+  document.getElementById('gameWinner').textContent = '';
+  document.getElementById('summaryButtons').style.display = 'none';
+  document.getElementById('nextGameBtn').style.display = 'none';
+  document.getElementById('history').innerHTML = '';
+
+  // 🔧 Unstick the scoreboard if it was locked
+  const lockToggle = document.getElementById('lockTopToggle');
+  if (lockToggle.checked) {
+    lockToggle.checked = false;
   }
+  document.getElementById('fullscoreboard').classList.remove('locked-top');
+  document.body.classList.remove('locked-body');
+  document.getElementById('scoreboardSpacer').style.height = '0';
+  localStorage.setItem('scoreboardLocked', 'false');
+
+  // Update scoreboard display
+  updateScore();
+  updateTimer();
 }
 
     function getMatchSummary() {
