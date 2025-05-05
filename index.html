@@ -58,8 +58,9 @@
 }
     .name-entry {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 15px;
 }
 
@@ -100,6 +101,13 @@
 }
     body.locked-body {
   padding-top: 200px; /* leave space so content isn't hidden */
+}
+    #setupControls {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
   </style>
 </head>
