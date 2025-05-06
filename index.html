@@ -125,6 +125,9 @@
   </style>
 </head>
 <body>
+<div id="skinnyScoreboard" style="display: none; padding: 10px; border: 2px solid #555; background: #000; color: #fff; border-radius: 8px; margin-bottom: 10px;">
+  <!-- Populated via JS -->
+</div>
   <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
   <img src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
 </div>
@@ -149,13 +152,17 @@
 </div>
     <div id="scoreboardSpacer" style="height: 0;"></div>
     <label style="display: block; margin-top: 20px;">
-  <input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" />
-  Lock Scoreboard to Top
+  
 </label>
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
       <div class="player-buttons" id="rightPlayerButtons"></div>
     </div>
+    <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
+  <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Show Skinny Scoreboard</label>
+</div>
+    <input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" />
+  Lock Scoreboard to Top
     <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
     <button onclick="resetMatch()">Reset Match</button>
     <div id="gameWinner"></div>
@@ -218,6 +225,7 @@
 
   // Start the match timer
   startTimer();
+      updateSkinnyScoreboard();
 }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -275,6 +283,7 @@
       ${formatPlayerScore(left)}
       ${formatPlayerScore(right)}
     </div>`;
+      updateSkinnyScoreboard();
 }
 
 function formatPlayerScore(player) {
@@ -298,6 +307,7 @@ function formatPlayerScore(player) {
   const sec = timeElapsed % 60;
   const timer = document.getElementById('timer');
   timer.textContent = `${min}:${sec.toString().padStart(2, '0')}` + (timerRunning ? '' : ' (Paused)');
+      updateSkinnyScoreboard();
 }
 
    function toggleTimer() {
@@ -362,6 +372,7 @@ function formatPlayerScore(player) {
       isPlayer1Left = !isPlayer1Left;
       renderButtons();
       updateScore();
+      updateSkinnyScoreboard();
     }
 
     function resetMatch() {
@@ -418,6 +429,7 @@ function formatPlayerScore(player) {
   // Update scoreboard display
   updateScore();
   updateTimer();
+      updateSkinnyScoreboard();
 }
     function getMatchSummary() {
       const [p1, p2] = players;
@@ -584,6 +596,31 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     toggleLockTop(); // applies the spacer too
   }
 });
+    function toggleSkinnyScoreboard() {
+  const skinny = document.getElementById('skinnyScoreboard');
+  const isChecked = document.getElementById('toggleSkinny').checked;
+  skinny.style.display = isChecked ? 'flex' : 'none';
+}
+    function updateSkinnyScoreboard() {
+  const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+  document.getElementById('skinnyScoreboard').innerHTML = `
+    <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
+      <div style="text-align: left;">
+        <div>${left.name}</div>
+        <div style="color: #d32f2f;">${left.points}</div>
+        <div style="font-size: 0.8em;">Games: ${left.games}</div>
+      </div>
+      <div style="text-align: center;">
+        <div>Time</div>
+        <div>${document.getElementById('timer').textContent.split(' ')[1]}</div>
+      </div>
+      <div style="text-align: right;">
+        <div>${right.name}</div>
+        <div style="color: #1976d2;">${right.points}</div>
+        <div style="font-size: 0.8em;">Games: ${right.games}</div>
+      </div>
+    </div>`;
+}
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
   ver1.5.5 – PLAY PUCK
