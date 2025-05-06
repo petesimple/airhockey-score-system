@@ -669,7 +669,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     lockTopWrapper.style.display = isChecked ? 'none' : 'block';
   }
 }
-    function updateSkinnyScoreboard(winnerId = null) {
+  function updateSkinnyScoreboard(winnerId = null) {
   const left = isPlayer1Left ? players[0] : players[1];
   const right = isPlayer1Left ? players[1] : players[0];
 
@@ -708,6 +708,23 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         </div>
       </div>
     </div>`;
+
+  // Update compact match summary in lines of 4 games each
+  const summaryEl = document.getElementById('compactSummary');
+  if (summaryEl && gameHistory.length > 0) {
+    const compact = getCompactMatchSummary();
+    const segments = compact.split(', ');
+    const lines = [];
+
+    for (let i = 0; i < segments.length; i += 4) {
+      lines.push(segments.slice(i, i + 4).join(', '));
+    }
+
+    summaryEl.innerHTML = lines.map(line => `<div>${line}</div>`).join('');
+  } else if (summaryEl) {
+    summaryEl.innerHTML = '';
+  }
+}   </div>`;
 
   // Update compact match summary separately
   const summaryEl = document.getElementById('compactSummary');
