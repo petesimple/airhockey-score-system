@@ -726,12 +726,6 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   }
 }
 
-  // Update compact match summary separately
-  const summaryEl = document.getElementById('compactSummary');
-  if (summaryEl && gameHistory.length > 0) {
-    summaryEl.textContent = getCompactMatchSummary();
-  }
-}
     function getCompactMatchSummary() {
   const [p1, p2] = players;
   const p1Initial = p1.name.charAt(0).toUpperCase() || 'P1';
