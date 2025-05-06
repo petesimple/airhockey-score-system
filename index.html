@@ -618,6 +618,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   skinny.style.display = isChecked ? 'flex' : 'none';
   skinny.classList.toggle('locked', isChecked);
+
+  document.body.style.paddingTop = isChecked ? '80px' : '';
 }
     function updateSkinnyScoreboard() {
   const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
