@@ -707,19 +707,19 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   // Update main scoreboard layout
   document.getElementById('skinnyContent').innerHTML = `
     <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
-      <div class="${leftClass}" style="text-align: left;">
+      <div class="${leftClass}" style="text-align: left; padding-right: 20px;">
         <div>${left.name}</div>
         <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
         <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
           ${'● '.repeat(left.games).trim()}
         </div>
       </div>
-      <div style="text-align: center;">
+      <div style="text-align: center; min-width: 100px;">
         <div>Time</div>
         <div>${timerText}</div>
         ${timeoutHTML}
       </div>
-      <div class="${rightClass}" style="text-align: right;">
+      <div class="${rightClass}" style="text-align: right; padding-left: 20px;">
         <div>${right.name}</div>
         <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
         <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
