@@ -621,6 +621,12 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   document.body.style.paddingTop = isChecked ? '80px' : '';
 
+  // If skinny mode is being enabled, unlock the full scoreboard if it was locked
+  if (isChecked && document.getElementById('lockTopToggle').checked) {
+    document.getElementById('lockTopToggle').checked = false;
+    toggleLockTop(); // Apply unlock
+  }
+
   // Hide or show the "Lock Scoreboard to Top" checkbox
   const lockTopWrapper = document.getElementById('lockTopWrapper');
   if (lockTopWrapper) {
