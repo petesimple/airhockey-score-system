@@ -662,7 +662,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       <div style="text-align: left;">
         <div>${left.name}</div>
         <div style="color: #d32f2f;">${left.points}</div>
-        <div style="font-size: 0.8em;">Games: ${left.games}</div>
+        <div style="font-size: 1.2em; color: #d32f2f;">${'● '.repeat(left.games).trim()}</div>
       </div>
       <div style="text-align: center;">
         <div>Time</div>
@@ -672,7 +672,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       <div style="text-align: right;">
         <div>${right.name}</div>
         <div style="color: #1976d2;">${right.points}</div>
-        <div style="font-size: 0.8em;">Games: ${right.games}</div>
+        <div style="font-size: 1.2em; color: #1976d2;">${'● '.repeat(right.games).trim()}</div>
       </div>
     </div>`;
 }
