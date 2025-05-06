@@ -141,7 +141,8 @@
 </head>
 <body>
 <div id="skinnyScoreboard" style="display: none; padding: 10px; border: 2px solid #555; background: #000; color: #fff; border-radius: 8px; margin-bottom: 10px;">
-  <!-- Populated via JS -->
+  <div id="skinnyContent"></div>
+  <div id="compactSummary" style="margin-top: 5px; font-size: 0.9em; color: #ccc;"></div>
 </div>
   <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
   <img src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
@@ -684,7 +685,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   const leftClass = winnerId === left.id ? 'winner' : '';
   const rightClass = winnerId === right.id ? 'winner' : '';
 
-  document.getElementById('skinnyScoreboard').innerHTML = `
+  // Update main scoreboard layout
+  document.getElementById('skinnyContent').innerHTML = `
     <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
       <div class="${leftClass}" style="text-align: left;">
         <div>${left.name}</div>
@@ -697,7 +699,6 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         <div>Time</div>
         <div>${timerText}</div>
         ${timeoutHTML}
-        <div id="compactSummary" style="margin-top: 5px; font-size: 0.9em; color: #ccc;"></div>
       </div>
       <div class="${rightClass}" style="text-align: right;">
         <div>${right.name}</div>
@@ -707,6 +708,12 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         </div>
       </div>
     </div>`;
+
+  // Update compact match summary separately
+  const summaryEl = document.getElementById('compactSummary');
+  if (summaryEl && gameHistory.length > 0) {
+    summaryEl.textContent = getCompactMatchSummary();
+  }
 }
     function getCompactMatchSummary() {
   const [p1, p2] = players;
