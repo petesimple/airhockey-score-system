@@ -205,6 +205,9 @@
     let isPlayer1Left = true;
 
     function startMatch() {
+      // Store names in localStorage
+localStorage.setItem('player1Name', document.getElementById('player1Name').value);
+localStorage.setItem('player2Name', document.getElementById('player2Name').value);
   // Set player names and match length
   players[0].name = document.getElementById('player1Name').value || 'Player 1';
   players[1].name = document.getElementById('player2Name').value || 'Player 2';
@@ -246,6 +249,16 @@
 
     document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('timer').addEventListener('click', toggleTimer);
+
+  // Restore scoreboard lock if needed
+  if (localStorage.getItem('scoreboardLocked') === 'true') {
+    document.getElementById('lockTopToggle').checked = true;
+    toggleLockTop(); // applies the spacer too
+  }
+
+  // Restore saved player names
+  document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
 });
     
     function renderButtons() {
@@ -410,8 +423,8 @@ function formatPlayerScore(player) {
   clearTimeoutTimer();
 
   // Reset UI inputs
-  document.getElementById('player1Name').value = '';
-  document.getElementById('player2Name').value = '';
+  document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
   document.getElementById('matchLength').value = '2';
 
   // Show setup UI
