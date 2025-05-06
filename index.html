@@ -287,30 +287,34 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     }
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
-  if (player.points >= 7) return;
-  player.points++;
-  updateScore();
+  if (player.points >= 7) return;  // Prevent scoring beyond 7 points
 
-  if (player.points === 7) {
-    player.games++;
+  player.points++;  // Increase the player's points
+  updateScore();    // Update the scoreboard
+
+  if (player.points === 7) {  // Check if the player has won the game
+    player.games++;  // Increase the game count for the player
     document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
     gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
     document.getElementById('nextGameBtn').style.display = 'inline-block';
-    updateHistory();
+    updateHistory();  // Update the game history
 
-    if (player.games === winGames) {
+    if (player.games === winGames) {  // Check if the player has won the match
       document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
-      clearInterval(timerInterval);
-      document.getElementById('summaryButtons').style.display = 'block';
-      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+      clearInterval(timerInterval);  // Stop the timer
+      document.getElementById('summaryButtons').style.display = 'block';  // Show the summary buttons
+      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });  // Trigger confetti effect
 
       // ✅ Highlight winner in skinny scoreboard
       updateSkinnyScoreboard(player.id);
+
+      // 🟡 Automatically send to Google Sheet
+      sendToGoogleSheet();  // Send match data to Google Sheets
     } else {
-      updateSkinnyScoreboard();
+      updateSkinnyScoreboard();  // Update skinny scoreboard without a match winner
     }
   } else {
-    updateSkinnyScoreboard();
+    updateSkinnyScoreboard();  // Update skinny scoreboard during the game
   }
 }
 
@@ -699,6 +703,48 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         </div>
       </div>
     </div>`;
+}
+    function sendToGoogleSheet() {
+  const [p1, p2] = players;
+  const winner = p1.games > p2.games ? p1.name : p2.name;
+  const date = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
+
+  const location = prompt("Enter match location:", "") || "";
+  const referee = prompt("Enter referee name (if any):", "") || "";
+  const notes = prompt("Additional notes:", "") || "";
+
+  const games = gameHistory.slice(0, 7);
+  while (games.length < 7) games.push("");
+
+  const data = {
+    date,         // ⬅️ New field added
+    player1: p1.name,
+    player2: p2.name,
+    winner,
+    location,
+    referee,
+    notes,
+    games
+  };
+
+  fetch("https://script.google.com/macros/s/AKfycbzCfc93oXn-c8DLQxCSj5FAhoiSSzE4P8rh8tdS29xvzOt0S6gGPC_YD8aOUdPiwsPt/exec", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => {
+    if (!response.ok) throw new Error("Network response was not ok");
+    return response.text();
+  })
+  .then(result => {
+    alert("Match data successfully saved to Google Sheet.");
+  })
+  .catch(error => {
+    console.error("Error sending data to Google Sheet:", error);
+    alert("Failed to send match data. Please try again.");
+  });
 }
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
