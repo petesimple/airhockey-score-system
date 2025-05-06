@@ -288,6 +288,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
   if (player.points >= 7) return;
+
   player.points++;
   updateScore();
 
@@ -304,8 +305,11 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
       document.getElementById('summaryButtons').style.display = 'block';
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
 
-      // ✅ Highlight winner in skinny scoreboard
       updateSkinnyScoreboard(player.id);
+
+      // ➕ Append compact game summary below time
+      const compact = getCompactMatchSummary();
+      document.getElementById('skinnyScoreboard').innerHTML += `<div style="margin-top: 5px; font-size: 0.9em; color: #ccc;">${compact}</div>`;
     } else {
       updateSkinnyScoreboard();
     }
@@ -699,6 +703,23 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         </div>
       </div>
     </div>`;
+}
+    function getCompactMatchSummary() {
+  const [p1, p2] = players;
+  const p1Initial = p1.name.charAt(0).toUpperCase() || 'P1';
+  const p2Initial = p2.name.charAt(0).toUpperCase() || 'P2';
+
+  return gameHistory.map((g, i) => {
+    const match = g.match(/(\d+)\s*-\s*(\d+)/);
+    if (!match) return `G${i+1} ?`;
+    const p1Score = parseInt(match[1], 10);
+    const p2Score = parseInt(match[2], 10);
+    const winnerInitial = p1Score > p2Score ? p1Initial : p2Initial;
+    const loserInitial = p1Score > p2Score ? p2Initial : p1Initial;
+    const winnerScore = Math.max(p1Score, p2Score);
+    const loserScore = Math.min(p1Score, p2Score);
+    return `G${i+1} ${winnerInitial}${winnerScore}-${loserScore}${loserInitial}`;
+  }).join(', ');
 }
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
