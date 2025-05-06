@@ -171,7 +171,7 @@
     <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
   <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Show Skinny Scoreboard</label>
 </div>
-    <div style="margin-bottom: 10px;">
+    <div id="lockTopWrapper" style="margin-bottom: 10px;">
   <label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" /> Lock Scoreboard to Top</label>
 </div>
 
@@ -620,6 +620,12 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   skinny.classList.toggle('locked', isChecked);
 
   document.body.style.paddingTop = isChecked ? '80px' : '';
+
+  // Hide or show the "Lock Scoreboard to Top" checkbox
+  const lockTopWrapper = document.getElementById('lockTopWrapper');
+  if (lockTopWrapper) {
+    lockTopWrapper.style.display = isChecked ? 'none' : 'block';
+  }
 }
     function updateSkinnyScoreboard() {
   const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
