@@ -707,7 +707,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     function sendToGoogleSheet() {
   const [p1, p2] = players;
   const winner = p1.games > p2.games ? p1.name : p2.name;
-  const date = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  const date = new Date().toISOString().split('T')[0];
 
   const location = prompt("Enter match location:", "") || "";
   const referee = prompt("Enter referee name (if any):", "") || "";
@@ -727,7 +727,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     games
   };
 
-  fetch("https://script.google.com/macros/s/AKfycbx9dudp_pB3doEbTkpn4Dxte5o4F0CWDoXMh4ypEJCvt4MbnPgIdrc5kkI24GCnr3SC/exec", {
+  fetch("https://script.google.com/macros/s/AKfycbysO1lRj1RZ-ZUbwrdper8_TygKiieOIqY43v5ai7qak32BmyfondINdm5SGo0C9xnt/exec", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
