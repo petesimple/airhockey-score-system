@@ -707,7 +707,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     function sendToGoogleSheet() {
   const [p1, p2] = players;
   const winner = p1.games > p2.games ? p1.name : p2.name;
-  const date = new Date().toISOString().split('T')[0];  // Auto-fill today's date
+  const date = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
   const location = prompt("Enter match location:", "") || "";
   const referee = prompt("Enter referee name (if any):", "") || "";
@@ -717,7 +717,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   while (games.length < 7) games.push("");
 
   const data = {
-    date,         // ⬅️ Auto-filled date
+    date,
     player1: p1.name,
     player2: p2.name,
     winner,
