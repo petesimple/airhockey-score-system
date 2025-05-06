@@ -647,7 +647,9 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   }
 }
     function updateSkinnyScoreboard() {
-  const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+  const left = isPlayer1Left ? players[0] : players[1];
+  const right = isPlayer1Left ? players[1] : players[0];
+
   const timerText = document.getElementById('timer').textContent
     .replace('Match Time: ', '')
     .replace(' (Paused)', '') || '0:00';
@@ -661,8 +663,10 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
       <div style="text-align: left;">
         <div>${left.name}</div>
-        <div style="color: #d32f2f;">${left.points}</div>
-        <div style="font-size: 1.2em; color: #d32f2f;">${'● '.repeat(left.games).trim()}</div>
+        <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
+        <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
+          ${'● '.repeat(left.games).trim()}
+        </div>
       </div>
       <div style="text-align: center;">
         <div>Time</div>
@@ -671,8 +675,10 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       </div>
       <div style="text-align: right;">
         <div>${right.name}</div>
-        <div style="color: #1976d2;">${right.points}</div>
-        <div style="font-size: 1.2em; color: #1976d2;">${'● '.repeat(right.games).trim()}</div>
+        <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
+        <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
+          ${'● '.repeat(right.games).trim()}
+        </div>
       </div>
     </div>`;
 }
