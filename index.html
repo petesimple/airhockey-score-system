@@ -131,6 +131,12 @@
   z-index: 999;
   width: calc(100% - 40px);
 }
+    .winner {
+    background-color: #444;
+    box-shadow: 0 0 10px 2px yellow;
+    border-radius: 5px;
+    padding: 4px;
+  }
   </style>
 </head>
 <body>
@@ -280,24 +286,33 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
 `;
     }
         function scorePoint(id) {
-      const player = players.find(p => p.id === id);
-      if (player.points >= 7) return;
-      player.points++;
-      updateScore();
-      if (player.points === 7) {
-        player.games++;
-        document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
-        gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
-        document.getElementById('nextGameBtn').style.display = 'inline-block';
-        updateHistory();
-        if (player.games === winGames) {
-          document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
-          clearInterval(timerInterval);
-          document.getElementById('summaryButtons').style.display = 'block';
-          confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-        }
-      }
+  const player = players.find(p => p.id === id);
+  if (player.points >= 7) return;
+  player.points++;
+  updateScore();
+
+  if (player.points === 7) {
+    player.games++;
+    document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
+    gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
+    document.getElementById('nextGameBtn').style.display = 'inline-block';
+    updateHistory();
+
+    if (player.games === winGames) {
+      document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
+      clearInterval(timerInterval);
+      document.getElementById('summaryButtons').style.display = 'block';
+      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+
+      // ✅ Highlight winner in skinny scoreboard
+      updateSkinnyScoreboard(player.id);
+    } else {
+      updateSkinnyScoreboard();
     }
+  } else {
+    updateSkinnyScoreboard();
+  }
+}
 
     function removePoint(id) {
       const player = players.find(p => p.id === id);
@@ -646,7 +661,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     lockTopWrapper.style.display = isChecked ? 'none' : 'block';
   }
 }
-    function updateSkinnyScoreboard() {
+    function updateSkinnyScoreboard(winnerId = null) {
   const left = isPlayer1Left ? players[0] : players[1];
   const right = isPlayer1Left ? players[1] : players[0];
 
@@ -659,9 +674,12 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     ? `<div style="color: yellow; font-size: 0.9em; margin-top: 2px;">Timeout: ${document.getElementById('timeoutTimer').textContent.replace('Timeout: ', '')}</div>`
     : '';
 
+  const leftClass = winnerId === left.id ? 'winner' : '';
+  const rightClass = winnerId === right.id ? 'winner' : '';
+
   document.getElementById('skinnyScoreboard').innerHTML = `
     <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
-      <div style="text-align: left;">
+      <div class="${leftClass}" style="text-align: left;">
         <div>${left.name}</div>
         <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
         <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
@@ -673,7 +691,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         <div>${timerText}</div>
         ${timeoutHTML}
       </div>
-      <div style="text-align: right;">
+      <div class="${rightClass}" style="text-align: right;">
         <div>${right.name}</div>
         <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
         <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
