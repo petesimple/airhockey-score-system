@@ -122,6 +122,15 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+    #skinnyScoreboard.locked {
+  position: fixed;
+  top: 20px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  z-index: 999;
+  width: calc(100% - 40px);
+}
   </style>
 </head>
 <body>
@@ -606,7 +615,9 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     function toggleSkinnyScoreboard() {
   const skinny = document.getElementById('skinnyScoreboard');
   const isChecked = document.getElementById('toggleSkinny').checked;
+
   skinny.style.display = isChecked ? 'flex' : 'none';
+  skinny.classList.toggle('locked', isChecked);
 }
     function updateSkinnyScoreboard() {
   const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
