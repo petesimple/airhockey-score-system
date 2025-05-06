@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+check it please - <!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="manifest" href="manifest.json" />
@@ -157,6 +157,7 @@
     <option value="4">Best of 7</option>
   </select>
   <button onclick="startMatch()">Start Match</button>
+</div>
 
   <div id="scoreSection" style="display:none">
     <div id="fullscoreboard">
@@ -286,34 +287,30 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     }
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
-  if (player.points >= 7) return;  // Prevent scoring beyond 7 points
+  if (player.points >= 7) return;
+  player.points++;
+  updateScore();
 
-  player.points++;  // Increase the player's points
-  updateScore();    // Update the scoreboard
-
-  if (player.points === 7) {  // Check if the player has won the game
-    player.games++;  // Increase the game count for the player
+  if (player.points === 7) {
+    player.games++;
     document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
     gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
     document.getElementById('nextGameBtn').style.display = 'inline-block';
-    updateHistory();  // Update the game history
+    updateHistory();
 
-    if (player.games === winGames) {  // Check if the player has won the match
+    if (player.games === winGames) {
       document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
-      clearInterval(timerInterval);  // Stop the timer
-      document.getElementById('summaryButtons').style.display = 'block';  // Show the summary buttons
-      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });  // Trigger confetti effect
+      clearInterval(timerInterval);
+      document.getElementById('summaryButtons').style.display = 'block';
+      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
 
       // ✅ Highlight winner in skinny scoreboard
       updateSkinnyScoreboard(player.id);
-
-      // 🟡 Automatically send to Google Sheet
-      console.log("Match complete. (Google Sheet integration disabled)");
     } else {
-      updateSkinnyScoreboard();  // Update skinny scoreboard without a match winner
+      updateSkinnyScoreboard();
     }
   } else {
-    updateSkinnyScoreboard();  // Update skinny scoreboard during the game
+    updateSkinnyScoreboard();
   }
 }
 
@@ -704,6 +701,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     </div>`;
 }
 </script>
-    <div id="versionLabel" style="margin-top: 10px;">v1.5.5 (streaming)</div>
+  <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
+  ver1.5.6 – (streaming)
+</div>
 </body>
 </html>
