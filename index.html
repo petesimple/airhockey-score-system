@@ -714,11 +714,10 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
           ${'● '.repeat(left.games).trim()}
         </div>
       </div>
-      <div style="text-align: center; min-width: 100px;">
-        <div>Time</div>
-        <div>${timerText}</div>
-        ${timeoutHTML}
-      </div>
+      <div style="text-align: center; min-width: 100px; font-size: 1.4em;">
+  <div style="font-weight: bold;">${timerText}</div>
+  ${timeoutHTML}
+</div>
       <div class="${rightClass}" style="text-align: right; padding-left: 20px;">
         <div>${right.name}</div>
         <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
