@@ -612,7 +612,11 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       </div>
       <div style="text-align: center;">
         <div>Time</div>
-        <div>${document.getElementById('timer').textContent.split(' ')[1]}</div>
+        <div>${
+  document.getElementById('timer').textContent.includes(':')
+    ? document.getElementById('timer').textContent.replace('Match Time: ', '').replace(' (Paused)', '')
+    : '0:00'
+}</div>
       </div>
       <div style="text-align: right;">
         <div>${right.name}</div>
