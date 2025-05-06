@@ -152,8 +152,9 @@
 </div>
     <div id="scoreboardSpacer" style="height: 0;"></div>
     <label style="display: block; margin-top: 20px;">
-  
+
 </label>
+    <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
     <div class="button-columns" id="buttonColumns">
       <div class="player-buttons" id="leftPlayerButtons"></div>
       <div class="player-buttons" id="rightPlayerButtons"></div>
@@ -161,12 +162,16 @@
     <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
   <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Show Skinny Scoreboard</label>
 </div>
-    <div>
-    <input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" />
-  Lock Scoreboard to Top
-  </div>
-    <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
-    <button onclick="resetMatch()">Reset Match</button>
+    <div style="margin-bottom: 10px;">
+  <label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" /> Lock Scoreboard to Top</label>
+</div>
+
+
+
+<!-- 👇 Move Reset Match button BELOW the toggles -->
+<div style="margin-top: 15px;">
+  <button onclick="resetMatch()">Reset Match</button>
+</div>
     <div id="gameWinner"></div>
     <div id="matchWinner"></div>
     <div id="history"></div>
