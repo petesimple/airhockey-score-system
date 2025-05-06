@@ -308,7 +308,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
       updateSkinnyScoreboard(player.id);
 
       // 🟡 Automatically send to Google Sheet
-      sendToGoogleSheet();  // Send match data to Google Sheets
+      console.log("Match complete. (Google Sheet integration disabled)");
     } else {
       updateSkinnyScoreboard();  // Update skinny scoreboard without a match winner
     }
@@ -702,74 +702,6 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         </div>
       </div>
     </div>`;
-}
-    function sendToGoogleSheet() {
-  const [p1, p2] = players;
-  const winner = p1.games > p2.games ? p1.name : p2.name;
-  const date = new Date().toISOString().split('T')[0];
-
-  const location = prompt("Enter match location:", "") || "";
-  const referee = prompt("Enter referee name (if any):", "") || "";
-  const notes = prompt("Additional notes:", "") || "";
-
-  const games = gameHistory.slice(0, 7);
-  while (games.length < 7) games.push("");
-
-  const data = {
-    date,
-    player1: p1.name,
-    player2: p2.name,
-    winner,
-    location,
-    referee,
-    notes,
-    games
-  };
-
-  fetch("https://script.google.com/macros/s/AKfycbysO1lRj1RZ-ZUbwrdper8_TygKiieOIqY43v5ai7qak32BmyfondINdm5SGo0C9xnt/exec", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => {
-    if (!response.ok) throw new Error("Network response was not ok");
-    return response.text();
-  })
-  .then(result => {
-    alert("Match data successfully saved to Google Sheet.");
-  })
-  .catch(error => {
-    console.error("Error sending data to Google Sheet:", error);
-    alert("Failed to send match data. Please try again.");
-  });
-}
-</script>
-  <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
-  ver1.5.6 – streaming
-</div>
-    </div>
-  <button onclick="sendTestData()">Send Test Data</button>
-<script>
-function sendTestData() {
-  fetch("https://script.google.com/macros/s/AKfycbysO1lRj1RZ-ZUbwrdper8_TygKiieOIqY43v5ai7qak32BmyfondINdm5SGo0C9xnt/exec", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      date: new Date().toISOString(),
-      player1: "Dev Player A",
-      player2: "Dev Player B",
-      winner: "Dev Player A",
-      location: "Test Field",
-      referee: "Dev Ref",
-      notes: "Testing Google Sheet connection",
-      games: ["7-3", "5-7", "7-6"]
-    })
-  })
-  .then(res => res.text())
-  .then(text => alert("Response: " + text))
-  .catch(err => alert("Error: " + err.message));
 }
 </script>
 </body>
