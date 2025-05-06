@@ -648,6 +648,15 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 }
     function updateSkinnyScoreboard() {
   const [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+  const timerText = document.getElementById('timer').textContent
+    .replace('Match Time: ', '')
+    .replace(' (Paused)', '') || '0:00';
+
+  const timeoutActive = document.getElementById('timeoutTimer').style.display === 'block';
+  const timeoutHTML = timeoutActive
+    ? `<div style="color: yellow; font-size: 0.9em; margin-top: 2px;">Timeout: ${document.getElementById('timeoutTimer').textContent.replace('Timeout: ', '')}</div>`
+    : '';
+
   document.getElementById('skinnyScoreboard').innerHTML = `
     <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
       <div style="text-align: left;">
@@ -657,11 +666,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       </div>
       <div style="text-align: center;">
         <div>Time</div>
-        <div>${
-  document.getElementById('timer').textContent.includes(':')
-    ? document.getElementById('timer').textContent.replace('Match Time: ', '').replace(' (Paused)', '')
-    : '0:00'
-}</div>
+        <div>${timerText}</div>
+        ${timeoutHTML}
       </div>
       <div style="text-align: right;">
         <div>${right.name}</div>
