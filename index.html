@@ -307,9 +307,12 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
 
       updateSkinnyScoreboard(player.id);
 
-      // ➕ Append compact game summary below time
+      // ➕ Append compact game summary below the time area
       const compact = getCompactMatchSummary();
-      document.getElementById('skinnyScoreboard').innerHTML += `<div style="margin-top: 5px; font-size: 0.9em; color: #ccc;">${compact}</div>`;
+      const summaryContainer = document.getElementById('compactSummary');
+      if (summaryContainer) {
+        summaryContainer.textContent = compact;
+      }
     } else {
       updateSkinnyScoreboard();
     }
@@ -694,6 +697,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
         <div>Time</div>
         <div>${timerText}</div>
         ${timeoutHTML}
+        <div id="compactSummary" style="margin-top: 5px; font-size: 0.9em; color: #ccc;"></div>
       </div>
       <div class="${rightClass}" style="text-align: right;">
         <div>${right.name}</div>
