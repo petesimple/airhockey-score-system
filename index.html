@@ -285,15 +285,29 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('timer').addEventListener('click', toggleTimer);
 
+  // Prefill from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const p1 = urlParams.get('p1');
+  const p2 = urlParams.get('p2');
+
+  if (p1) {
+    document.getElementById('player1Name').value = p1;
+    localStorage.setItem('player1Name', p1);
+  }
+  if (p2) {
+    document.getElementById('player2Name').value = p2;
+    localStorage.setItem('player2Name', p2);
+  }
+
   // Restore scoreboard lock if needed
   if (localStorage.getItem('scoreboardLocked') === 'true') {
     document.getElementById('lockTopToggle').checked = true;
     toggleLockTop(); // applies the spacer too
   }
 
-  // Restore saved player names
-  document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
-  document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
+  // Restore saved player names (if not overridden by URL)
+  if (!p1) document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  if (!p2) document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
 });
     
     function renderButtons() {
