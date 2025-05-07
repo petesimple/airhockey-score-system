@@ -79,7 +79,7 @@
   <div id="result"></div>
   <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
   <canvas id="qrcode"></canvas>
-
+  
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     let generatedUrl = '';
@@ -94,9 +94,10 @@
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
 
   if (table) {
-  generatedUrl += `&table=${encodeURIComponent(table)}`;
-}
-const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
+    generatedUrl += `&table=${encodeURIComponent(table)}`;
+  }
+
+  const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
 
   document.getElementById('result').innerHTML = `
     <p><strong>Match Link:</strong></p>
@@ -114,6 +115,10 @@ const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}<
   }, function (error) {
     if (error) console.error(error);
   });
+
+  // 📝 Save to localStorage log
+  const readableMatch = `${decodeURIComponent(p1)} vs ${decodeURIComponent(p2)} – Best of ${match}${table ? ` @ Table ${table}` : ''}`;
+  addToMatchLog(readableMatch, generatedUrl);
 }
 
     function copyLink() {
@@ -127,6 +132,38 @@ const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}<
         }, 2000);
       });
     }
+    function addToMatchLog(text, url) {
+  const logItem = { text, url };
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+  log.unshift(logItem); // newest first
+  localStorage.setItem('matchLog', JSON.stringify(log));
+  renderMatchLog();
+}
+
+function renderMatchLog() {
+  const logList = document.getElementById('logList');
+  logList.innerHTML = '';
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+  log.forEach(item => {
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a>`;
+    logList.appendChild(li);
+  });
+}
+
+function clearMatchLog() {
+  const sure = confirm("Are you sure you want to clear the match log?");
+  if (sure) {
+    localStorage.removeItem('matchLog');
+    renderMatchLog();
+  }
+}
+    document.addEventListener('DOMContentLoaded', renderMatchLog);
   </script>
+  <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
+  <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
+</details>
+
 </body>
 </html>
