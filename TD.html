@@ -33,43 +33,74 @@
     a {
       color: #00eaff;
     }
+    #copyBtn {
+      margin-top: 10px;
+      padding: 6px 14px;
+      font-size: 0.9em;
+      background: #333;
+      color: #0f0;
+    }
+    #copyBtn.copied {
+      background: #0f0;
+      color: #000;
+    }
   </style>
 </head>
 <body>
-  <h1>Tournament Director: Match URL Generator</h1>
-  <p>Generate a player match link with optional QR code.</p>
+  <h1>Tournament Director</h1>
+  <p>Generate a match link with QR code and clipboard support</p>
 
-  <input type="text" id="player1" placeholder="Player 1 Name" />
-  <input type="text" id="player2" placeholder="Player 2 Name" />
+  <input type="text" id="player1" placeholder="Player 1" />
+  <input type="text" id="player2" placeholder="Player 2" />
   <select id="matchLength">
     <option value="2">Best of 3</option>
     <option value="3">Best of 5</option>
     <option value="4">Best of 7</option>
   </select>
   <br/>
-  <button onclick="generateMatchLink()">Generate Link</button>
+  <button onclick="generateMatchLink()">Generate Match Link</button>
 
   <div id="result"></div>
+  <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
   <div id="qrcode"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
+    let generatedUrl = '';
+
     function generateMatchLink() {
       const p1 = encodeURIComponent(document.getElementById('player1').value.trim());
       const p2 = encodeURIComponent(document.getElementById('player2').value.trim());
       const match = document.getElementById('matchLength').value;
 
       const baseUrl = window.location.origin + '/airhockey-score-system/';
-      const fullUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
+      generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
 
       document.getElementById('result').innerHTML = `
         <p><strong>Match Link:</strong></p>
-        <a href="${fullUrl}" target="_blank">${fullUrl}</a>
+        <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
       `;
+      document.getElementById('copyBtn').style.display = 'inline-block';
+      document.getElementById('copyBtn').classList.remove('copied');
+      document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
 
-      // Generate QR code
-      QRCode.toCanvas(document.getElementById('qrcode'), fullUrl, { width: 220, color: { dark: "#ffffff", light: "#111111" } }, function (error) {
+      QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+        width: 220,
+        color: { dark: "#ffffff", light: "#111111" }
+      }, function (error) {
         if (error) console.error(error);
+      });
+    }
+
+    function copyLink() {
+      navigator.clipboard.writeText(generatedUrl).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.classList.add('copied');
+        btn.innerText = 'Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerText = 'Copy to Clipboard';
+        }, 2000);
       });
     }
   </script>
