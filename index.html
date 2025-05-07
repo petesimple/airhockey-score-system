@@ -132,11 +132,12 @@
   width: calc(100% - 40px);
 }
     .winner {
-    background-color: #444;
-    box-shadow: 0 0 10px 2px yellow;
-    border-radius: 5px;
-    padding: 4px;
-  }
+  background-color: #ff0 !important;
+  color: black !important;
+  box-shadow: 0 0 12px 4px #ff0;
+  font-weight: bold;
+  border-radius: 6px;
+}
     #skinnyScoreboard {
   display: none;
   flex-direction: column;
@@ -718,33 +719,38 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     ? `<div style="color: yellow; font-size: 0.9em; margin-top: 2px;">Timeout: ${document.getElementById('timeoutTimer').textContent.replace('Timeout: ', '')}</div>`
     : '';
 
-  const leftClass = winnerId === left.id ? 'winner' : '';
-  const rightClass = winnerId === right.id ? 'winner' : '';
+  // Normalize winnerId to avoid null/undefined or stray spaces
+  const winId = winnerId?.trim?.() || null;
 
-  // Update main scoreboard layout
-  document.getElementById('skinnyContent').innerHTML = `
-    <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
-      <div class="${leftClass}" style="text-align: left; padding-right: 20px;">
-        <div>${left.name}</div>
-        <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
-        <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
-          ${'● '.repeat(left.games).trim()}
-        </div>
-      </div>
-      <div style="text-align: center; min-width: 100px; font-size: 1.4em;">
-  <div style="font-weight: bold;">${timerText}</div>
-  ${timeoutHTML}
-</div>
-      <div class="${rightClass}" style="text-align: right; padding-left: 20px;">
-        <div>${right.name}</div>
-        <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
-        <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
-          ${'● '.repeat(right.games).trim()}
-        </div>
+  const leftHTML = `
+    <div class="skinny-player ${winId === left.id ? 'winner' : ''}" style="text-align: left; padding-right: 20px;">
+      <div>${left.name}</div>
+      <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
+      <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
+        ${'● '.repeat(left.games).trim()}
       </div>
     </div>`;
 
-  // Update compact match summary in lines of 4 games each
+  const rightHTML = `
+    <div class="skinny-player ${winId === right.id ? 'winner' : ''}" style="text-align: right; padding-left: 20px;">
+      <div>${right.name}</div>
+      <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
+      <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
+        ${'● '.repeat(right.games).trim()}
+      </div>
+    </div>`;
+
+  document.getElementById('skinnyContent').innerHTML = `
+    <div style="display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black'; font-size: 1.2em;">
+      ${leftHTML}
+      <div style="text-align: center; min-width: 100px; font-size: 1.4em;">
+        <div style="font-weight: bold;">${timerText}</div>
+        ${timeoutHTML}
+      </div>
+      ${rightHTML}
+    </div>`;
+
+  // Update compact match summary in lines of 4
   const summaryEl = document.getElementById('compactSummary');
   if (summaryEl && gameHistory.length > 0) {
     const compact = getCompactMatchSummary();
