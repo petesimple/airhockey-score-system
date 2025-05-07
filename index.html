@@ -291,6 +291,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const p1 = urlParams.get('p1');
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
+  const table = urlParams.get('table');
 
   if (p1) {
     document.getElementById('player1Name').value = p1;
@@ -302,6 +303,11 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   }
   if (match && ['2', '3', '4'].includes(match)) {
     document.getElementById('matchLength').value = match;
+  }
+  if (table) {
+    const banner = document.getElementById('tableNumberBanner');
+    banner.textContent = `📍 Table ${table}`;
+    banner.style.display = 'block';
   }
 
   // Restore scoreboard lock if needed
