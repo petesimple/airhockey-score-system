@@ -132,10 +132,15 @@
         }, 2000);
       });
     }
-    function addToMatchLog(text, url) {
-  const logItem = { text, url };
+    
+function addToMatchLog(text, url) {
+  const logItem = {
+    text,
+    url,
+    time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  };
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  log.unshift(logItem); // newest first
+  log.unshift(logItem); // Add to top
   localStorage.setItem('matchLog', JSON.stringify(log));
   renderMatchLog();
 }
@@ -146,13 +151,13 @@ function renderMatchLog() {
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   log.forEach(item => {
     const li = document.createElement('li');
-    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a>`;
+    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.time})</span>`;
     logList.appendChild(li);
   });
 }
 
 function clearMatchLog() {
-  const sure = confirm("Are you sure you want to clear the match log?");
+  const sure = confirm("⚠️ Are you sure you want to clear the match log?");
   if (sure) {
     localStorage.removeItem('matchLog');
     renderMatchLog();
@@ -163,7 +168,8 @@ function clearMatchLog() {
   <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
   <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
-</details>
+  <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
+</details>>
 
 </body>
 </html>
