@@ -317,23 +317,18 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
 
-  // Prevent further scoring if the game is done or the player already has 7
-  if ((players[0].points === 7 || players[1].points === 7) ||
-      player.points >= 7 ||
-      document.getElementById('nextGameBtn').style.display.includes('inline')) {
-    return;
-  }
+  // Don't allow score to increase beyond 7
+  if (player.points >= 7) return;
 
   player.points++;
   updateScore();
 
-  // Lock score when someone hits 7, but don't assign game win yet
+  // If someone hits 7, show "Next Game" button
   if (player.points === 7) {
     document.getElementById('nextGameBtn').style.display = 'inline-block';
-    updateSkinnyScoreboard(); // still show update
-  } else {
-    updateSkinnyScoreboard();
   }
+
+  updateSkinnyScoreboard();
 }
 
     function removePoint(id) {
