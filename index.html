@@ -637,6 +637,9 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   if (event.key === 'ArrowRight') scorePoint(rightPlayer);
   if (event.key.toLowerCase() === 'a') callTimeout(leftPlayer);
   if (event.key.toLowerCase() === 'd') callTimeout(rightPlayer);
+  if (event.key === 'Enter' && document.getElementById('nextGameBtn').style.display !== 'none') {
+    startNextGame();
+  }    
 });
   </script>
   <script>
