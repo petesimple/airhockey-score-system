@@ -432,7 +432,7 @@ function formatPlayerScore(player) {
       document.getElementById('summaryButtons').style.display = 'block';
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
 
-      updateSkinnyScoreboard(winner.id);
+      updateSkinnyScoreboard(winner.id); // 👈 winner highlight passed in here
 
       const compact = getCompactMatchSummary();
       const summaryContainer = document.getElementById('compactSummary');
@@ -453,7 +453,7 @@ function formatPlayerScore(player) {
   isPlayer1Left = !isPlayer1Left;
   renderButtons();
   updateScore();
-  updateSkinnyScoreboard();
+  updateSkinnyScoreboard(); // 👈 this updates layout between games, without highlight
 }
 
     function resetMatch() {
