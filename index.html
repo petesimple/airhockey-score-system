@@ -301,35 +301,20 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     }
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
- if (player.points >= 7 && !document.getElementById('nextGameBtn').style.display.includes('inline')) return;
+
+  // If someone already hit 7 and next game isn't started, ignore further scoring
+  if ((players[0].points === 7 || players[1].points === 7) &&
+      !document.getElementById('nextGameBtn').style.display.includes('inline')) {
+    return;
+  }
 
   player.points++;
   updateScore();
 
+  // Lock score when someone hits 7, but don't assign game win yet
   if (player.points === 7) {
-    player.games++;
-    document.getElementById('gameWinner').textContent = `${player.name} wins this game!`;
-    gameHistory.push(`${players[0].name} ${players[0].points} - ${players[1].points} ${players[1].name}`);
     document.getElementById('nextGameBtn').style.display = 'inline-block';
-    updateHistory();
-
-    if (player.games === winGames) {
-      document.getElementById('matchWinner').textContent = `${player.name} wins the match!`;
-      clearInterval(timerInterval);
-      document.getElementById('summaryButtons').style.display = 'block';
-      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-
-      updateSkinnyScoreboard(player.id);
-
-      // ➕ Append compact game summary below the time area
-      const compact = getCompactMatchSummary();
-      const summaryContainer = document.getElementById('compactSummary');
-      if (summaryContainer) {
-        summaryContainer.textContent = compact;
-      }
-    } else {
-      updateSkinnyScoreboard();
-    }
+    updateSkinnyScoreboard(); // still show update
   } else {
     updateSkinnyScoreboard();
   }
@@ -431,14 +416,45 @@ function formatPlayerScore(player) {
     }
 
     function startNextGame() {
-      players.forEach(p => { p.points = 0; p.timeoutUsed = false });
-      document.getElementById('nextGameBtn').style.display = 'none';
-      document.getElementById('gameWinner').textContent = '';
-      isPlayer1Left = !isPlayer1Left;
-      renderButtons();
-      updateScore();
-      updateSkinnyScoreboard();
+  const p1 = players[0];
+  const p2 = players[1];
+  const winner = p1.points === 7 ? p1 : (p2.points === 7 ? p2 : null);
+
+  if (winner) {
+    winner.games++;
+    document.getElementById('gameWinner').textContent = `${winner.name} wins this game!`;
+    gameHistory.push(`${p1.name} ${p1.points} - ${p2.points} ${p2.name}`);
+    updateHistory();
+
+    if (winner.games === winGames) {
+      document.getElementById('matchWinner').textContent = `${winner.name} wins the match!`;
+      clearInterval(timerInterval);
+      document.getElementById('summaryButtons').style.display = 'block';
+      confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+
+      updateSkinnyScoreboard(winner.id);
+
+      const compact = getCompactMatchSummary();
+      const summaryContainer = document.getElementById('compactSummary');
+      if (summaryContainer) {
+        summaryContainer.textContent = compact;
+      }
     }
+  }
+
+  // Reset for next game
+  players.forEach(p => {
+    p.points = 0;
+    p.timeoutUsed = false;
+  });
+
+  document.getElementById('nextGameBtn').style.display = 'none';
+  document.getElementById('gameWinner').textContent = '';
+  isPlayer1Left = !isPlayer1Left;
+  renderButtons();
+  updateScore();
+  updateSkinnyScoreboard();
+}
 
     function resetMatch() {
   const confirmReset = confirm("Do you really want to reset the match?");
@@ -763,7 +779,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 }
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
-  ver1.5.7 – (streaming)
+  ver1.5.8 – (connbonn)
 </div>
 </body>
 </html>
