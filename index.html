@@ -298,6 +298,9 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     document.getElementById('player2Name').value = p2;
     localStorage.setItem('player2Name', p2);
   }
+  if (match && ['2', '3', '4'].includes(match)) {
+    document.getElementById('matchLength').value = match;
+  }
 
   // Restore scoreboard lock if needed
   if (localStorage.getItem('scoreboardLocked') === 'true') {
