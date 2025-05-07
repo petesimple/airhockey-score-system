@@ -439,8 +439,9 @@ function formatPlayerScore(player) {
       }
     }
 
-    // ✅ Highlight the winner in the skinny scoreboard for this game
+    // ✅ Temporarily highlight the winner in the skinny scoreboard
     updateSkinnyScoreboard(winner.id);
+    setTimeout(() => updateSkinnyScoreboard(), 1500);
   }
 
   // Reset for next game
@@ -454,7 +455,6 @@ function formatPlayerScore(player) {
   isPlayer1Left = !isPlayer1Left;
   renderButtons();
   updateScore();
-  updateSkinnyScoreboard(); // 👈 Reset layout for the new game
 }
 
     function resetMatch() {
