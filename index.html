@@ -289,6 +289,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const urlParams = new URLSearchParams(window.location.search);
   const p1 = urlParams.get('p1');
   const p2 = urlParams.get('p2');
+  const match = urlParams.get('match');
 
   if (p1) {
     document.getElementById('player1Name').value = p1;
