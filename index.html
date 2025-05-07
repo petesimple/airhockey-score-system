@@ -61,6 +61,9 @@
   50%  { transform: scale(1.05); opacity: 0.9; }
   100% { transform: scale(1); opacity: 1; }
 }
+    .pulse {
+  animation: pulse 1s infinite;
+}
 
 #timer.running {
   animation: pulse 1s infinite;
@@ -449,11 +452,28 @@ function formatPlayerScore(player) {
       if (summaryContainer) {
         summaryContainer.textContent = compact;
       }
-    }
 
-    // ✅ Temporarily highlight the winner in the skinny scoreboard
-    updateSkinnyScoreboard(winner.id);
-    setTimeout(() => updateSkinnyScoreboard(), 1500);
+      // ✅ Temporarily pulse the match winner's name in the skinny scoreboard
+      updateSkinnyScoreboard(winner.id);
+
+      // Remove any previous pulses
+      const skinnyPlayers = document.querySelectorAll('.skinny-player');
+      skinnyPlayers.forEach(el => el.classList.remove('pulse'));
+
+      // Add pulse to winner
+      const winnerDiv = document.querySelector('.skinny-player.winner');
+      if (winnerDiv) winnerDiv.classList.add('pulse');
+
+      // Remove pulse after 4 seconds
+      setTimeout(() => {
+        if (winnerDiv) winnerDiv.classList.remove('pulse');
+        updateSkinnyScoreboard(); // reset view cleanly
+      }, 4000);
+    } else {
+      // Game win only — update skinny board highlight briefly
+      updateSkinnyScoreboard(winner.id);
+      setTimeout(() => updateSkinnyScoreboard(), 1500);
+    }
   }
 
   // Reset for next game
