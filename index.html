@@ -317,9 +317,10 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
 
-  // If someone already hit 7 and next game isn't started, ignore further scoring
-  if ((players[0].points === 7 || players[1].points === 7) &&
-      !document.getElementById('nextGameBtn').style.display.includes('inline')) {
+  // Prevent further scoring if the game is done or the player already has 7
+  if ((players[0].points === 7 || players[1].points === 7) ||
+      player.points >= 7 ||
+      document.getElementById('nextGameBtn').style.display.includes('inline')) {
     return;
   }
 
