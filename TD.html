@@ -48,19 +48,6 @@
 </head>
 <body>
   <img src="TDlogo.png" alt="Tournament Director Logo" style="max-width: 300px; margin-bottom: 20px;" />
-  <h1>Tournament Director</h1>
-  <p>Generate a match link with QR code and clipboard support</p>
-
-  <input type="text" id="player1" placeholder="Player 1" />
-  <input type="text" id="player2" placeholder="Player 2" />
-  <select id="matchLength">
-    <option value="2">Best of 3</option>
-    <option value="3">Best of 5</option>
-    <option value="4">Best of 7</option>
-  </select>
-  <br/>
-  <button onclick="generateMatchLink()">Generate Match Link</button>
-
   <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Tournament Director Guide)</summary>
   <div style="margin-top: 10px; line-height: 1.5;">
@@ -82,6 +69,18 @@
     <p>That's it! This tool makes assigning tables and matches lightning fast. 🏓</p>
   </div>
 </details>
+  <h1>Tournament Director</h1>
+  <p>Generate a match link with QR code and clipboard support</p>
+
+  <input type="text" id="player1" placeholder="Player 1" />
+  <input type="text" id="player2" placeholder="Player 2" />
+  <select id="matchLength">
+    <option value="2">Best of 3</option>
+    <option value="3">Best of 5</option>
+    <option value="4">Best of 7</option>
+  </select>
+  <br/>
+  <button onclick="generateMatchLink()">Generate Match Link</button>
   
   <div id="result"></div>
   <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
