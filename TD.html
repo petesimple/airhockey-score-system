@@ -134,10 +134,12 @@
     }
     
 function addToMatchLog(text, url) {
+  const now = new Date();
   const logItem = {
     text,
     url,
-    time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    date: now.toLocaleDateString()
   };
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   log.unshift(logItem); // Add to top
@@ -151,7 +153,7 @@ function renderMatchLog() {
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   log.forEach(item => {
     const li = document.createElement('li');
-    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.time})</span>`;
+    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
     logList.appendChild(li);
   });
 }
@@ -163,12 +165,35 @@ function clearMatchLog() {
     renderMatchLog();
   }
 }
+    function exportMatchLogCSV() {
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+  if (log.length === 0) {
+    alert("No matches to export.");
+    return;
+  }
+
+  const headers = ['Date', 'Time', 'Match Info', 'Link'];
+  const rows = log.map(item => [item.date, item.time, item.text, item.url]);
+
+  const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
     document.addEventListener('DOMContentLoaded', renderMatchLog);
   </script>
   <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
   <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
   <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
+    <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
 </details>
 
 </body>
