@@ -2,47 +2,138 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tournament Director</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background-color: #111;
+      font-family: Arial, sans-serif;
+      background: #111;
       color: #fff;
+      padding: 20px;
+      text-align: center;
     }
-    .form-control, .form-select {
-      background-color: #222;
-      color: #fff;
-      border: 1px solid #444;
+    input, select, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: none;
     }
-    .form-control::placeholder {
-      color: #888;
+    input {
+      width: 150px;
+    }
+    button {
+      background: #00bcd4;
+      color: #000;
+      cursor: pointer;
+    }
+    #result, #qrcode {
+      margin-top: 20px;
     }
     a {
       color: #00eaff;
-      word-break: break-all;
     }
     #copyBtn {
-      background-color: #333;
+      margin-top: 10px;
+      padding: 6px 14px;
+      font-size: 0.9em;
+      background: #333;
       color: #0f0;
     }
     #copyBtn.copied {
       background: #0f0;
       color: #000;
     }
-    canvas {
-      margin-top: 20px;
-    }
   </style>
 </head>
 <body>
-  <div class="container py-4">
-    <div class="text-center">
-      <img src="TDlogo.png" alt="Tournament Director Logo" class="img-fluid mb-4" style="max-width: 300px;" />
-    </div>
+  <img src="TDlogo.png" alt="Tournament Director Logo" style="max-width: 300px; margin-bottom: 20px;" />
+  <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Tournament Director Guide)</summary>
+  <div style="margin-top: 10px; line-height: 1.5;">
+    <p><strong>Step 1: Enter Player Names</strong><br/>
+    Type the names of the two players in the "Player 1" and "Player 2" fields.</p>
 
-    <div class="accordion mb-4" id="helpAccordion">
-      <div class="accordion-item bg-dark text-light">
-        <h2 class="accordion-header">
-          <button class="accordion-button collapsed bg-dark text-info" type="button" data-bs-toggle="collapse" data-bs-target="#helpContent">
-            
+    <p><strong>Step 2: Select Match Length</strong><br/>
+    Choose the match format: Best of 3, 5, or 7 (2, 3, or 4 game wins).</p>
+
+    <p><strong>Step 3: Generate Match Link</strong><br/>
+    Click "Generate Match Link" to create a pre-filled scoreboard URL with player names and match length.</p>
+
+    <p><strong>Step 4: Scan or Share QR Code</strong><br/>
+    A QR code appears — players can scan it or use the clickable link to jump right into the match.</p>
+
+    <p><strong>Step 5: Copy the Link</strong><br/>
+    Use the "Copy to Clipboard" button to paste the link into your bracket system, a message, or a browser.</p>
+
+    <p>That's it! This tool makes assigning tables and matches lightning fast. 🏓</p>
+  </div>
+</details>
+
+  <input type="text" id="player1" placeholder="Player 1" />
+  <input type="text" id="player2" placeholder="Player 2" />
+  <input type="text" id="tableNumber" placeholder="Table #" />
+  <select id="matchLength">
+    <option value="2">Best of 3</option>
+    <option value="3">Best of 5</option>
+    <option value="4">Best of 7</option>
+  </select>
+  <br/>
+  <button onclick="generateMatchLink()">Generate Match Link</button>
+
+  <div id="result"></div>
+  <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
+  <canvas id="qrcode"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script>
+    let generatedUrl = '';
+
+    function generateMatchLink() {
+  const p1 = encodeURIComponent(document.getElementById('player1').value.trim());
+  const p2 = encodeURIComponent(document.getElementById('player2').value.trim());
+  const match = document.getElementById('matchLength').value;
+  const table = document.getElementById('tableNumber').value.trim();
+
+  const baseUrl = window.location.origin + '/airhockey-score-system/';
+  generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
+
+  let extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
+  if (table) {
+    generatedUrl += `&table=${encodeURIComponent(table)}`;
+  }
+
+  const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
+
+  document.getElementById('result').innerHTML = `
+    <p><strong>Match Link:</strong></p>
+    <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+    ${extraNote}
+  `;
+
+  document.getElementById('copyBtn').style.display = 'inline-block';
+  document.getElementById('copyBtn').classList.remove('copied');
+  document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
+
+  QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+    width: 220,
+    color: { dark: "#ffffff", light: "#111111" }
+  }, function (error) {
+    if (error) console.error(error);
+  });
+}
+
+    function copyLink() {
+      navigator.clipboard.writeText(generatedUrl).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.classList.add('copied');
+        btn.innerText = 'Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerText = 'Copy to Clipboard';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
