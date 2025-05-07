@@ -3,118 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Air Hockey TD Link Generator</title>
+  <title>Tournament Director</title>
   <style>
     body {
-      background-color: #121212;
-      color: #f0f0f0;
       font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 20px;
       text-align: center;
-      padding: 30px;
     }
     input, select, button {
       padding: 10px;
-      font-size: 1em;
       margin: 10px;
-      border-radius: 5px;
+      font-size: 1em;
+      border-radius: 6px;
       border: none;
     }
+    input {
+      width: 150px;
+    }
     button {
-      background-color: #00eaff;
-      color: black;
-      font-weight: bold;
+      background: #00bcd4;
+      color: #000;
       cursor: pointer;
     }
-    #output {
+    #result, #qrcode {
       margin-top: 20px;
-      background: #1e1e1e;
-      padding: 20px;
-      border-radius: 10px;
-      border: 1px solid #555;
     }
     a {
       color: #00eaff;
-      text-decoration: underline;
-    }
-    #qrcode {
-      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <h1>Generate Match Link</h1>
+  <h1>Tournament Director: Match URL Generator</h1>
+  <p>Generate a player match link with optional QR code.</p>
 
-  <input type="text" id="p1" placeholder="Player 1 Name" />
-  <input type="text" id="p2" placeholder="Player 2 Name" /><br/>
-
-  <label for="match">Match Length:</label>
-  <select id="match">
+  <input type="text" id="player1" placeholder="Player 1 Name" />
+  <input type="text" id="player2" placeholder="Player 2 Name" />
+  <select id="matchLength">
     <option value="2">Best of 3</option>
     <option value="3">Best of 5</option>
     <option value="4">Best of 7</option>
-  </select><br/>
+  </select>
+  <br/>
+  <button onclick="generateMatchLink()">Generate Link</button>
 
-  <input type="text" id="table" placeholder="Table Number (e.g. 3)" /><br/>
+  <div id="result"></div>
+  <div id="qrcode"></div>
 
-  <button onclick="generateLink()">Generate Link</button>
-
-  <div id="output" style="display:none;">
-    <p><strong>Launch Link:</strong></p>
-    <p><a id="link" href="#" target="_blank"></a></p>
-
-    <p><strong>Copy Message:</strong></p>
-    <textarea id="message" rows="3" style="width: 90%;"></textarea><br/>
-    <button onclick="copyMessage()">Copy to Clipboard</button>
-
-    <div id="qrcode"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
-    let qr;
+    function generateMatchLink() {
+      const p1 = encodeURIComponent(document.getElementById('player1').value.trim());
+      const p2 = encodeURIComponent(document.getElementById('player2').value.trim());
+      const match = document.getElementById('matchLength').value;
 
-    function generateLink() {
       const baseUrl = window.location.origin + '/airhockey-score-system/';
-      const p1 = encodeURIComponent(document.getElementById('p1').value.trim());
-      const p2 = encodeURIComponent(document.getElementById('p2').value.trim());
-      const match = document.getElementById('match').value;
-      const table = document.getElementById('table').value.trim();
+      const fullUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
 
-      if (!p1 || !p2 || !table) {
-        alert("Please fill out all fields.");
-        return;
-      }
+      document.getElementById('result').innerHTML = `
+        <p><strong>Match Link:</strong></p>
+        <a href="${fullUrl}" target="_blank">${fullUrl}</a>
+      `;
 
-      const link = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
-      const displayLink = `${window.location.origin}/?p1=${p1}&p2=${p2}&match=${match}`;
-      const message = `${decodeURIComponent(p1)} vs ${decodeURIComponent(p2)} — Best of ${match * 2 - 1} on Table ${table}: ${displayLink}`;
-
-      document.getElementById('link').textContent = displayLink;
-      document.getElementById('link').href = link;
-      document.getElementById('message').value = message;
-      document.getElementById('output').style.display = 'block';
-
-      // Create or update QR code
-      if (!qr) {
-        qr = new QRCode(document.getElementById("qrcode"), {
-          text: link,
-          width: 200,
-          height: 200,
-          colorDark: "#00eaff",
-          colorLight: "#ffffff",
-        });
-      } else {
-        qr.clear();
-        qr.makeCode(link);
-      }
-    }
-
-    function copyMessage() {
-      const msg = document.getElementById('message');
-      msg.select();
-      msg.setSelectionRange(0, 99999);
-      document.execCommand('copy');
-      alert('Message copied to clipboard!');
+      // Generate QR code
+      QRCode.toCanvas(document.getElementById('qrcode'), fullUrl, { width: 220, color: { dark: "#ffffff", light: "#111111" } }, function (error) {
+        if (error) console.error(error);
+      });
     }
   </script>
 </body>
