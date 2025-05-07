@@ -98,12 +98,10 @@
   const baseUrl = window.location.origin + '/airhockey-score-system/';
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
 
-  let extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
   if (table) {
-    generatedUrl += `&table=${encodeURIComponent(table)}`;
-  }
-
-  const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
+  generatedUrl += `&table=${encodeURIComponent(table)}`;
+}
+const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
 
   document.getElementById('result').innerHTML = `
     <p><strong>Match Link:</strong></p>
