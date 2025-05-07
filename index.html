@@ -432,14 +432,15 @@ function formatPlayerScore(player) {
       document.getElementById('summaryButtons').style.display = 'block';
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
 
-      updateSkinnyScoreboard(winner.id); // 👈 winner highlight passed in here
-
       const compact = getCompactMatchSummary();
       const summaryContainer = document.getElementById('compactSummary');
       if (summaryContainer) {
         summaryContainer.textContent = compact;
       }
     }
+
+    // ✅ Highlight the winner in the skinny scoreboard for this game
+    updateSkinnyScoreboard(winner.id);
   }
 
   // Reset for next game
@@ -453,7 +454,7 @@ function formatPlayerScore(player) {
   isPlayer1Left = !isPlayer1Left;
   renderButtons();
   updateScore();
-  updateSkinnyScoreboard(); // 👈 this updates layout between games, without highlight
+  updateSkinnyScoreboard(); // 👈 Reset layout for the new game
 }
 
     function resetMatch() {
