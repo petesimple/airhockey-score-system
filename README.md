@@ -1,47 +1,61 @@
-# Air Hockey Score System
+# Air Hockey Score System (AHSS)
 
-This web app is designed for air hockey tournaments and casual matches. It features a simple, stylish scoreboard with timer, score tracking, match history, and match summary export. It's built to be mobile-friendly and works well in portrait mode for tablets and phones.
+Welcome to the **Air Hockey Score System**, a fully-featured web app for tracking competitive air hockey matches—used in tournaments, casual games, and stream overlays. 🏒💥
 
-## 🎯 Features
+## 🚀 Features
 
-- Score tracking for two players
-- Timeout system with countdown
-- Skinny streaming scoreboard view
-- Match timer with pause/resume
-- Match summaries (full and compact)
-- Export options: CSV and TXT
-- Confetti celebration for match winner
-- Keyboard hotkeys: arrow keys, A/D for timeouts, Enter to advance game
-- Table number banner via URL (e.g. `?table=4`)
+- 🎮 Scorekeeping for best-of-3, 5, or 7 sets
+- 🧠 Player name memory (via localStorage)
+- ⏱️ Animated match timer with pulse
+- ⏸️ Clickable timer for pause/resume
+- 🕹️ Arrow key & keyboard control support
+- ⏳ 10-second timeout system (one per player)
+- 🔁 Flip sides button for fair gameplay
+- 📺 "Skinny" scoreboard view for stream overlays
+- 📌 Optional "lock-to-top" scoreboard
+- 🔔 Confetti animation and sound on match win
+- 📋 Compact game summary in initials (e.g., `G1 A7-5B`)
+- 🦨 Skunk detection (7-0) with emoji in scoreboard
+- 🔘 Winner and loser pips in skinny scoreboard (● and ○)
+- 📦 Export match results as:
+  - Text summary
+  - Clipboard share
+  - Tournament-ready CSV file
 
-## 📋 New in v1.5.9 – (TD)
+## 📦 Setup
 
-- 🆕 **Tournament Director Page (TD.html)**:
-  - Create a match link prefilled with player names and match length
-  - Optional Table # field adds `&table=##` param to the URL
-  - Generates a QR Code and a copy-to-clipboard button
-  - Collapsible how-to-use guide embedded for staff or TDs
-- Main scoreboard now reads and displays a `table` param as a yellow 📍 Table banner
+No installation required—just open `index.html` in your browser.
 
-## 💡 Usage
+To use as a PWA (Progressive Web App):
+- Add to Home Screen on iOS or Android
+- Works offline with service worker included
 
-Visit the [main scoreboard](https://petesimple.github.io/airhockey-score-system/) to start a match manually, or use the new [Tournament Director Tool](https://petesimple.github.io/airhockey-score-system/TD.html) to generate links.
+## 🧪 Keyboard Shortcuts
 
-## 🛠 Tech Stack
+| Key        | Action                        |
+|------------|-------------------------------|
+| ←          | Score for left player         |
+| →          | Score for right player        |
+| A / D      | Call timeout (left/right)     |
+| Enter      | Trigger "Next Game" button    |
 
-- HTML/CSS/JavaScript
-- LocalStorage for name persistence
-- QRCode.js for TD QR generation
-- Canvas Confetti for celebrations
-- Fully offline-capable via Service Worker
+## 📜 Version
 
-## 🧠 Ideas Welcome
+**v1.6 – (skunk)**  
+Now includes skunk pips in the skinny scoreboard 🦨 and polish to match end behavior!
 
-Open an issue or start a discussion to suggest new features, like:
-- Audio feedback for goals/timeouts
-- Bracket or Elo integration
-- OBS compatibility enhancements
+## 📁 Files
+
+- `index.html` – Main app
+- `manifest.json` – PWA manifest
+- `service-worker.js` – Offline support
+- `icon-192.png`, `logo.png` – Assets
+
+## ❤️ Credit
+
+Created by [Pete Lippincott](https://github.com/petesimple) with help from ChatGPT.  
+Built for the air hockey community. Feedback welcome!
 
 ---
 
-Built with 💙 by [Pete](https://github.com/petesimple) and ChatGPT.
+🏓 May the best mallet win.
