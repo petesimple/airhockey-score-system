@@ -349,17 +349,10 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   player.points++;
   updateScore();
 
-  // If someone hits 7, show "Next Game" button
+  // If someone hits 7, show the next game button (label is handled later)
   if (player.points === 7) {
-  const potentialGameCount = players[0].games + players[1].games + 1;
-  const neededToWin = winGames;
-
-  const isFinalGame = potentialGameCount >= (winGames * 2 - 1);
-  const nextGameBtn = document.getElementById('nextGameBtn');
-
-  nextGameBtn.textContent = isFinalGame ? 'Declare Winner' : 'Start Next Game';
-  nextGameBtn.style.display = 'inline-block';
-}
+    document.getElementById('nextGameBtn').style.display = 'inline-block';
+  }
 
   updateSkinnyScoreboard();
 }
@@ -470,6 +463,7 @@ function formatPlayerScore(player) {
     gameHistory.push(`${p1.name} ${p1.points} - ${p2.points} ${p2.name}`);
     updateHistory();
 
+    // Check for match win
     if (winner.games === winGames) {
       document.getElementById('matchWinner').textContent = `${winner.name} wins the match!`;
       clearInterval(timerInterval);
@@ -482,30 +476,30 @@ function formatPlayerScore(player) {
         summaryContainer.textContent = compact;
       }
 
-      // ✅ Temporarily pulse the match winner's name in the skinny scoreboard
+      // Pulse winner on skinny scoreboard
       updateSkinnyScoreboard(winner.id);
-
-      // Remove any previous pulses
-      const skinnyPlayers = document.querySelectorAll('.skinny-player');
-      skinnyPlayers.forEach(el => el.classList.remove('pulse'));
-
-      // Add pulse to winner
+      document.querySelectorAll('.skinny-player').forEach(el => el.classList.remove('pulse'));
       const winnerDiv = document.querySelector('.skinny-player.winner');
       if (winnerDiv) winnerDiv.classList.add('pulse');
 
-      // Remove pulse after 4 seconds
       setTimeout(() => {
         if (winnerDiv) winnerDiv.classList.remove('pulse');
-        updateSkinnyScoreboard(); // reset view cleanly
+        updateSkinnyScoreboard(); // Reset highlight
       }, 4000);
+
+      // Change button to "Declare Winner"
+      document.getElementById('nextGameBtn').textContent = 'Declare Winner';
     } else {
-      // Game win only — update skinny board highlight briefly
+      // Still more games left — update label to "Start Next Game"
+      document.getElementById('nextGameBtn').textContent = 'Start Next Game';
+
+      // Brief game win highlight
       updateSkinnyScoreboard(winner.id);
       setTimeout(() => updateSkinnyScoreboard(), 1500);
     }
   }
 
-  // Reset for next game
+  // Reset points and timeout states for next game
   players.forEach(p => {
     p.points = 0;
     p.timeoutUsed = false;
