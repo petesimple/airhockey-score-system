@@ -351,8 +351,15 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
 
   // If someone hits 7, show "Next Game" button
   if (player.points === 7) {
-    document.getElementById('nextGameBtn').style.display = 'inline-block';
-  }
+  const potentialGameCount = players[0].games + players[1].games + 1;
+  const neededToWin = winGames;
+
+  const isFinalGame = potentialGameCount >= (winGames * 2 - 1);
+  const nextGameBtn = document.getElementById('nextGameBtn');
+
+  nextGameBtn.textContent = isFinalGame ? 'Declare Winner' : 'Start Next Game';
+  nextGameBtn.style.display = 'inline-block';
+}
 
   updateSkinnyScoreboard();
 }
