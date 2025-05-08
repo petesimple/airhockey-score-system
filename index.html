@@ -778,12 +778,30 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   const winId = winnerId?.trim?.() || null;
 
+  function getPipLine(forPlayerId) {
+    return gameHistory.map(g => {
+      const match = g.match(/(\d+)\s*-\s*(\d+)/);
+      if (!match) return '–';
+
+      const [score1, score2] = [parseInt(match[1]), parseInt(match[2])];
+      const winnerIsP1 = score1 > score2;
+      const isSkunk = (score1 === 7 && score2 === 0) || (score2 === 7 && score1 === 0);
+
+      const thisPlayerWon = (forPlayerId === 'player1' && winnerIsP1) || (forPlayerId === 'player2' && !winnerIsP1);
+      const thisPlayerLost = !thisPlayerWon;
+
+      if (thisPlayerWon) return '●';
+      if (isSkunk) return '🦨';
+      return '○';
+    }).join(' ');
+  }
+
   const leftHTML = `
     <div class="skinny-player ${winId === left.id ? 'winner' : ''}" style="text-align: left;">
       <div>${left.name}</div>
       <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
       <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
-        ${'● '.repeat(left.games).trim()}
+        ${getPipLine(left.id)}
       </div>
     </div>`;
 
@@ -792,7 +810,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       <div>${right.name}</div>
       <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
       <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
-        ${'● '.repeat(right.games).trim()}
+        ${getPipLine(right.id)}
       </div>
     </div>`;
 
@@ -806,17 +824,15 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       ${rightHTML}
     </div>`;
 
-  // Update compact match summary in lines of 4
+  // Compact match summary
   const summaryEl = document.getElementById('compactSummary');
   if (summaryEl && gameHistory.length > 0) {
     const compact = getCompactMatchSummary();
     const segments = compact.split(', ');
     const lines = [];
-
     for (let i = 0; i < segments.length; i += 4) {
       lines.push(segments.slice(i, i + 4).join(', '));
     }
-
     summaryEl.innerHTML = lines.map(line => `<div>${line}</div>`).join('');
   } else if (summaryEl) {
     summaryEl.innerHTML = '';
