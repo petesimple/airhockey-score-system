@@ -199,5 +199,11 @@ function clearMatchLog() {
     <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
 </details>
 
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker-td.js')
+      .then(() => console.log('TD Service Worker registered!'));
+  }
+</script>
 </body>
 </html>
