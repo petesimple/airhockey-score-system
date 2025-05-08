@@ -216,6 +216,7 @@
 <!-- 👇 Move Reset Match button BELOW the toggles -->
 <div style="margin-top: 15px;">
   <button onclick="resetMatch()">Reset Match</button>
+  <button onclick="flipSides()" style="margin-left: 10px;">Flip Sides</button>
 </div>
     <div id="gameWinner"></div>
     <div id="matchWinner"></div>
@@ -837,6 +838,15 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     const loserScore = Math.min(p1Score, p2Score);
     return `G${i+1} ${winnerInitial}${winnerScore}-${loserScore}${loserInitial}`;
   }).join(', ');
+}
+    function flipSides() {
+  const confirmFlip = confirm("Oh sure, just flip everything mid-match. You sure about that?");
+  if (!confirmFlip) return;
+
+  isPlayer1Left = !isPlayer1Left;
+  renderButtons();
+  updateScore();
+  updateSkinnyScoreboard();
 }
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
