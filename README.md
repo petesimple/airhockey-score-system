@@ -22,9 +22,18 @@ Welcome to the **Air Hockey Score System**, a fully-featured web app for trackin
   - Clipboard share
   - Tournament-ready CSV file
 
+### 🧑‍⚖️ Tournament Director (TD) Page
+
+The **TD.html** page lets you:
+- Generate match links with player names and match length
+- Create a scannable QR code for each match
+- Copy the match URL to clipboard
+- Access a built-in collapsible help guide
+- Use as a standalone PWA for tournaments
+
 ## 📦 Setup
 
-No installation required—just open `index.html` in your browser.
+No installation required—just open `index.html` or `TD.html` in your browser.
 
 To use as a PWA (Progressive Web App):
 - Add to Home Screen on iOS or Android
@@ -47,9 +56,10 @@ Now includes skunk pips in the skinny scoreboard 🦨 and polish to match end be
 ## 📁 Files
 
 - `index.html` – Main app
-- `manifest.json` – PWA manifest
-- `service-worker.js` – Offline support
-- `icon-192.png`, `logo.png` – Assets
+- `TD.html` – Tournament Director match tool
+- `manifest.json` / `manifestTD.json` – PWA manifests
+- `service-worker.js` / `service-worker-td.js` – Offline support
+- `icon-192.png`, `iconTD-192.png`, `logo.png` – App assets
 
 ## ❤️ Credit
 
