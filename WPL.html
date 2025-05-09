@@ -71,10 +71,6 @@
       fetch(SHEET_URL)
         .then(res => res.json())
         .then(data => {
-          if (!Array.isArray(data)) {
-            throw new Error("Unexpected response format.");
-          }
-
           const container = document.getElementById('playerList');
           container.innerHTML = '';
 
