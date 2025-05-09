@@ -57,6 +57,22 @@
       font-size: 0.9em;
       color: yellow;
     }
+    .spinner {
+  display: none;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #000;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
   </style>
 </head>
 <body>
@@ -68,7 +84,10 @@
     <input type="text" id="lastName" placeholder="Last Name" required />
     <input type="tel" id="cellNumber" placeholder="Cell Number" required />
     <textarea id="notes" rows="3" placeholder="Any notes for the TD? (optional)"></textarea>
-    <button type="submit">Submit</button>
+    <button type="submit" id="submitBtn">
+  <span class="spinner" id="spinner"></span>
+  <span id="btnText">Submit</span>
+</button>
   </form>
 
   <div id="response"></div>
@@ -76,6 +95,14 @@
   <script>
   document.getElementById('ayptForm').addEventListener('submit', function(e) {
     e.preventDefault();
+
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btnText');
+
+    submitBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Submitting...';
 
     const url = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
 
@@ -101,6 +128,11 @@
     .catch(err => {
       document.getElementById('response').textContent = "Submission failed. Please try again.";
       console.error(err);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = 'Submit';
     });
   });
 </script>
