@@ -52,55 +52,57 @@
   <div id="playerList" class="player-list"></div>
 
   <script>
-    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
 
-    function fetchPlayers() {
-      fetch(SHEET_URL)
-        .then(res => res.json())
-        .then(data => {
-          const container = document.getElementById('playerList');
-          container.innerHTML = '';
-
-          data.forEach(player => {
-            const div = document.createElement('div');
-            div.className = 'player-item';
-
-            const info = document.createElement('div');
-            info.className = 'player-info';
-            info.innerHTML = `<strong>${player.firstName} ${player.lastName}</strong><br><small>${player.cellNumber || ''}</small><br><em>${player.notes || ''}</em>`;
-
-            const label = document.createElement('label');
-            label.innerHTML = `Paid <input type="checkbox" ${player.Paid === 'TRUE' ? 'checked' : ''} onchange="updatePaidStatus(${player.row}, this.checked)" />`;
-
-            div.appendChild(info);
-            div.appendChild(label);
-            container.appendChild(div);
-          });
-        })
-        .catch(err => {
-          document.getElementById('playerList').textContent = 'Failed to load players list.';
-          console.error(err);
-        });
-    }
-
-    function updatePaidStatus(row, paid) {
-      fetch(SHEET_URL, {
-        method: 'POST',
-        body: new URLSearchParams({ row, paid }),
-      })
+  function fetchPlayers() {
+    fetch(SHEET_URL)
       .then(res => res.json())
       .then(data => {
-        if (data.result !== 'success') {
-          alert('Failed to update payment status.');
-        }
+        if (!Array.isArray(data)) throw new Error("Unexpected response format.");
+
+        const container = document.getElementById('playerList');
+        container.innerHTML = '';
+
+        data.forEach(player => {
+          const div = document.createElement('div');
+          div.className = 'player-item';
+
+          const info = document.createElement('div');
+          info.className = 'player-info';
+          info.innerHTML = `<strong>${player.firstName} ${player.lastName}</strong><br><small>${player.cellNumber || ''}</small><br><em>${player.notes || ''}</em>`;
+
+          const label = document.createElement('label');
+          label.innerHTML = `Paid <input type="checkbox" ${player.Paid === 'TRUE' ? 'checked' : ''} onchange="updatePaidStatus(${player.row}, this.checked)" />`;
+
+          div.appendChild(info);
+          div.appendChild(label);
+          container.appendChild(div);
+        });
       })
       .catch(err => {
-        alert('Error updating payment status.');
+        document.getElementById('playerList').textContent = 'Failed to load players list.';
         console.error(err);
       });
-    }
+  }
 
-    fetchPlayers();
-  </script>
+  function updatePaidStatus(row, paid) {
+    fetch(SHEET_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ row, paid }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.result !== 'success') {
+        alert('Failed to update payment status.');
+      }
+    })
+    .catch(err => {
+      alert('Error updating payment status.');
+      console.error(err);
+    });
+  }
+
+  fetchPlayers();
+</script>
 </body>
 </html>
