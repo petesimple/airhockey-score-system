@@ -82,20 +82,20 @@
             info.className = 'player-info';
 
             const name = document.createElement('strong');
-            name.textContent = `${player.firstName} ${player.lastName}`;
+            name.textContent = `${player["First Name"] || ''} ${player["Last Name"] || ''}`;
             info.appendChild(name);
             info.appendChild(document.createElement('br'));
 
-            if (player.cellNumber) {
+            if (player["Cell Number"]) {
               const phone = document.createElement('small');
-              phone.textContent = player.cellNumber;
+              phone.textContent = player["Cell Number"];
               info.appendChild(phone);
               info.appendChild(document.createElement('br'));
             }
 
-            if (player.notes) {
+            if (player["Notes"]) {
               const notes = document.createElement('em');
-              notes.textContent = player.notes;
+              notes.textContent = player["Notes"];
               info.appendChild(notes);
             }
 
@@ -104,7 +104,7 @@
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.checked = player.Paid === 'TRUE';
+            checkbox.checked = player["Paid"] === 'TRUE';
             checkbox.addEventListener('change', () => updatePaidStatus(player.row, checkbox.checked, div));
             label.appendChild(checkbox);
 
