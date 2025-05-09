@@ -74,39 +74,35 @@
   <div id="response"></div>
 
   <script>
-    document.getElementById('ayptForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+  document.getElementById('ayptForm').addEventListener('submit', function(e) {
+    e.preventDefault();
 
-      const url = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
+    const url = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
 
-      const formData = {
-        firstName: document.getElementById('firstName').value,
-        lastName: document.getElementById('lastName').value,
-        cellNumber: document.getElementById('cellNumber').value,
-        notes: document.getElementById('notes').value
-      };
+    const formData = new FormData();
+    formData.append('firstName', document.getElementById('firstName').value);
+    formData.append('lastName', document.getElementById('lastName').value);
+    formData.append('cellNumber', document.getElementById('cellNumber').value);
+    formData.append('notes', document.getElementById('notes').value);
 
-      fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(formData),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.result === 'success') {
-          document.getElementById('response').textContent = "You're signed up! ✅";
-          document.getElementById('ayptForm').reset();
-        } else {
-          document.getElementById('response').textContent = "Error: " + data.message;
-        }
-      })
-      .catch(err => {
-        document.getElementById('response').textContent = "Submission failed. Please try again.";
-        console.error(err);
-      });
+    fetch(url, {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.result === 'success') {
+        document.getElementById('response').textContent = "You're signed up! ✅";
+        document.getElementById('ayptForm').reset();
+      } else {
+        document.getElementById('response').textContent = "Error: " + data.message;
+      }
+    })
+    .catch(err => {
+      document.getElementById('response').textContent = "Submission failed. Please try again.";
+      console.error(err);
     });
-  </script>
+  });
+</script>
 </body>
 </html>
