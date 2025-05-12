@@ -489,6 +489,27 @@ function formatPlayerScore(player) {
 
       // Change button to "Declare Winner"
       document.getElementById('nextGameBtn').textContent = 'Declare Winner';
+
+      // ✅ AUTO SEND TO GOOGLE SHEETS
+      const matchData = {
+        player1: p1.name,
+        player2: p2.name,
+        p1Games: p1.games,
+        p2Games: p2.games,
+        winner: winner.name,
+        location: '', // You can auto-fill from URL param if needed
+        notes: '',
+        games: gameHistory
+      };
+
+      fetch('https://script.google.com/macros/s/AKfycbxZKBjOLQIi9GvDsxwVCny2nSZjXIaT_nZL95t8heNjVvsHiLPj69CuWErLVYlGQ4Q/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(matchData)
+      })
+      .then(res => res.text())
+      .then(res => console.log('✅ Match data sent:', res))
+      .catch(err => console.error('❌ Failed to send match data', err));
     } else {
       // Still more games left — update label to "Start Next Game"
       document.getElementById('nextGameBtn').textContent = 'Start Next Game';
