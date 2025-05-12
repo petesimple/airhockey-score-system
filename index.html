@@ -487,7 +487,8 @@ const matchData = {
 fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(matchData)
+  body: JSON.stringify(matchData),
+  redirect: 'follow'
 })
   .then(res => res.text())
   .then(res => console.log('✅ Match data sent:', res))
