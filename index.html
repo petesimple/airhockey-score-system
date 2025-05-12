@@ -225,7 +225,6 @@
       <button onclick="exportSummary()">Export Summary</button>
       <button onclick="shareSummary()">Share Summary</button>
       <button onclick="generateCSV()">Export CSV</button>
-      <button onclick="sendFakeMatch()">Test Manual Post</button>
     </div>
   </div>
 
@@ -889,28 +888,6 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   renderButtons();
   updateScore();
   updateSkinnyScoreboard();
-}
-    function sendFakeMatch() {
-  const matchData = {
-    player1: "Manual A",
-    player2: "Manual B",
-    p1Games: 3,
-    p2Games: 1,
-    winner: "Manual A",
-    location: "Manual Table",
-    notes: "Manual trigger test",
-    games: ["A 7-4 B", "B 7-6 A", "A 7-5 B", "A 7-0 B"]
-  };
-
-  console.log("📤 Manual Post:", matchData);
-  fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(matchData)
-  })
-  .then(res => res.text())
-  .then(res => console.log('✅ Manual match posted:', res))
-  .catch(err => console.error('❌ Manual fetch failed', err));
 }
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
