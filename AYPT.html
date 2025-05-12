@@ -118,13 +118,18 @@
     })
     .then(response => response.json())
     .then(data => {
-      if (data.result === 'success') {
-        document.getElementById('response').textContent = "You're signed up! ✅";
-        document.getElementById('ayptForm').reset();
-      } else {
-        document.getElementById('response').textContent = "Error: " + data.message;
-      }
-    })
+  if (data.result === 'success') {
+    const firstName = document.getElementById('firstName').value.trim();
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = today.toLocaleDateString(undefined, options);
+
+    document.getElementById('response').innerHTML = `<strong>Thank you ${firstName}, you are signed up for the tournament tonight ${formattedDate}. ✅</strong>`;
+    document.getElementById('ayptForm').reset();
+  } else {
+    document.getElementById('response').textContent = "Error: " + data.message;
+  }
+})
     .catch(err => {
       document.getElementById('response').textContent = "Submission failed. Please try again.";
       console.error(err);
