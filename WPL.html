@@ -92,7 +92,7 @@
   </div>
 
   <h1>🇺🇸 Weekly Players List</h1>
-  <p>This is the list of players signed up for tonight. Check off who has paid.</p>
+  <p id="dateSentence">This is the list of players signed up for tonight <strong id="todayDate"></strong>. Check off who has paid.</p>
   <div id="playerList" class="player-list">
     <div class="loading">Loading player data...</div>
   </div>
@@ -194,6 +194,10 @@
     document.getElementById('pwInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') checkPassword();
     });
+
+    const today = new Date();
+const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+document.getElementById('todayDate').textContent = today.toLocaleDateString(undefined, options);
     
   </script>
 </body>
