@@ -183,6 +183,7 @@
 
       if (entered === correctPassword) {
         document.getElementById('passwordOverlay').style.display = 'none';
+        document.getElementById('playerList').style.display = 'block';
         fetchPlayers(); // allow access
       } else {
         document.getElementById('pwError').style.display = 'block';
@@ -193,11 +194,7 @@
     document.getElementById('pwInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') checkPassword();
     });
-
-    // Prevent loading until unlocked
-    window.onload = () => {
-      document.getElementById('playerList').style.display = 'none';
-    };
+    
   </script>
 </body>
 </html>
