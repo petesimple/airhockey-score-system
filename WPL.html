@@ -55,9 +55,42 @@
     .updated {
       background-color: #224422 !important;
     }
+
+    #passwordOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    #pwInput {
+      padding: 10px;
+      font-size: 1.2em;
+    }
+
+    #pwError {
+      margin-top: 10px;
+      color: red;
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <div id="passwordOverlay">
+    <h2>Enter Password to View List</h2>
+    <input type="password" id="pwInput" placeholder="Password..." />
+    <button onclick="checkPassword()" style="margin-top: 10px; padding: 10px;">Enter</button>
+    <div id="pwError">Incorrect password</div>
+  </div>
+
   <h1>🇺🇸 Weekly Players List</h1>
   <p>This is the list of players signed up for tonight. Check off who has paid.</p>
   <div id="playerList" class="player-list">
@@ -68,12 +101,13 @@
     const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzkxP83HCDwFyS4GE-g9heCA_kZANNx76RobBKBGTIWOK8qBCsBDyJymDK1SB3c9wDO/exec';
 
     function fetchPlayers() {
+      const container = document.getElementById('playerList');
+      container.innerHTML = '<div class="loading">Loading player data...</div>';
+
       fetch(SHEET_URL)
         .then(res => res.json())
         .then(data => {
-          const container = document.getElementById('playerList');
           container.innerHTML = '';
-
           data.forEach(player => {
             const div = document.createElement('div');
             div.className = 'player-item';
@@ -114,7 +148,7 @@
           });
         })
         .catch(err => {
-          document.getElementById('playerList').textContent = 'Failed to load players list.';
+          container.textContent = 'Failed to load players list.';
           console.error("Fetch error or invalid JSON structure:", err);
         });
     }
@@ -143,7 +177,27 @@
       }, 250);
     }
 
-    fetchPlayers();
+    function checkPassword() {
+      const correctPassword = 'airhockey101';
+      const entered = document.getElementById('pwInput').value;
+
+      if (entered === correctPassword) {
+        document.getElementById('passwordOverlay').style.display = 'none';
+        fetchPlayers(); // allow access
+      } else {
+        document.getElementById('pwError').style.display = 'block';
+      }
+    }
+
+    // Allow Enter key
+    document.getElementById('pwInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkPassword();
+    });
+
+    // Prevent loading until unlocked
+    window.onload = () => {
+      document.getElementById('playerList').style.display = 'none';
+    };
   </script>
 </body>
 </html>
