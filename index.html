@@ -834,7 +834,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   const leftHTML = `
     <div class="skinny-player ${winId === left.id ? 'winner' : ''}" style="text-align: left;">
       <div>${left.name}</div>
-      <div style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
+      <div class="score-value" style="color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">${left.points}</div>
       <div style="font-size: 1.2em; color: ${left.id === 'player1' ? '#d32f2f' : '#1976d2'};">
         ${getPipLine(left.id)}
       </div>
@@ -843,7 +843,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   const rightHTML = `
     <div class="skinny-player ${winId === right.id ? 'winner' : ''}" style="text-align: right;">
       <div>${right.name}</div>
-      <div style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
+      <div class="score-value" style="color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">${right.points}</div>
       <div style="font-size: 1.2em; color: ${right.id === 'player1' ? '#d32f2f' : '#1976d2'};">
         ${getPipLine(right.id)}
       </div>
