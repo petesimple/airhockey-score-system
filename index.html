@@ -352,9 +352,15 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   player.points++;
   updateScore();
 
-  // If someone hits 7, show the next game button (label is handled later)
+  // If someone hits 7, show the next game button
   if (player.points === 7) {
     document.getElementById('nextGameBtn').style.display = 'inline-block';
+
+    // Check if this game-ending point also ends the match
+    const thisPlayerGames = player.games + 1;
+    if (thisPlayerGames === winGames) {
+      clearBetweenGamesTimer(); // 🔥 Immediately clear between timer on match win
+    }
   }
 
   updateSkinnyScoreboard();
