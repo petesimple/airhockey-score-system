@@ -871,33 +871,40 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   const winner = p1.games > p2.games ? p1.name : p2.name;
 
   const formData = new FormData();
+
+  // 🔹 Required fields
   formData.append('Date', new Date().toLocaleString());
   formData.append('Player 1', p1.name);
   formData.append('Player 2', p2.name);
-  formData.append('P1 rank', ''); // optional
+  formData.append('P1 rank', '');
   formData.append('P2 rank', '');
   formData.append('Ref', '');
   formData.append('Image', '');
   formData.append('Puck Color', '');
-  formData.append('Location', 'Table 1'); // dynamic if needed
+  formData.append('Location', 'Table 1');
   formData.append('Winner', winner);
   formData.append('Video Link', '');
   formData.append('Notes', '');
   formData.append('Game Count', `${p1.games}-${p2.games}`);
 
-  // Flatten up to 7 sets of 7 games each
-  // For now, treat all games as Set 1.1–1.7
-  formData.append('Set 1', ''); // Label
-  gameHistory.slice(0, 7).forEach((game, i) => {
-    formData.append(`Set 1.${i+1}`, game);
+  // 🔸 Games: Clean format without names (e.g. "7 - 4")
+  // Populate Set 1.1–1.7 using stripped scores
+  formData.append('Set 1', ''); // Label row for Set 1
+  const cleanScores = gameHistory.map(g => {
+    const match = g.match(/(\d+)\s*-\s*(\d+)/);
+    return match ? `${match[1]} - ${match[2]}` : '';
   });
 
-  // Pad missing Set 1.x
-  for (let i = gameHistory.length + 1; i <= 7; i++) {
+  cleanScores.slice(0, 7).forEach((score, i) => {
+    formData.append(`Set 1.${i + 1}`, score);
+  });
+
+  // 🔹 Pad out to 7 games if fewer were played
+  for (let i = cleanScores.length + 1; i <= 7; i++) {
     formData.append(`Set 1.${i}`, '');
   }
 
-  // Add placeholders for Sets 2–7
+  // 🔹 Placeholder sets for Set 2 to Set 7
   for (let s = 2; s <= 7; s++) {
     formData.append(`Set ${s}`, '');
     for (let g = 1; g <= 7; g++) {
@@ -905,7 +912,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     }
   }
 
-  // Fill other fields (some can be calculated by the sheet if needed)
+  // 🔹 Remaining columns (optional/may be computed later)
   formData.append('ARCHIVE', '');
   formData.append('email', '');
   formData.append('OtherData', '');
@@ -924,13 +931,17 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   formData.append('Round', '');
   formData.append('KValue Image', '');
   formData.append('Brackelope', '');
-  formData.append('Skunk', ''); // Optional: set if any 7-0
+
+  // 🦨 Optional skunk flag if any 7-0 game occurred
+  const anySkunk = cleanScores.some(score => score === '7 - 0' || score === '0 - 7');
+  formData.append('Skunk', anySkunk ? 'Yes' : '');
 
   formData.append('VideoLink2', '');
   formData.append('CMC', '');
   formData.append('TableType', '');
   formData.append('TableTypeOther', '');
 
+  // 📤 Submit to backend
   fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
     method: 'POST',
     body: formData
