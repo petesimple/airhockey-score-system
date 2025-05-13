@@ -469,30 +469,7 @@ function formatPlayerScore(player) {
       clearInterval(timerInterval);
       document.getElementById('summaryButtons').style.display = 'block';
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-
-// ✅ Send to Google Sheets here
-const matchData = {
-  player1: p1.name,
-  player2: p2.name,
-  p1Games: p1.games,
-  p2Games: p2.games,
-  winner: winner.name,
-  location: '', // Optional: pull from URL param if desired
-  notes: '',
-  games: gameHistory
-};
-      console.log("📤 Sending match data:", matchData);
-      console.log(JSON.stringify(matchData, null, 2)); //check nothing is empty
-      
-fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(matchData),
-  redirect: 'follow'
-})
-  .then(res => res.text())
-  .then(res => console.log('✅ Match data sent:', res))
-  .catch(err => console.error('❌ Failed to send match data', err));
+      postMatchFormDataToSheet();
 
       const compact = getCompactMatchSummary();
       const summaryContainer = document.getElementById('compactSummary');
