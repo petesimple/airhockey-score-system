@@ -314,6 +314,8 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     banner.textContent = `📍 Table ${table}`;
     banner.style.display = 'block';
   }
+
+  const ref = urlParams.get('ref');
   if (ref) {
     const refBanner = document.getElementById('refNameBanner');
     refBanner.textContent = `🎤 Ref: ${ref}`;
