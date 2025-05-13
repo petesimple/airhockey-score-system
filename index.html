@@ -367,6 +367,9 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   player.points++;
   updateScore();
 
+  // 🧹 Clear the between-games timer if it's running
+  clearBetweenGamesTimer();
+
   // If someone hits 7, prepare next game or declare winner
   if (player.points === 7) {
     const thisPlayerGames = player.games + 1;
@@ -375,7 +378,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     btn.style.display = 'inline-block';
     btn.textContent = thisPlayerGames === winGames ? 'Declare Winner' : 'Start Next Game';
 
-    // If this ends the match, stop the between-games timer early
+    // If this ends the match, stop the between-games timer again (safe redundancy)
     if (thisPlayerGames === winGames) {
       clearBetweenGamesTimer();
     }
