@@ -516,11 +516,9 @@ function formatPlayerScore(player) {
         updateSkinnyScoreboard(); // Reset highlight
       }, 4000);
 
-      // Change button to "Declare Winner"
-      document.getElementById('nextGameBtn').textContent = 'Declare Winner';
-
+      // ✅ Leave button label as "Declare Winner" (already set in scorePoint)
     } else {
-      // Still more games left — update label to "Start Next Game"
+      // Still more games left — ✅ only update label if match is NOT over
       document.getElementById('nextGameBtn').textContent = 'Start Next Game';
 
       // Brief game win highlight
