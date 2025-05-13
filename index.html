@@ -887,6 +887,13 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   updateSkinnyScoreboard();
 }
     function startBetweenGamesTimer() {
+  // 🛑 Don't start if match is already over
+  const [p1, p2] = players;
+  if (p1.games === winGames || p2.games === winGames) {
+    clearBetweenGamesTimer(); // extra safety
+    return;
+  }
+
   if (betweenGamesCountdown) return;
 
   betweenGamesTimeLeft = 120;
