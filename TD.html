@@ -70,6 +70,7 @@
   </div>
 </details>
 
+  <div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
   <input type="text" id="player1" placeholder="Player 1" />
   <input type="text" id="player2" placeholder="Player 2" />
   <input type="text" id="tableNumber" placeholder="Table #" />
@@ -79,8 +80,8 @@
     <option value="3">Best of 5</option>
     <option value="4">Best of 7</option>
   </select>
-  <br/>
   <button onclick="generateMatchLink()">Generate Match Link</button>
+</div>
 
   <div id="result"></div>
   <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
