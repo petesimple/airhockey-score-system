@@ -193,6 +193,7 @@
   <div id="scoreBoard" class="scoreboard"></div>
   <div id="timer">Match Time: 0:00</div>
   <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
+      <div id="betweenGamesTimer" style="font-size: 2em; margin-top: 10px; display: none; cursor: pointer;"></div>
 </div>
     <div id="scoreboardSpacer" style="height: 0;"></div>
     <label style="display: block; margin-top: 20px;">
@@ -240,7 +241,9 @@
     let timerInterval, timeElapsed = 0, timerRunning = false;
     let winGames = 4;
     let isPlayer1Left = true;
-
+    let betweenGamesCountdown = null;
+    let betweenGamesTimeLeft = 0;
+    
     function startMatch() {
       // Store names in localStorage
 localStorage.setItem('player1Name', document.getElementById('player1Name').value);
@@ -512,6 +515,7 @@ function formatPlayerScore(player) {
   isPlayer1Left = !isPlayer1Left;
   renderButtons();
   updateScore();
+  startBetweenGamesTimer();
 }
 
     function resetMatch() {
@@ -531,6 +535,7 @@ function formatPlayerScore(player) {
   // Clear timers
   clearInterval(timerInterval);
   clearTimeoutTimer();
+  clearBetweenGamesTimer();
 
   // Reset UI inputs
   document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
@@ -773,8 +778,15 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
     .replace(' (Paused)', '') || '0:00';
 
   const timeoutActive = document.getElementById('timeoutTimer').style.display === 'block';
+  const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ', '');
   const timeoutHTML = timeoutActive
-    ? `<div style="color: yellow; font-size: 0.9em; margin-top: 2px;">Timeout: ${document.getElementById('timeoutTimer').textContent.replace('Timeout: ', '')}</div>`
+    ? `<div style="color: yellow; font-size: 0.9em; margin-top: 2px;">Timeout: ${timeoutText}</div>`
+    : '';
+
+  const betweenGamesActive = document.getElementById('betweenGamesTimer').style.display === 'block';
+  const betweenGamesText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ', '');
+  const betweenGamesHTML = betweenGamesActive
+    ? `<div style="color: ${betweenGamesTimeLeft <= 60 ? 'red' : 'yellow'}; font-size: 0.9em; margin-top: 2px;">Next Game: ${betweenGamesText}</div>`
     : '';
 
   const winId = winnerId?.trim?.() || null;
@@ -821,6 +833,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
       <div style="text-align: center; min-width: 100px; font-size: 1.4em;">
         <div style="font-weight: bold;">${timerText}</div>
         ${timeoutHTML}
+        ${betweenGamesHTML}
       </div>
       ${rightHTML}
     </div>`;
@@ -865,6 +878,34 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   renderButtons();
   updateScore();
   updateSkinnyScoreboard();
+}
+    function startBetweenGamesTimer() {
+  if (betweenGamesCountdown) return;
+
+  betweenGamesTimeLeft = 120;
+  const el = document.getElementById('betweenGamesTimer');
+  el.style.display = 'block';
+  el.style.color = 'yellow';
+  el.textContent = `Next Game: ${betweenGamesTimeLeft}s`;
+
+  betweenGamesCountdown = setInterval(() => {
+    betweenGamesTimeLeft--;
+    if (betweenGamesTimeLeft <= 0) {
+      clearBetweenGamesTimer();
+    } else {
+      el.textContent = `Next Game: ${betweenGamesTimeLeft}s`;
+      el.style.color = betweenGamesTimeLeft <= 60 ? 'red' : 'yellow';
+    }
+  }, 1000);
+}
+
+function clearBetweenGamesTimer() {
+  if (betweenGamesCountdown) {
+    clearInterval(betweenGamesCountdown);
+    betweenGamesCountdown = null;
+  }
+  const el = document.getElementById('betweenGamesTimer');
+  el.style.display = 'none';
 }
     function postMatchFormDataToSheet() {
   const [p1, p2] = players;
@@ -950,6 +991,8 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   .then(data => console.log('✅ Match FormData POSTed:', data))
   .catch(err => console.error('❌ FormData POST failed:', err));
 }
+    //In between games timer
+  document.getElementById('betweenGamesTimer').addEventListener('click', clearBetweenGamesTimer);
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
   ver1.7 – (miticlift)
