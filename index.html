@@ -889,6 +889,79 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   updateScore();
   updateSkinnyScoreboard();
 }
+    function postMatchFormDataToSheet() {
+  const [p1, p2] = players;
+  const winner = p1.games > p2.games ? p1.name : p2.name;
+
+  const formData = new FormData();
+  formData.append('Date', new Date().toLocaleString());
+  formData.append('Player 1', p1.name);
+  formData.append('Player 2', p2.name);
+  formData.append('P1 rank', ''); // optional
+  formData.append('P2 rank', '');
+  formData.append('Ref', '');
+  formData.append('Image', '');
+  formData.append('Puck Color', '');
+  formData.append('Location', 'Table 1'); // dynamic if needed
+  formData.append('Winner', winner);
+  formData.append('Video Link', '');
+  formData.append('Notes', '');
+  formData.append('Game Count', `${p1.games}-${p2.games}`);
+
+  // Flatten up to 7 sets of 7 games each
+  // For now, treat all games as Set 1.1–1.7
+  formData.append('Set 1', ''); // Label
+  gameHistory.slice(0, 7).forEach((game, i) => {
+    formData.append(`Set 1.${i+1}`, game);
+  });
+
+  // Pad missing Set 1.x
+  for (let i = gameHistory.length + 1; i <= 7; i++) {
+    formData.append(`Set 1.${i}`, '');
+  }
+
+  // Add placeholders for Sets 2–7
+  for (let s = 2; s <= 7; s++) {
+    formData.append(`Set ${s}`, '');
+    for (let g = 1; g <= 7; g++) {
+      formData.append(`Set ${s}.${g}`, '');
+    }
+  }
+
+  // Fill other fields (some can be calculated by the sheet if needed)
+  formData.append('ARCHIVE', '');
+  formData.append('email', '');
+  formData.append('OtherData', '');
+  formData.append('P1 RE Rating', '');
+  formData.append('P2 RE Rating', '');
+  formData.append('Percentage P1 Win', '');
+  formData.append('Percentage P2 Win', '');
+  formData.append('🔒 Row ID', '');
+  formData.append('Other KVC', '');
+  formData.append('KVC', '');
+  formData.append('Percentage P1 WinBK', '');
+  formData.append('Percentage P2 WinBK', '');
+  formData.append('Other location', '');
+  formData.append('Old Math', '');
+  formData.append('Send Email', '');
+  formData.append('Round', '');
+  formData.append('KValue Image', '');
+  formData.append('Brackelope', '');
+  formData.append('Skunk', ''); // Optional: set if any 7-0
+
+  formData.append('VideoLink2', '');
+  formData.append('CMC', '');
+  formData.append('TableType', '');
+  formData.append('TableTypeOther', '');
+
+  fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => console.log('✅ Match FormData POSTed:', data))
+  .catch(err => console.error('❌ FormData POST failed:', err));
+}
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
   ver1.6 – (skunk)
