@@ -470,6 +470,7 @@ function formatPlayerScore(player) {
     if (winner.games === winGames) {
       document.getElementById('matchWinner').textContent = `${winner.name} wins the match!`;
       clearInterval(timerInterval);
+      clearBetweenGamesTimer();
       document.getElementById('summaryButtons').style.display = 'block';
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
       postMatchFormDataToSheet();
