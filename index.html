@@ -905,6 +905,7 @@ function clearBetweenGamesTimer() {
     clearInterval(betweenGamesCountdown);
     betweenGamesCountdown = null;
   }
+  betweenGamesTimeLeft = 0; 
   const el = document.getElementById('betweenGamesTimer');
   el.style.display = 'none';
 }
