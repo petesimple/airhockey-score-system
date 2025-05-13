@@ -53,24 +53,27 @@
   <img src="TDlogo.png" alt="Tournament Director Logo" style="max-width: 300px; margin-bottom: 20px;" />
   <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
-<div style="margin-top: 10px; line-height: 1.5;">
-  <p><strong>1. Who's playing?</strong><br/>Enter names for Player 1 and Player 2.</p>
+  <div style="margin-top: 10px; line-height: 1.5;">
+    <p><strong>1. Who's playing?</strong><br/>Enter names for Player 1 and Player 2.</p>
 
-  <p><strong>2. Got a table?</strong><br/>Drop in a Table # so the scoreboard shows where to go.</p>
+    <p><strong>2. Got a table?</strong><br/>Drop in a Table # so the scoreboard shows where to go.</p>
 
-  <p><strong>3. Match type?</strong><br/>Pick Best of 3, 5, or 7. No math required.</p>
+    <p><strong>3. Got a ref?</strong><br/>Enter a Referee name (optional, but makes you look extra official 👨‍⚖️).</p>
 
-  <p><strong>4. Smash that button.</strong><br/>Click "Generate Match Link" to create a custom scoreboard URL + QR code.</p>
+    <p><strong>4. Match type?</strong><br/>Pick Best of 3, 5, or 7. No math required.</p>
 
-  <p><strong>5. Share it!</strong><br/>Scan, tap, copy—whatever gets players to the table faster.</p>
+    <p><strong>5. Smash that button.</strong><br/>Click "Generate Match Link" to create a custom scoreboard URL + QR code.</p>
 
-  <p>You're now the matchmaker. Use your power wisely. 🏓</p>
-</div>
+    <p><strong>6. Share it!</strong><br/>Scan, tap, copy—whatever gets players to the table faster.</p>
+
+    <p>You're now the matchmaker *and* the law. Use your power wisely. 🏓</p>
+  </div>
 </details>
 
   <input type="text" id="player1" placeholder="Player 1" />
   <input type="text" id="player2" placeholder="Player 2" />
   <input type="text" id="tableNumber" placeholder="Table #" />
+  <input type="text" id="refName" placeholder="Referee Name" />
   <select id="matchLength">
     <option value="2">Best of 3</option>
     <option value="3">Best of 5</option>
@@ -92,6 +95,7 @@
   const p2 = encodeURIComponent(document.getElementById('player2').value.trim());
   const match = document.getElementById('matchLength').value;
   const table = document.getElementById('tableNumber').value.trim();
+  const ref = encodeURIComponent(document.getElementById('refName').value.trim());
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
@@ -99,8 +103,14 @@
   if (table) {
     generatedUrl += `&table=${encodeURIComponent(table)}`;
   }
+  if (ref) {
+    generatedUrl += `&ref=${ref}`;
+  }
 
-  const extraNote = table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : '';
+  const extraNote = `
+    ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
+    ${ref ? `<p><strong>Referee:</strong> ${decodeURIComponent(ref)}</p>` : ''}
+  `;
 
   document.getElementById('result').innerHTML = `
     <p><strong>Match Link:</strong></p>
@@ -119,8 +129,7 @@
     if (error) console.error(error);
   });
 
-  // 📝 Save to localStorage log
-  const readableMatch = `${decodeURIComponent(p1)} vs ${decodeURIComponent(p2)} – Best of ${match}${table ? ` @ Table ${table}` : ''}`;
+  const readableMatch = `${decodeURIComponent(p1)} vs ${decodeURIComponent(p2)} – Best of ${match}${table ? ` @ Table ${table}` : ''}${ref ? ` [Ref: ${decodeURIComponent(ref)}]` : ''}`;
   addToMatchLog(readableMatch, generatedUrl);
 }
 
