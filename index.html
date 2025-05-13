@@ -510,16 +510,18 @@ function formatPlayerScore(player) {
 
       // Pulse winner on skinny scoreboard
       updateSkinnyScoreboard(winner.id);
-      document.querySelectorAll('.skinny-player').forEach(el => el.classList.remove('pulse'));
-      const winnerDiv = document.querySelector('.skinny-player.winner');
-      if (winnerDiv) winnerDiv.classList.add('pulse');
+      setTimeout(() => {
+        document.querySelectorAll('.skinny-player').forEach(el => el.classList.remove('pulse'));
+        const winnerDiv = document.querySelector('.skinny-player.winner');
+        if (winnerDiv) winnerDiv.classList.add('pulse');
+      }, 50); // give the DOM a moment to reflow
 
       setTimeout(() => {
+        const winnerDiv = document.querySelector('.skinny-player.winner');
         if (winnerDiv) winnerDiv.classList.remove('pulse');
         updateSkinnyScoreboard(); // Reset highlight
       }, 4000);
 
-      // ✅ Leave button label as "Declare Winner" (already set in scorePoint)
     } else {
       // Still more games left — ✅ only update label if match is NOT over
       document.getElementById('nextGameBtn').textContent = 'Start Next Game';
