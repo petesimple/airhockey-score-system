@@ -238,6 +238,8 @@
       { id: 'player1', name: '', points: 0, games: 0, timeoutUsed: false },
       { id: 'player2', name: '', points: 0, games: 0, timeoutUsed: false }
     ];
+      const urlParams = new URLSearchParams(window.location.search);
+      const refFromUrl = urlParams.get('ref') || '';
     let gameHistory = [];
     let timerInterval, timeElapsed = 0, timerRunning = false;
     let winGames = 4;
@@ -699,7 +701,7 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
 
   // Prompt user for missing info
   const location = prompt("Enter match location:", "") || "";
-  const referee = prompt("Enter referee name (if any):", "") || "";
+  const referee = refFromUrl || prompt("Enter referee name (if any):", "") || "";
   const notes = prompt("Additional notes:", "") || "";
 
   // Extract up to 7 games for columns O–U
@@ -942,7 +944,7 @@ function clearBetweenGamesTimer() {
   formData.append('Player 2', p2.name);
   formData.append('P1 rank', '');
   formData.append('P2 rank', '');
-  formData.append('Ref', '');
+  formData.append('Ref', refFromUrl);
   formData.append('Image', '');
   formData.append('Puck Color', '');
   formData.append('Location', 'Table 1');
