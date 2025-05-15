@@ -1,0 +1,5 @@
+"name": "@petesimple/airhockey-score-system",
+"version": "1.8.1",
+"publishConfig": {
+  "registry": "https://npm.pkg.github.com/"
+}
