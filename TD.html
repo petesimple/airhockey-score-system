@@ -50,7 +50,10 @@
   </style>
 </head>
 <body>
-        <img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;">
+        <img id="logo" src="TDlogo.png" alt="Logo"
+          style="height:200px; cursor: pointer;" 
+          draggable="false" 
+          unselectable="on" />
           <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
   <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
@@ -221,6 +224,10 @@ function clearMatchLog() {
   const uploader = document.getElementById("logoUploader");
   let pressTimer;
 
+    // Prevent default drag and selection behavior on the logo
+logo.addEventListener("dragstart", (e) => e.preventDefault());
+logo.addEventListener("selectstart", (e) => e.preventDefault());
+    
   // Long press triggers file input
   logo.addEventListener("mousedown", () => {
     pressTimer = setTimeout(() => {
