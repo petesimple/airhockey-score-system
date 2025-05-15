@@ -50,7 +50,8 @@
   </style>
 </head>
 <body>
-  <img src="TDlogo.png" alt="Tournament Director Logo" style="max-width: 300px; margin-bottom: 20px;" />
+        <img id="logo" src="TDlogo.png" alt="Logo" style="height:80px; cursor: pointer;">
+          <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
   <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
   <div style="margin-top: 10px; line-height: 1.5;">
@@ -206,7 +207,8 @@ function clearMatchLog() {
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
   <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
   <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
-    <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
+  <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
+  <button onclick="resetLogo()" style="margin-top: 10px; background: #666; color: #fff; border-radius: 6px; padding: 6px 12px;">Reset Logo</button>
 </details>
 
   <script>
@@ -214,6 +216,54 @@ function clearMatchLog() {
     navigator.serviceWorker.register('service-worker-td.js')
       .then(() => console.log('TD Service Worker registered!'));
   }
+
+    const logo = document.getElementById("logo");
+  const uploader = document.getElementById("logoUploader");
+  let pressTimer;
+
+  // Long press triggers file input
+  logo.addEventListener("mousedown", () => {
+    pressTimer = setTimeout(() => {
+      uploader.click();
+    }, 500); // 500ms for long press
+  });
+
+  logo.addEventListener("mouseup", () => clearTimeout(pressTimer));
+  logo.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+
+// Add touch support for mobile
+logo.addEventListener("touchstart", () => {
+  pressTimer = setTimeout(() => {
+    uploader.click();
+  }, 500);
+});
+logo.addEventListener("touchend", () => clearTimeout(pressTimer));
+logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
+    
+  // When a file is selected, update the logo
+  uploader.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        logo.src = evt.target.result;
+        localStorage.setItem("customLogo", evt.target.result); // Save for reload
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Load from localStorage on page load
+  window.addEventListener("DOMContentLoaded", () => {
+    const savedLogo = localStorage.getItem("customLogo");
+    if (savedLogo) {
+      logo.src = savedLogo;
+    }
+  });
+    function resetLogo() {
+  localStorage.removeItem("customLogo");
+  logo.src = "TDlogo.png";
+}
 </script>
 </body>
 </html>
