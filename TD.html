@@ -211,7 +211,10 @@ function clearMatchLog() {
   <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
   <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
   <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
-  <button onclick="resetLogo()" style="margin-top: 10px; background: #666; color: #fff; border-radius: 6px; padding: 6px 12px;">Reset Logo</button>
+  <div style="margin-top: 10px;">
+    <button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
+    <button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
+  </div>
 </details>
 
   <script>
