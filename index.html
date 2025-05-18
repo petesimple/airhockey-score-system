@@ -170,6 +170,23 @@
   height: 180px; /* 👈 fixed height */
   overflow: hidden; /* optional: to avoid any overflow effects */
 }
+/* Base size for all player buttons */
+.score-btn {
+  width: 160px;
+  height: 50px;
+  font-size: 1em;
+  margin: 5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Highlight important buttons for better mobile usability */
+.large-tap {
+  font-size: 1.2em;
+  height: 60px;
+  font-weight: bold;
+}
   </style>
 </head>
 <body>
@@ -348,16 +365,16 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     }
 
     function generateButtonHTML(player) {
-      const colorClass = player.id === 'player1' ? 'red-btn' : 'blue-btn';
-      const num = player.id === 'player1' ? '1' : '2';
-      return `
-  <button class="${colorClass}" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
-  <button class="${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
-  <button id="timeoutBtn${num}" class="small-btn ${colorClass}" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
-  <button class="small-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
-  <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
-`;
-    }
+  const colorClass = player.id === 'player1' ? 'red-btn' : 'blue-btn';
+  const num = player.id === 'player1' ? '1' : '2';
+  return `
+    <button class="score-btn ${colorClass} large-tap" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
+    <button class="score-btn ${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
+    <button id="timeoutBtn${num}" class="score-btn ${colorClass} large-tap" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
+    <button class="score-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
+    <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
+  `;
+}
         function scorePoint(id) {
   const player = players.find(p => p.id === id);
 
