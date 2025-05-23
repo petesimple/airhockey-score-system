@@ -208,6 +208,14 @@ function clearMatchLog() {
   </script>
   <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
+    
+    <input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
+<div id="paginationControls" style="margin: 10px 0;">
+  <button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
+  <span id="pageInfo" style="font-size: 0.9em;"></span>
+  <button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
+</div>
+    
   <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
   <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
   <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
