@@ -167,14 +167,30 @@ function addToMatchLog(text, url) {
 }
 
 function renderMatchLog() {
+  const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+  const filtered = log.filter(item =>
+    item.text.toLowerCase().includes(searchQuery)
+  );
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages || 1;
+
+  const start = (currentPage - 1) * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
+
   const logList = document.getElementById('logList');
   logList.innerHTML = '';
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  log.forEach(item => {
+  visible.forEach(item => {
     const li = document.createElement('li');
     li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
     logList.appendChild(li);
   });
+
+  const pageInfo = document.getElementById('pageInfo');
+  if (pageInfo) {
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+  }
 }
 
 function clearMatchLog() {
@@ -283,6 +299,16 @@ logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
     function resetLogo() {
   localStorage.removeItem("customLogo");
   logo.src = "TDlogo.png";
+}
+    function nextPage() {
+  currentPage++;
+  renderMatchLog();
+}
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderMatchLog();
+  }
 }
 </script>
 </body>
