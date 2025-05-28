@@ -143,6 +143,12 @@
   font-weight: bold;
   line-height: 1;
 }
+    #skinnyScoreboard.mirrored .skinny-player {
+  text-align: right;
+}
+#skinnyScoreboard.mirrored .skinny-player:last-child {
+  text-align: left;
+}
     .winner {
   background-color: #ff0 !important;
   color: black !important;
@@ -818,8 +824,16 @@ document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTi
   }
 }
   function updateSkinnyScoreboard(winnerId = null) {
-  const left = isPlayer1Left ? players[0] : players[1];
-  const right = isPlayer1Left ? players[1] : players[0];
+  const mirror = document.getElementById('mirrorSkinny')?.checked;
+  const skinny = document.getElementById('skinnyScoreboard');
+  skinny.classList.toggle('mirrored', mirror);
+
+  let left, right;
+  if (mirror) {
+    [left, right] = isPlayer1Left ? [players[1], players[0]] : [players[0], players[1]];
+  } else {
+    [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+  }
 
   const timerText = document.getElementById('timer').textContent
     .replace('Match Time: ', '')
@@ -1051,7 +1065,7 @@ function clearBetweenGamesTimer() {
   document.getElementById('betweenGamesTimer').addEventListener('click', clearBetweenGamesTimer);
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
-  ver1.9 – (cash)
+  ver2.0 – (mirror)
 </div>
 </body>
 </html>
