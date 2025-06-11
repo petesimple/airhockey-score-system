@@ -535,6 +535,8 @@ function formatPlayerScore(player) {
         summaryContainer.textContent = compact;
       }
 
+      document.getElementById('startAnotherMatchBtn').style.display = 'inline-block';
+
       // Pulse winner on skinny scoreboard
       updateSkinnyScoreboard(winner.id);
       setTimeout(() => {
