@@ -103,6 +103,9 @@
     <option value="4">Best of 7</option>
   </select>
   <button onclick="generateMatchLink()">Generate Match Link</button>
+    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">
+  ➕ Generate Match Sheet
+</a>
 </div>
 
   <div id="result"></div>
@@ -124,19 +127,21 @@
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
+  if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
+  if (ref) generatedUrl += `&ref=${ref}`;
 
-  if (table) {
-    generatedUrl += `&table=${encodeURIComponent(table)}`;
-  }
-  if (ref) {
-    generatedUrl += `&ref=${ref}`;
-  }
+  // Match Sheet Link
+  const matchSheetBase = 'https://yourusername.github.io/airhockey-match-sheet/';
+  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}`;
+  const matchSheetLink = document.getElementById('matchSheetLink');
+  matchSheetLink.href = matchSheetUrl;
+  matchSheetLink.style.display = 'inline-block';
 
+  // Display match link
   const extraNote = `
     ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
     ${ref ? `<p><strong>Referee:</strong> ${decodeURIComponent(ref)}</p>` : ''}
   `;
-
   document.getElementById('result').innerHTML = `
     <p><strong>Match Link:</strong></p>
     <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
