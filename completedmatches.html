@@ -20,14 +20,16 @@
   </table>
 
   <script>
-    const endpoint = "https://script.google.com/macros/s/AKfycbyWUxcGcD8jt76YbLX4q_wOjk3ZLXSj6vAff25tSpQBP8H62iK5tWUfL1d44h0uQsOo/exec";
+  const endpoint = "https://script.google.com/macros/s/AKfycbyWUxcGcD8jt76YbLX4q_wOjk3ZLXSj6vAff25tSpQBP8H62iK5tWUfL1d44h0uQsOo/exec";
 
+  function loadMatches() {
     fetch(endpoint)
       .then(res => res.json())
       .then(data => {
         const table = document.getElementById("matchTable");
         const thead = table.querySelector("thead");
         const tbody = table.querySelector("tbody");
+        tbody.innerHTML = ""; // clear previous rows
 
         if (!data.length) {
           tbody.innerHTML = "<tr><td colspan='100%'>No matches found.</td></tr>";
@@ -53,6 +55,13 @@
         console.error("Fetch error:", err);
         document.body.innerHTML += "<p style='color: red;'>Failed to load match data.</p>";
       });
-  </script>
+  }
+
+  // Initial load
+  loadMatches();
+
+  // Auto-refresh every 30 seconds
+  setInterval(loadMatches, 30000);
+</script>
 </body>
 </html>
