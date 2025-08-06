@@ -279,6 +279,10 @@
     let isPlayer1Left = true;
     let betweenGamesCountdown = null;
     let betweenGamesTimeLeft = 0;
+
+// Store Match ID from URL globally
+const matchIdFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
+window.matchIdFromUrl = matchIdFromUrl; // Optional global access
     
     function startMatch() {
       // Store names in localStorage
@@ -1132,6 +1136,15 @@ function startAnotherMatchWithSameSettings() {
     const matchId = new URLSearchParams(window.location.search).get('matchid') || '';
 formData.append('Match ID', matchId);
 document.getElementById('matchIdDisplay').textContent = matchId ? `📄 Match ID: ${matchId}` : '⚠️ No Match ID in URL';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const display = document.getElementById('matchIdDisplay');
+  if (display) {
+    display.textContent = matchIdFromUrl
+      ? `📄 Match ID: ${matchIdFromUrl}`
+      : '⚠️ No Match ID in URL';
+  }
+});
     
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
