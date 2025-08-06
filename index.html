@@ -337,7 +337,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
   const table = urlParams.get('table');
-  const matchId = urlParams.get('matchid') || '';
+  const matchId = urlParams.get('matchid') || 'test';
       window.matchIdFromUrl = matchId; // Save globally for later use
 
   if (p1) {
@@ -1065,7 +1065,7 @@ function clearBetweenGamesTimer() {
     
 
       const matchIdFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
-formData.append('Match ID', matchIdFromUrl, 'test');
+formData.append('Match ID', matchIdFromUrl);
 console.log("📄 Submitting Match ID:", matchIdFromUrl);
 
   // 📤 Submit to backend
