@@ -337,7 +337,7 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
   const table = urlParams.get('table');
-  const matchId = urlParams.get('matchid') || 'test';
+  const matchId = urlParams.get('matchid');
       window.matchIdFromUrl = matchId; // Save globally for later use
 
   if (p1) {
@@ -355,6 +355,10 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     const banner = document.getElementById('tableNumberBanner');
     banner.textContent = `📍 Table ${table}`;
     banner.style.display = 'block';
+  }
+  if (matchId) {
+    document.getElementById('matchid').value = matchId;
+    localStorage.setItem('matchId', matchId);
   }
 
   const ref = urlParams.get('ref');
