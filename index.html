@@ -1134,11 +1134,7 @@ function startAnotherMatchWithSameSettings() {
 
   // Restart the timer
   startTimer();
-}
-    //testing Match ID
-    const matchId = new URLSearchParams(window.location.search).get('matchid') || '';
-formData.append('Match ID', matchId);
-document.getElementById('matchIdDisplay').textContent = matchId ? `📄 Match ID: ${matchId}` : '⚠️ No Match ID in URL';
+}    
 
 document.addEventListener('DOMContentLoaded', () => {
   const display = document.getElementById('matchIdDisplay');
