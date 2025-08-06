@@ -1,4 +1,4 @@
-const CACHE_NAME = "airhockey-cache-v1";
+const CACHE_NAME = "airhockey-cache-vw";
 const urlsToCache = [
   "./index_v1_3.html",
   "./manifest.json",
