@@ -235,6 +235,7 @@
     <div id="tableNumberBanner" style="font-size: 1.2em; margin-top: 10px; color: yellow; display: none;"></div>
     <div id="refNameBanner" style="font-size: 1em; color: #ccc; margin-top: 5px; margin-bottom: 15px; display: none;"></div>
     <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
+      <div id="matchIdDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
   <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Streaming Scoreboard</label>
 </div>
     <div id="mirrorSkinnyWrapper" style="margin-bottom: 10px;">
@@ -1127,9 +1128,14 @@ function startAnotherMatchWithSameSettings() {
   // Restart the timer
   startTimer();
 }
+    //testing Match ID
+    const matchId = new URLSearchParams(window.location.search).get('matchid') || '';
+formData.append('Match ID', matchId);
+document.getElementById('matchIdDisplay').textContent = matchId ? `📄 Match ID: ${matchId}` : '⚠️ No Match ID in URL';
+    
 </script>
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">
-  ver2.2 – (worlds)
+  ver2.3 – (worlds)
 </div>
 </body>
 </html>
