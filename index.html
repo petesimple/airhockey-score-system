@@ -1078,6 +1078,7 @@ console.log("📄 Submitting Match ID:", matchidFromUrl);
   // 📤 Submit to backend
   fetch('https://script.google.com/macros/s/AKfycbxK7MDjjfCJrFkLkqBUVVI3eIRvnJJIKJq7GxdqPxZCrUrfbnFSRRynb7EltXVxWt8e/exec', {
     method: 'POST',
+    mode: 'cors',
     body: formData
   })
   .then(res => res.json())
