@@ -235,7 +235,7 @@
     <div id="tableNumberBanner" style="font-size: 1.2em; margin-top: 10px; color: yellow; display: none;"></div>
     <div id="refNameBanner" style="font-size: 1em; color: #ccc; margin-top: 5px; margin-bottom: 15px; display: none;"></div>
     <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
-      <div id="matchIdDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
+      <div id="matchidDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
       <hr>
   <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Streaming Scoreboard</label>
 </div>
@@ -282,8 +282,8 @@
     let betweenGamesTimeLeft = 0;
 
 // Store Match ID from URL globally
-const matchIdFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
-window.matchIdFromUrl = matchIdFromUrl; // Optional global access
+const matchidFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
+window.matchidFromUrl = matchidFromUrl; // Optional global access
     
     function startMatch() {
       // Store names in localStorage
@@ -337,8 +337,8 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
   const table = urlParams.get('table');
-  const matchId = urlParams.get('matchid');
-      window.matchIdFromUrl = matchId; // Save globally for later use
+  const matchid = urlParams.get('matchid');
+      window.matchidFromUrl = matchid; // Save globally for later use
 
   if (p1) {
     document.getElementById('player1Name').value = p1;
@@ -356,10 +356,13 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
     banner.textContent = `📍 Table ${table}`;
     banner.style.display = 'block';
   }
-  if (matchId) {
-    document.getElementById('matchId').value = matchId;
-    localStorage.setItem('matchId', matchId);
+  if (matchid) {
+  const matchInput = document.getElementById('matchid');
+  if (matchInput) {
+    matchInput.value = matchid;
   }
+  localStorage.setItem('matchid', matchid);
+}
 
   const ref = urlParams.get('ref');
   if (ref) {
@@ -1068,9 +1071,9 @@ function clearBetweenGamesTimer() {
   formData.append('TableTypeOther', '');
     
 
-      const matchIdFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
-formData.append('Match ID', matchIdFromUrl);
-console.log("📄 Submitting Match ID:", matchIdFromUrl);
+      const matchidFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
+formData.append('Match ID', matchidFromUrl);
+console.log("📄 Submitting Match ID:", matchidFromUrl);
 
   // 📤 Submit to backend
   fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
@@ -1140,10 +1143,10 @@ function startAnotherMatchWithSameSettings() {
 }    
 
 document.addEventListener('DOMContentLoaded', () => {
-  const display = document.getElementById('matchIdDisplay');
+  const display = document.getElementById('matchidDisplay');
   if (display) {
-    display.textContent = matchIdFromUrl
-      ? `📄 Match ID: ${matchIdFromUrl}`
+    display.textContent = matchidFromUrl
+      ? `📄 Match ID: ${matchidFromUrl}`
       : '⚠️ No Match ID in URL';
   }
 });
