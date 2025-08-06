@@ -331,6 +331,8 @@ localStorage.setItem('player2Name', document.getElementById('player2Name').value
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
   const table = urlParams.get('table');
+  const matchId = urlParams.get('matchid') || '';
+      window.matchIdFromUrl = matchId; // Save globally for later use
 
   if (p1) {
     document.getElementById('player1Name').value = p1;
@@ -1054,7 +1056,7 @@ function clearBetweenGamesTimer() {
   formData.append('CMC', '');
   formData.append('TableType', '');
   formData.append('TableTypeOther', '');
-  formData.append('Match ID', '');    
+  formData.append('Match ID', window.matchIdFromUrl || '');   
 
   // 📤 Submit to backend
   fetch('https://script.google.com/macros/s/AKfycbzrBDHxyhctkl4UaaX3gjVUAbjJ6i2Xkxo3k6XmWZ-8vZ3ru5mtJj1vikQSQBxT9-Eb/exec', {
