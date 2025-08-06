@@ -1065,7 +1065,7 @@ function clearBetweenGamesTimer() {
     
 
       const matchIdFromUrl = new URLSearchParams(window.location.search).get('matchid') || '';
-formData.append('Match ID', matchIdFromUrl);
+formData.append('Match ID', matchIdFromUrl, 'test');
 console.log("📄 Submitting Match ID:", matchIdFromUrl);
 
   // 📤 Submit to backend
