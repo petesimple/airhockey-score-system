@@ -10,6 +10,38 @@
     th, td { border: 1px solid #888; padding: 0.5em; text-align: center; }
     th { background: #222; }
     tr:nth-child(even) { background: #111; }
+
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+    }
+
+    .iframe-wrapper {
+      width: 100%;
+      height: 100vh;
+      background: #111;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background-color: #111;
+      filter: invert(1) hue-rotate(180deg); /* dark-mode trick */
+    }
+
+    /* Optional: constrain max width on desktop */
+    @media (min-width: 1200px) {
+      .iframe-wrapper {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -19,7 +51,11 @@
     <tbody></tbody>
   </table>
 
-  <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4veJVDSnPmuiuAAfyhhJDrKaWpoUcC4rkIZwDyie4q3hOZA3qWYqoPgktNpycuao1xj_md4kqGdDT/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+  <div class="iframe-wrapper">
+    <iframe
+      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4veJVDSnPmuiuAAfyhhJDrKaWpoUcC4rkIZwDyie4q3hOZA3qWYqoPgktNpycuao1xj_md4kqGdDT/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false">
+    </iframe>
+  </div>
 
   <script>
   const endpoint = "https://script.google.com/macros/s/AKfycbxTiyDSagNArqBsw2Fupyf0sXGy7N3dk7JS09iBw9wCqEGE9DrZ1wFHJsm_SyLUFVOx/exec";
