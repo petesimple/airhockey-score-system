@@ -1,6 +1,6 @@
-const CACHE_NAME = "airhockey-cache-vw";
+const CACHE_NAME = "airhockey-cache-vw1";
 const urlsToCache = [
-  "./index_v1_3.html",
+  "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
