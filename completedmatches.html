@@ -5,12 +5,6 @@
   <title>Completed Matches</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { background: #000; color: #fff; font-family: sans-serif; padding: 1em; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-    th, td { border: 1px solid #888; padding: 0.5em; text-align: center; }
-    th { background: #222; }
-    tr:nth-child(even) { background: #111; }
-
     body {
       margin: 0;
       background: #000;
@@ -45,61 +39,10 @@
   </style>
 </head>
 <body>
-  <h1>Completed Matches</h1>
-  <!--<table id="matchTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>-->
-
   <div class="iframe-wrapper">
     <iframe
       src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4veJVDSnPmuiuAAfyhhJDrKaWpoUcC4rkIZwDyie4q3hOZA3qWYqoPgktNpycuao1xj_md4kqGdDT/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false">
     </iframe>
   </div>
-
-  <script>
-  const endpoint = "https://script.google.com/macros/s/AKfycbxTiyDSagNArqBsw2Fupyf0sXGy7N3dk7JS09iBw9wCqEGE9DrZ1wFHJsm_SyLUFVOx/exec";
-
-  function loadMatches() {
-    fetch(endpoint)
-      .then(res => res.json())
-      .then(data => {
-        const table = document.getElementById("matchTable");
-        const thead = table.querySelector("thead");
-        const tbody = table.querySelector("tbody");
-        tbody.innerHTML = ""; // clear previous rows
-
-        if (!data.length) {
-          tbody.innerHTML = "<tr><td colspan='100%'>No matches found.</td></tr>";
-          return;
-        }
-
-        // Headers
-        const headers = Object.keys(data[0]);
-        thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
-
-        // Rows
-        data.forEach(row => {
-          const tr = document.createElement("tr");
-          headers.forEach(h => {
-            const td = document.createElement("td");
-            td.textContent = row[h] ?? "";
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
-      })
-      .catch(err => {
-        console.error("Fetch error:", err);
-        document.body.innerHTML += "<p style='color: red;'>Failed to load match data.</p>";
-      });
-  }
-
-  // Initial load
-  loadMatches();
-
-  // Auto-refresh every 30 seconds
-  setInterval(loadMatches, 30000);
-</script>
 </body>
 </html>
