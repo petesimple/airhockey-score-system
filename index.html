@@ -277,6 +277,7 @@
   margin-right: auto;
 ">
   📋 Please fill out the paper match card and turn it into the command center.
+  <div id="matchCardScores" style="margin-top: 8px; font-weight: normal; color: #fff;"></div>
 </div>
   </div>
 
@@ -561,8 +562,23 @@ function formatPlayerScore(player) {
       // ✅ Show post-match notice if Match ID exists
       if (matchidFromUrl && document.getElementById('postMatchNotice')) {
       document.getElementById('postMatchNotice').style.display = 'block';
-      }
-      
+
+        // 📝 Create easy-read scores for match card
+  const p1Scores = [];
+  const p2Scores = [];
+  gameHistory.forEach(g => {
+    const match = g.match(/(\d+)\s*-\s*(\d+)/);
+    if (match) {
+      p1Scores.push(match[1]);
+      p2Scores.push(match[2]);
+    }
+  });
+
+  document.getElementById('matchCardScores').textContent =
+    `${players[0].name} - ${p1Scores.join(', ')} | ` +
+    `${players[1].name} - ${p2Scores.join(', ')}`;
+    }
+            
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
       postMatchFormDataToSheet();
 
