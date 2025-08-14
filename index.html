@@ -262,6 +262,22 @@
       <button onclick="generateCSV()">Export CSV</button>
       <button id="startAnotherMatchBtn" style="display:none;">Start Another Match</button>
     </div>
+    <!-- 📋 Notice appears only if Match ID present -->
+<div id="postMatchNotice" style="
+  display: none;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 2px dashed #f5c04f;
+  background: rgba(245, 192, 79, 0.08);
+  color: #f5c04f;
+  font-weight: 700;
+  border-radius: 10px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+">
+  📋 Please fill out the paper match card and turn it into the command center.
+</div>
   </div>
 
   <canvas id="confettiCanvas"></canvas>
@@ -541,6 +557,12 @@ function formatPlayerScore(player) {
       clearInterval(timerInterval);
       clearBetweenGamesTimer();
       document.getElementById('summaryButtons').style.display = 'block';
+      
+      // ✅ Show post-match notice if Match ID exists
+      if (matchidFromUrl && document.getElementById('postMatchNotice')) {
+      document.getElementById('postMatchNotice').style.display = 'block';
+      }
+      
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
       postMatchFormDataToSheet();
 
