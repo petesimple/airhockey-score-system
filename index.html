@@ -392,7 +392,7 @@
 
     function updateMirrorState(){ // apply mirror class to overlays and rerender everything
       const mirror = isMirrored();
-      document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
+      //document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror); //removed to test
       document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
       renderButtons(); updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard();
     }
