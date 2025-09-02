@@ -126,13 +126,20 @@
   const ref = encodeURIComponent(document.getElementById('refName').value.trim());
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
-  generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}`;
+  
+  // 🔹 Generate matchid=weeklyYYYYMMDD
+  const today = new Date();
+  const yyyymmdd = today.toISOString().slice(0,10).replace(/-/g, ''); 
+  const matchId = `weekly${yyyymmdd}`;
+  
+  // Build generatedUrl
+  generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
   if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
   if (ref) generatedUrl += `&ref=${ref}`;
 
   // Match Sheet Link
   const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}`;
+  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
   const matchSheetLink = document.getElementById('matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
   matchSheetLink.style.display = 'inline-block';
@@ -141,6 +148,7 @@
   const extraNote = `
     ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
     ${ref ? `<p><strong>Referee:</strong> ${decodeURIComponent(ref)}</p>` : ''}
+    <p><strong>Match ID:</strong> ${matchId}</p>
   `;
   document.getElementById('result').innerHTML = `
     <p><strong>Match Link:</strong></p>
