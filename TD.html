@@ -127,10 +127,15 @@
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
   
-  // 🔹 Generate matchid=weeklyYYYYMMDD
+  // 🔹 Generate unique 4-char ID
+  const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+  
+  // 🔹 Generate date with dashes
   const today = new Date();
-  const yyyymmdd = today.toISOString().slice(0,10).replace(/-/g, ''); 
-  const matchId = `weekly${yyyymmdd}`;
+  const yyyymmdd = today.toISOString().slice(0,10); // YYYY-MM-DD format
+
+  // 🔹 Combine into matchid
+  const matchId = `weekly${randomId}-${yyyymmdd}`;
   
   // Build generatedUrl
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
