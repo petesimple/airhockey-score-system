@@ -76,7 +76,7 @@
           </div>
         </div>
         <p class="text-center mt-3 small ah-muted">
-          <!-- Admin view: append <code>?admin=1</code> to the URL. -->
+          Admin view: append <code>?admin=1</code> to the URL.
         </p>
       </div>
     </div>
@@ -119,6 +119,7 @@
     // CONFIG
     // ==============================
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec"; // must end with /exec
+    const ADMIN_CODE = "2580"; // 🔐 admin passcode
 
     // ==============================
     // UTILITIES
@@ -126,7 +127,7 @@
     const $  = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-    function isAdmin() {
+    function isAdminRequest() {
       return new URLSearchParams(location.search).get("admin") === "1";
     }
 
@@ -154,7 +155,7 @@
       try { return new Date(iso).toLocaleString(); } catch { return iso; }
     }
 
-    // JSONP helper
+    // JSONP helper (avoids CORS)
     function jsonp(url, params = {}, timeoutMs = 12000){
       return new Promise((resolve, reject) => {
         const cb = "AYPT_CB_" + Math.random().toString(36).slice(2);
@@ -260,17 +261,33 @@
     }
 
     // ==============================
+    // ADMIN PASSCODE GATE
+    // ==============================
+    function requireAdminAccess() {
+      const stored = sessionStorage.getItem("ayptAdminOK");
+      if (stored === "true") return true;
+      const code = prompt("Enter admin passcode:");
+      if (code === ADMIN_CODE) {
+        sessionStorage.setItem("ayptAdminOK", "true");
+        return true;
+      }
+      alert("Incorrect code. Returning to player form.");
+      window.location.href = location.pathname; // drop query string
+      return false;
+    }
+
+    // ==============================
     // INIT
     // ==============================
     document.addEventListener("DOMContentLoaded", () => {
-      const admin = isAdmin();
+      const adminReq = isAdminRequest();
 
-      // Toggle views
-      if (admin) {
+      if (adminReq) {
+        if (!requireAdminAccess()) return; // stop if wrong code
         $("#formView").classList.add("d-none");
         $("#adminView").classList.remove("d-none");
         $("#subtitle").textContent = "Admin view: read-only list from Google Sheets.";
-        $("#modeSwitch").href = location.pathname; // go back to player view
+        $("#modeSwitch").href = location.pathname; // back to player form
         $("#modeSwitch").textContent = "Player Form";
         loadAdminTable();
         $("#refreshBtn").addEventListener("click", loadAdminTable);
