@@ -79,69 +79,58 @@
   </div>
 
   <script>
-    // 🔗 Your live Apps Script Web App URL (must end with /exec)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
-    const form = document.getElementById("ayptForm");
-    const submitBtn = document.getElementById("submitBtn");
-    const btnIdle = document.getElementById("btnIdle");
-    const btnBusy = document.getElementById("btnBusy");
-    const responseEl = document.getElementById("response");
+document.getElementById('ayptForm').addEventListener('submit', function(e){
+  e.preventDefault();
 
-    function setBusy(b){
-      submitBtn.disabled = b;
-      btnIdle.classList.toggle("d-none", b);
-      btnBusy.classList.toggle("d-none", !b);
+  const firstName = document.getElementById('firstName').value.trim();
+  const lastName  = document.getElementById('lastName').value.trim();
+  const cell      = document.getElementById('cellNumber').value.trim().replace(/[^\d+\-\s().]/g, "");
+  const notes     = document.getElementById('notes').value.trim();
+  const responseEl= document.getElementById('response');
+
+  if(!firstName || !lastName || !cell){
+    responseEl.textContent = "Please complete First, Last, and Cell.";
+    return;
+  }
+
+  // Unique JSONP callback name
+  const cbName = "AYPT_CB_" + Math.random().toString(36).slice(2);
+  window[cbName] = function(data){
+    cleanup();
+    if(data && data.result === "success"){
+      responseEl.innerHTML = `<strong>Thanks ${firstName}, you’re signed up ✅</strong>`;
+      document.getElementById('ayptForm').reset();
+    } else {
+      responseEl.textContent = "Error: " + (data && data.message ? data.message : "Submission failed");
     }
+  };
 
-    // Simple phone cleanup (keeps digits + basic symbols)
-    function normalizePhone(str){
-      return String(str).replace(/[^\d+\-\s().]/g, "").trim();
-    }
+  // Build querystring (GET)
+  const params = new URLSearchParams({
+    firstName, lastName, cellNumber: cell, notes, callback: cbName
+  });
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      responseEl.textContent = "";
+  // Inject <script> to bypass CORS
+  const s = document.createElement('script');
+  s.src = `${SCRIPT_URL}?${params.toString()}`;
+  s.id = cbName;
+  document.body.appendChild(s);
 
-      const firstName = document.getElementById("firstName").value.trim();
-      const lastName  = document.getElementById("lastName").value.trim();
-      const cellRaw   = document.getElementById("cellNumber").value;
-      const cellNumber = normalizePhone(cellRaw);
-      const notes     = document.getElementById("notes").value.trim();
+  // Timeout in case the script load fails
+  const to = setTimeout(() => {
+    cleanup();
+    responseEl.textContent = "Submission timed out. Please try again.";
+  }, 12000);
 
-      if(!firstName || !lastName || !cellNumber){
-        responseEl.textContent = "Please complete First, Last, and Cell.";
-        return;
-      }
-
-      // Use x-www-form-urlencoded to avoid CORS preflight
-      const body = new URLSearchParams();
-      body.append("firstName", firstName);
-      body.append("lastName", lastName);
-      body.append("cellNumber", cellNumber);
-      body.append("notes", notes);
-
-      try {
-        setBusy(true);
-        const r = await fetch(SCRIPT_URL, { method: "POST", body });
-        // Some deployments return text/plain; handle both
-        const text = await r.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = { result: r.ok ? "success" : "error", raw: text }; }
-
-        if (data.result === "success") {
-          responseEl.innerHTML = `<strong>Thanks ${firstName}, you’re signed up ✅</strong>`;
-          form.reset();
-        } else {
-          responseEl.textContent = "Error: " + (data.message || data.raw || "Submission failed");
-        }
-      } catch (err) {
-        console.error(err);
-        responseEl.textContent = "Submission failed. Please try again.";
-      } finally {
-        setBusy(false);
-      }
-    });
-  </script>
+  function cleanup(){
+    clearTimeout(to);
+    const el = document.getElementById(cbName);
+    if(el) el.remove();
+    try { delete window[cbName]; } catch(_) { window[cbName] = undefined; }
+  }
+});
+</script>
 </body>
 </html>
