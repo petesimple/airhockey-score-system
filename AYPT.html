@@ -37,8 +37,7 @@
       width: 100%; border-collapse: collapse; margin-top: 20px;
     }
     th, td {
-      border: 1px solid #444; padding: 8px; text-align: left;
-      vertical-align: top;
+      border: 1px solid #444; padding: 8px; text-align: left; vertical-align: top;
     }
     th { background-color: #222; }
     .paid-cell, .delete-cell { text-align: center; }
@@ -54,7 +53,7 @@
       font-size: 1.2em;
       cursor: pointer;
     }
-    .note-input {
+    .admin-note-input {
       width: 100%;
       min-height: 52px;
       resize: vertical;
@@ -73,12 +72,21 @@
       opacity:0; transition:opacity .2s ease;
     }
     .saved-dot.show { opacity:1; }
+    .player-note {
+      white-space: pre-wrap;
+      background:#0e0e0e;
+      border:1px solid #333;
+      border-radius:6px;
+      padding:8px;
+      min-height: 52px;
+    }
   </style>
 </head>
 <body>
   <h1>🎯 Are You Playing Tonight?</h1>
   <div class="subtext">Fill out this form to get added to tonight's tournament list.</div>
 
+  <!-- Normal (player) view -->
   <div id="formWrapper">
     <form id="ayptForm">
       <input type="text" id="firstName" placeholder="First Name" required />
@@ -90,13 +98,20 @@
     <div id="response"></div>
   </div>
 
+  <!-- Admin view -->
   <div id="adminWrapper" style="display:none;">
     <h2>📋 AYPT Signups (Admin View)</h2>
     <table id="signupTable">
       <thead>
         <tr>
-          <th>First</th><th>Last</th><th>Cell</th>
-          <th>Notes (editable)</th><th>Signed Up</th><th>Paid</th><th>Delete</th>
+          <th>First</th>
+          <th>Last</th>
+          <th>Cell</th>
+          <th>Player Note (read-only)</th>
+          <th>Admin Notes (private)</th>
+          <th>Signed Up</th>
+          <th>Paid</th>
+          <th>Delete</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -118,20 +133,31 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
+  // Escape helper for safe text injection
+  function esc(str){
+    return String(str || "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#39;");
+  }
+
   function renderTable(){
     const tbody = document.querySelector("#signupTable tbody");
     tbody.innerHTML = "";
     loadSignups().forEach((s, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${s.firstName}</td>
-        <td>${s.lastName}</td>
-        <td>${s.cellNumber}</td>
+        <td>${esc(s.firstName)}</td>
+        <td>${esc(s.lastName)}</td>
+        <td>${esc(s.cellNumber)}</td>
+        <td><div class="player-note">${esc(s.notes)}</div></td>
         <td>
-          <textarea class="note-input" data-index="${idx}" placeholder="Add notes...">${s.notes || ""}</textarea>
+          <textarea class="admin-note-input" data-index="${idx}" placeholder="Private admin notes...">${esc(s.adminNotes || "")}</textarea>
           <span class="saved-dot" id="saved-${idx}" title="Saved"></span>
         </td>
-        <td>${s.timestamp || ""}</td>
+        <td>${esc(s.timestamp || "")}</td>
         <td class="paid-cell">
           <input type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
         </td>
@@ -142,7 +168,6 @@
     });
   }
 
-  // Small debounce helper for live saving notes
   function debounce(fn, delay=300){
     let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), delay); };
   }
@@ -156,7 +181,7 @@
 
     const tbody = document.querySelector("#signupTable tbody");
 
-    // Handle paid checkbox toggles
+    // Paid toggle
     tbody.addEventListener("change", function(e){
       if(e.target.type === "checkbox"){
         const index = e.target.getAttribute("data-index");
@@ -166,7 +191,7 @@
       }
     });
 
-    // Handle per-player delete
+    // Delete player
     tbody.addEventListener("click", function(e){
       if(e.target.classList.contains("delete-btn")){
         const index = e.target.getAttribute("data-index");
@@ -180,11 +205,11 @@
       }
     });
 
-    // Handle editable notes (auto-save on input/blur)
-    const saveNotes = debounce((index, value) => {
+    // Admin notes (private) auto-save
+    const saveAdminNotes = debounce((index, value) => {
       const list = loadSignups();
       if(list[index]){
-        list[index].notes = value;
+        list[index].adminNotes = value;
         saveSignups(list);
         const dot = document.getElementById(`saved-${index}`);
         if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
@@ -192,17 +217,17 @@
     }, 250);
 
     tbody.addEventListener("input", function(e){
-      if(e.target.classList.contains("note-input")){
+      if(e.target.classList.contains("admin-note-input")){
         const index = e.target.getAttribute("data-index");
-        saveNotes(index, e.target.value);
+        saveAdminNotes(index, e.target.value);
       }
     });
     tbody.addEventListener("blur", function(e){
-      if(e.target.classList.contains("note-input")){
+      if(e.target.classList.contains("admin-note-input")){
         const index = e.target.getAttribute("data-index");
         const list = loadSignups();
         if(list[index]){
-          list[index].notes = e.target.value;
+          list[index].adminNotes = e.target.value;
           saveSignups(list);
         }
       }
@@ -217,7 +242,7 @@
     });
 
   } else {
-    // Form mode
+    // Player form mode
     const form = document.getElementById("ayptForm");
     form.addEventListener("submit", function(e){
       e.preventDefault();
@@ -225,9 +250,10 @@
         firstName: document.getElementById("firstName").value.trim(),
         lastName: document.getElementById("lastName").value.trim(),
         cellNumber: document.getElementById("cellNumber").value.trim(),
-        notes: document.getElementById("notes").value.trim(),
+        notes: document.getElementById("notes").value.trim(), // player-provided note (read-only in admin)
         timestamp: new Date().toLocaleString(),
-        paid: false
+        paid: false,
+        adminNotes: "" // private, only editable in admin
       };
       const list = loadSignups();
       list.push(entry);
