@@ -25,34 +25,16 @@
       color:#000; font-weight:700; border:none;
     }
     .btn-gradient:hover{ opacity:.9; color:#000; }
-    .table thead th{ position:sticky; top:0; z-index:1; background: #141519; }
-    .admin-note, .player-note{
-      background:#111216; color:#fff; border:1px solid var(--ah-border);
-      border-radius:.5rem; padding:.5rem; min-height:3rem; width:100%;
-    }
-    .player-note{ white-space:pre-wrap; }
-    .saved-dot{
-      display:inline-block; width:8px; height:8px; margin-left:.4rem;
-      border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease;
-    }
-    .saved-dot.show{ opacity:1; }
-    /* Touch-friendly checkboxes */
-    .form-check-input{ width:1.4rem; height:1.4rem; }
-    /* Make delete button compact */
-    .btn-icon{ padding:.25rem .5rem; line-height:1; }
   </style>
 </head>
 <body>
   <div class="container py-4">
-
-    <!-- Header -->
     <div class="text-center mb-3">
       <h1 class="h3 fw-bold">🎯 Are You Playing Tonight?</h1>
       <p class="ah-muted mb-0">Fill out this form to get added to tonight's tournament list.</p>
     </div>
 
-    <!-- Player Form (default) -->
-    <div id="formWrapper" class="row justify-content-center">
+    <div class="row justify-content-center">
       <div class="col-12 col-sm-10 col-md-8 col-lg-6">
         <div class="card ah-card shadow-sm">
           <div class="card-body">
@@ -74,11 +56,14 @@
                   <label for="notes" class="form-label">Notes for TD (optional)</label>
                   <textarea id="notes" rows="3" class="form-control"></textarea>
                 </div>
+
                 <div class="col-12 d-grid">
-                  <button class="btn btn-gradient btn-lg" type="submit">
-                    <i class="bi bi-send-fill me-1"></i> Submit
+                  <button id="submitBtn" class="btn btn-gradient btn-lg" type="submit">
+                    <span id="btnIdle"><i class="bi bi-send-fill me-1"></i> Submit</span>
+                    <span id="btnBusy" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Submitting…</span>
                   </button>
                 </div>
+
                 <div class="col-12">
                   <div id="response" class="small text-warning"></div>
                 </div>
@@ -87,210 +72,76 @@
           </div>
         </div>
         <p class="text-center mt-3 small ah-muted">
-          Admin view: append <code>?admin=1</code> to the URL.
+          Questions? Ask the TD at check-in. Thanks!
         </p>
       </div>
     </div>
-
-    <!-- Admin View -->
-    <div id="adminWrapper" class="d-none">
-      <div class="card ah-card shadow-sm">
-        <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
-          <h2 class="h5 mb-0">📋 AYPT Signups (Admin)</h2>
-          <div class="d-flex gap-2">
-            <button id="clearBtn" class="btn btn-danger">
-              <i class="bi bi-trash3 me-1"></i> Clear All Players
-            </button>
-          </div>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table id="signupTable" class="table table-dark table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>First</th>
-                  <th>Last</th>
-                  <th>Cell</th>
-                  <th style="min-width:220px;">Player Note</th>
-                  <th style="min-width:220px;">Admin Notes (private)</th>
-                  <th>Signed Up</th>
-                  <th class="text-center">Paid</th>
-                  <th class="text-center">Delete</th>
-                </tr>
-              </thead>
-              <tbody><!-- rows injected --></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="card-footer small ah-muted">
-          Tip: Use this page on your phone in landscape if you want a wider table, or scroll horizontally.
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /container -->
+  </div>
 
   <script>
-    (function(){
-      const params = new URLSearchParams(location.search);
-      const isAdmin = params.get("admin") === "1";
+    // 🔗 Your live Apps Script Web App URL (must end with /exec)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
-      const STORAGE_KEY = "ayptSignups";
+    const form = document.getElementById("ayptForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const btnIdle = document.getElementById("btnIdle");
+    const btnBusy = document.getElementById("btnBusy");
+    const responseEl = document.getElementById("response");
 
-      // Helpers
-      const $ = (sel, root = document) => root.querySelector(sel);
-      const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+    function setBusy(b){
+      submitBtn.disabled = b;
+      btnIdle.classList.toggle("d-none", b);
+      btnBusy.classList.toggle("d-none", !b);
+    }
 
-      const formWrapper   = $("#formWrapper");
-      const adminWrapper  = $("#adminWrapper");
-      const tableBody     = $("#signupTable tbody");
+    // Simple phone cleanup (keeps digits + basic symbols)
+    function normalizePhone(str){
+      return String(str).replace(/[^\d+\-\s().]/g, "").trim();
+    }
 
-      function loadSignups(){
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      }
-      function saveSignups(list){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      }
-      function esc(str){
-        return String(str ?? "")
-          .replace(/&/g,"&amp;")
-          .replace(/</g,"&lt;")
-          .replace(/>/g,"&gt;")
-          .replace(/"/g,"&quot;")
-          .replace(/'/g,"&#39;");
-      }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      responseEl.textContent = "";
 
-      function renderTable(){
-        const signups = loadSignups();
-        tableBody.innerHTML = "";
-        signups.forEach((s, idx) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${esc(s.firstName)}</td>
-            <td>${esc(s.lastName)}</td>
-            <td><a class="text-decoration-none" href="tel:${esc(s.cellNumber)}">${esc(s.cellNumber)}</a></td>
-            <td><div class="player-note">${esc(s.notes)}</div></td>
-            <td>
-              <textarea class="admin-note form-control admin-note" rows="3" data-index="${idx}" placeholder="Private admin notes...">${esc(s.adminNotes || "")}</textarea>
-              <span class="saved-dot" id="saved-${idx}" title="Saved"></span>
-            </td>
-            <td>${esc(s.timestamp || "")}</td>
-            <td class="text-center">
-              <input class="form-check-input" type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
-            </td>
-            <td class="text-center">
-              <button class="btn btn-outline-danger btn-sm btn-icon delete-btn" data-index="${idx}" title="Delete Player">
-                <i class="bi bi-trash3"></i>
-              </button>
-            </td>`;
-          tableBody.appendChild(tr);
-        });
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName  = document.getElementById("lastName").value.trim();
+      const cellRaw   = document.getElementById("cellNumber").value;
+      const cellNumber = normalizePhone(cellRaw);
+      const notes     = document.getElementById("notes").value.trim();
+
+      if(!firstName || !lastName || !cellNumber){
+        responseEl.textContent = "Please complete First, Last, and Cell.";
+        return;
       }
 
-      // Debounce for admin notes auto-save
-      function debounce(fn, delay=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),delay); }; }
-      const saveAdminNotes = debounce((index, value) => {
-        const list = loadSignups();
-        if(list[index]){
-          list[index].adminNotes = value;
-          saveSignups(list);
-          const dot = document.getElementById(`saved-${index}`);
-          if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
-        }
-      }, 250);
+      // Use x-www-form-urlencoded to avoid CORS preflight
+      const body = new URLSearchParams();
+      body.append("firstName", firstName);
+      body.append("lastName", lastName);
+      body.append("cellNumber", cellNumber);
+      body.append("notes", notes);
 
-      if(isAdmin){
-        // Show admin UI
-        formWrapper.classList.add("d-none");
-        adminWrapper.classList.remove("d-none");
+      try {
+        setBusy(true);
+        const r = await fetch(SCRIPT_URL, { method: "POST", body });
+        // Some deployments return text/plain; handle both
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { result: r.ok ? "success" : "error", raw: text }; }
 
-        renderTable();
-
-        // Paid checkbox toggle
-        tableBody.addEventListener("change", (e)=>{
-          if(e.target.matches('.form-check-input[type="checkbox"]')){
-            const index = e.target.getAttribute("data-index");
-            const list = loadSignups();
-            if(list[index]){
-              list[index].paid = e.target.checked;
-              saveSignups(list);
-            }
-          }
-        });
-
-        // Delete player
-        tableBody.addEventListener("click", (e)=>{
-          if(e.target.closest(".delete-btn")){
-            const btn = e.target.closest(".delete-btn");
-            const index = btn.getAttribute("data-index");
-            const list = loadSignups();
-            const player = list[index];
-            if(player && confirm(`Remove ${player.firstName} ${player.lastName}?`)){
-              list.splice(index,1);
-              saveSignups(list);
-              renderTable();
-            }
-          }
-        });
-
-        // Admin notes: input + blur save
-        tableBody.addEventListener("input", (e)=>{
-          if(e.target.matches(".admin-note")){
-            const index = e.target.getAttribute("data-index");
-            saveAdminNotes(index, e.target.value);
-          }
-        });
-        tableBody.addEventListener("blur", (e)=>{
-          if(e.target.matches(".admin-note")){
-            const index = e.target.getAttribute("data-index");
-            const list = loadSignups();
-            if(list[index]){
-              list[index].adminNotes = e.target.value;
-              saveSignups(list);
-            }
-          }
-        }, true);
-
-        // Clear all
-        $("#clearBtn").addEventListener("click", ()=>{
-          if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
-            localStorage.removeItem(STORAGE_KEY);
-            renderTable();
-          }
-        });
-
-      } else {
-        // Player form mode
-        const form = $("#ayptForm");
-        const responseEl = $("#response");
-
-        form.addEventListener("submit", (e)=>{
-          e.preventDefault();
-
-          const entry = {
-            firstName: $("#firstName").value.trim(),
-            lastName: $("#lastName").value.trim(),
-            cellNumber: $("#cellNumber").value.trim(),
-            notes: $("#notes").value.trim(),
-            timestamp: new Date().toLocaleString(),
-            paid: false,
-            adminNotes: ""
-          };
-
-          if(!entry.firstName || !entry.lastName || !entry.cellNumber){
-            responseEl.textContent = "Please complete First, Last, and Cell.";
-            return;
-          }
-
-          const list = loadSignups();
-          list.push(entry);
-          saveSignups(list);
-
-          responseEl.innerHTML = `<strong>Thanks ${esc(entry.firstName)}, you are signed up ✅</strong>`;
+        if (data.result === "success") {
+          responseEl.innerHTML = `<strong>Thanks ${firstName}, you’re signed up ✅</strong>`;
           form.reset();
-        });
+        } else {
+          responseEl.textContent = "Error: " + (data.message || data.raw || "Submission failed");
+        }
+      } catch (err) {
+        console.error(err);
+        responseEl.textContent = "Submission failed. Please try again.";
+      } finally {
+        setBusy(false);
       }
-    })();
+    });
   </script>
 </body>
 </html>
