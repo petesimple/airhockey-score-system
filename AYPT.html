@@ -2,269 +2,295 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Are You Playing Tonight?</title>
+
+  <!-- Bootstrap 5 CSS + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
   <style>
-    body {
-      background-color: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      text-align: center;
+    :root{
+      --ah-bg:#000;
+      --ah-panel:#0f0f10;
+      --ah-border:#2d2f33;
+      --ah-text:#f5f7fa;
+      --ah-muted:#9aa1a9;
     }
-    h1 { margin-bottom: 10px; }
-    .subtext { color: #ccc; margin-bottom: 20px; }
-    form {
-      background-color: #111;
-      border: 2px solid #444;
-      border-radius: 10px;
-      padding: 20px;
-      max-width: 400px;
-      margin: 0 auto;
+    body{ background:var(--ah-bg); color:var(--ah-text); }
+    .ah-card{ background:var(--ah-panel); border:1px solid var(--ah-border); }
+    .ah-muted{ color:var(--ah-muted); }
+    .btn-gradient{
+      background: linear-gradient(90deg, #e53935, #ffffff, #1e88e5);
+      color:#000; font-weight:700; border:none;
     }
-    input, textarea {
-      width: 100%; padding: 10px; margin-bottom: 15px;
-      border: none; border-radius: 5px; font-size: 1em;
+    .btn-gradient:hover{ opacity:.9; color:#000; }
+    .table thead th{ position:sticky; top:0; z-index:1; background: #141519; }
+    .admin-note, .player-note{
+      background:#111216; color:#fff; border:1px solid var(--ah-border);
+      border-radius:.5rem; padding:.5rem; min-height:3rem; width:100%;
     }
-    button {
-      background: linear-gradient(to right, red, white, blue);
-      color: black; font-weight: bold;
-      border: none; padding: 10px 20px;
-      border-radius: 5px; cursor: pointer;
+    .player-note{ white-space:pre-wrap; }
+    .saved-dot{
+      display:inline-block; width:8px; height:8px; margin-left:.4rem;
+      border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease;
     }
-    #response { margin-top: 15px; color: yellow; }
-    table {
-      width: 100%; border-collapse: collapse; margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #444; padding: 8px; text-align: left; vertical-align: top;
-    }
-    th { background-color: #222; }
-    .paid-cell, .delete-cell { text-align: center; }
-    #clearBtn {
-      margin-top: 15px;
-      background: crimson;
-      color: #fff;
-    }
-    .delete-btn {
-      background: none;
-      border: none;
-      color: #ff5555;
-      font-size: 1.2em;
-      cursor: pointer;
-    }
-    .admin-note-input {
-      width: 100%;
-      min-height: 52px;
-      resize: vertical;
-      background:#0e0e0e;
-      color:#fff;
-      border:1px solid #333;
-      border-radius:6px;
-      padding:8px;
-      font-family: inherit;
-      margin:0;
-    }
-    .saved-dot {
-      display:inline-block;
-      width:8px;height:8px;border-radius:50%;
-      background:#3ddc84;margin-left:6px;vertical-align:middle;
-      opacity:0; transition:opacity .2s ease;
-    }
-    .saved-dot.show { opacity:1; }
-    .player-note {
-      white-space: pre-wrap;
-      background:#0e0e0e;
-      border:1px solid #333;
-      border-radius:6px;
-      padding:8px;
-      min-height: 52px;
-    }
+    .saved-dot.show{ opacity:1; }
+    /* Touch-friendly checkboxes */
+    .form-check-input{ width:1.4rem; height:1.4rem; }
+    /* Make delete button compact */
+    .btn-icon{ padding:.25rem .5rem; line-height:1; }
   </style>
 </head>
 <body>
-  <h1>🎯 Are You Playing Tonight?</h1>
-  <div class="subtext">Fill out this form to get added to tonight's tournament list.</div>
+  <div class="container py-4">
 
-  <!-- Normal (player) view -->
-  <div id="formWrapper">
-    <form id="ayptForm">
-      <input type="text" id="firstName" placeholder="First Name" required />
-      <input type="text" id="lastName" placeholder="Last Name" required />
-      <input type="tel" id="cellNumber" placeholder="Cell Number" required />
-      <textarea id="notes" rows="3" placeholder="Any notes for the TD? (optional)"></textarea>
-      <button type="submit">Submit</button>
-    </form>
-    <div id="response"></div>
-  </div>
+    <!-- Header -->
+    <div class="text-center mb-3">
+      <h1 class="h3 fw-bold">🎯 Are You Playing Tonight?</h1>
+      <p class="ah-muted mb-0">Fill out this form to get added to tonight's tournament list.</p>
+    </div>
 
-  <!-- Admin view -->
-  <div id="adminWrapper" style="display:none;">
-    <h2>📋 AYPT Signups (Admin View)</h2>
-    <table id="signupTable">
-      <thead>
-        <tr>
-          <th>First</th>
-          <th>Last</th>
-          <th>Cell</th>
-          <th>Player Note (read-only)</th>
-          <th>Admin Notes (private)</th>
-          <th>Signed Up</th>
-          <th>Paid</th>
-          <th>Delete</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <button id="clearBtn">🗑️ Clear All Players</button>
-  </div>
+    <!-- Player Form (default) -->
+    <div id="formWrapper" class="row justify-content-center">
+      <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+        <div class="card ah-card shadow-sm">
+          <div class="card-body">
+            <form id="ayptForm" novalidate>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label for="firstName" class="form-label">First Name</label>
+                  <input type="text" id="firstName" class="form-control form-control-lg" required>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label for="lastName" class="form-label">Last Name</label>
+                  <input type="text" id="lastName" class="form-control form-control-lg" required>
+                </div>
+                <div class="col-12">
+                  <label for="cellNumber" class="form-label">Cell Number</label>
+                  <input type="tel" id="cellNumber" inputmode="tel" class="form-control form-control-lg" required>
+                </div>
+                <div class="col-12">
+                  <label for="notes" class="form-label">Notes for TD (optional)</label>
+                  <textarea id="notes" rows="3" class="form-control"></textarea>
+                </div>
+                <div class="col-12 d-grid">
+                  <button class="btn btn-gradient btn-lg" type="submit">
+                    <i class="bi bi-send-fill me-1"></i> Submit
+                  </button>
+                </div>
+                <div class="col-12">
+                  <div id="response" class="small text-warning"></div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <p class="text-center mt-3 small ah-muted">
+          Admin view: append <code>?admin=1</code> to the URL.
+        </p>
+      </div>
+    </div>
 
-<script>
-(function(){
-  const params = new URLSearchParams(window.location.search);
-  const isAdmin = params.get("admin") === "1";
+    <!-- Admin View -->
+    <div id="adminWrapper" class="d-none">
+      <div class="card ah-card shadow-sm">
+        <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <h2 class="h5 mb-0">📋 AYPT Signups (Admin)</h2>
+          <div class="d-flex gap-2">
+            <button id="clearBtn" class="btn btn-danger">
+              <i class="bi bi-trash3 me-1"></i> Clear All Players
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table id="signupTable" class="table table-dark table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>First</th>
+                  <th>Last</th>
+                  <th>Cell</th>
+                  <th style="min-width:220px;">Player Note</th>
+                  <th style="min-width:220px;">Admin Notes (private)</th>
+                  <th>Signed Up</th>
+                  <th class="text-center">Paid</th>
+                  <th class="text-center">Delete</th>
+                </tr>
+              </thead>
+              <tbody><!-- rows injected --></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer small ah-muted">
+          Tip: Use this page on your phone in landscape if you want a wider table, or scroll horizontally.
+        </div>
+      </div>
+    </div>
 
-  const STORAGE_KEY = "ayptSignups";
+  </div><!-- /container -->
 
-  function loadSignups(){
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  }
-  function saveSignups(list){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  }
+  <script>
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const isAdmin = params.get("admin") === "1";
 
-  // Escape helper for safe text injection
-  function esc(str){
-    return String(str || "")
-      .replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;")
-      .replace(/'/g,"&#39;");
-  }
+      const STORAGE_KEY = "ayptSignups";
 
-  function renderTable(){
-    const tbody = document.querySelector("#signupTable tbody");
-    tbody.innerHTML = "";
-    loadSignups().forEach((s, idx) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${esc(s.firstName)}</td>
-        <td>${esc(s.lastName)}</td>
-        <td>${esc(s.cellNumber)}</td>
-        <td><div class="player-note">${esc(s.notes)}</div></td>
-        <td>
-          <textarea class="admin-note-input" data-index="${idx}" placeholder="Private admin notes...">${esc(s.adminNotes || "")}</textarea>
-          <span class="saved-dot" id="saved-${idx}" title="Saved"></span>
-        </td>
-        <td>${esc(s.timestamp || "")}</td>
-        <td class="paid-cell">
-          <input type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
-        </td>
-        <td class="delete-cell">
-          <button class="delete-btn" data-index="${idx}" title="Delete Player">🗑️</button>
-        </td>`;
-      tbody.appendChild(tr);
-    });
-  }
+      // Helpers
+      const $ = (sel, root = document) => root.querySelector(sel);
+      const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  function debounce(fn, delay=300){
-    let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), delay); };
-  }
+      const formWrapper   = $("#formWrapper");
+      const adminWrapper  = $("#adminWrapper");
+      const tableBody     = $("#signupTable tbody");
 
-  if(isAdmin){
-    // Admin mode
-    document.getElementById("formWrapper").style.display = "none";
-    document.getElementById("adminWrapper").style.display = "block";
+      function loadSignups(){
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      }
+      function saveSignups(list){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      }
+      function esc(str){
+        return String(str ?? "")
+          .replace(/&/g,"&amp;")
+          .replace(/</g,"&lt;")
+          .replace(/>/g,"&gt;")
+          .replace(/"/g,"&quot;")
+          .replace(/'/g,"&#39;");
+      }
 
-    renderTable();
-
-    const tbody = document.querySelector("#signupTable tbody");
-
-    // Paid toggle
-    tbody.addEventListener("change", function(e){
-      if(e.target.type === "checkbox"){
-        const index = e.target.getAttribute("data-index");
+      function renderTable(){
         const signups = loadSignups();
-        signups[index].paid = e.target.checked;
-        saveSignups(signups);
+        tableBody.innerHTML = "";
+        signups.forEach((s, idx) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${esc(s.firstName)}</td>
+            <td>${esc(s.lastName)}</td>
+            <td><a class="text-decoration-none" href="tel:${esc(s.cellNumber)}">${esc(s.cellNumber)}</a></td>
+            <td><div class="player-note">${esc(s.notes)}</div></td>
+            <td>
+              <textarea class="admin-note form-control admin-note" rows="3" data-index="${idx}" placeholder="Private admin notes...">${esc(s.adminNotes || "")}</textarea>
+              <span class="saved-dot" id="saved-${idx}" title="Saved"></span>
+            </td>
+            <td>${esc(s.timestamp || "")}</td>
+            <td class="text-center">
+              <input class="form-check-input" type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
+            </td>
+            <td class="text-center">
+              <button class="btn btn-outline-danger btn-sm btn-icon delete-btn" data-index="${idx}" title="Delete Player">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </td>`;
+          tableBody.appendChild(tr);
+        });
       }
-    });
 
-    // Delete player
-    tbody.addEventListener("click", function(e){
-      if(e.target.classList.contains("delete-btn")){
-        const index = e.target.getAttribute("data-index");
-        const signups = loadSignups();
-        const player = signups[index];
-        if(confirm(`Remove ${player.firstName} ${player.lastName}?`)){
-          signups.splice(index, 1);
-          saveSignups(signups);
-          renderTable();
-        }
-      }
-    });
-
-    // Admin notes (private) auto-save
-    const saveAdminNotes = debounce((index, value) => {
-      const list = loadSignups();
-      if(list[index]){
-        list[index].adminNotes = value;
-        saveSignups(list);
-        const dot = document.getElementById(`saved-${index}`);
-        if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
-      }
-    }, 250);
-
-    tbody.addEventListener("input", function(e){
-      if(e.target.classList.contains("admin-note-input")){
-        const index = e.target.getAttribute("data-index");
-        saveAdminNotes(index, e.target.value);
-      }
-    });
-    tbody.addEventListener("blur", function(e){
-      if(e.target.classList.contains("admin-note-input")){
-        const index = e.target.getAttribute("data-index");
+      // Debounce for admin notes auto-save
+      function debounce(fn, delay=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),delay); }; }
+      const saveAdminNotes = debounce((index, value) => {
         const list = loadSignups();
         if(list[index]){
-          list[index].adminNotes = e.target.value;
+          list[index].adminNotes = value;
           saveSignups(list);
+          const dot = document.getElementById(`saved-${index}`);
+          if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
         }
-      }
-    }, true);
+      }, 250);
 
-    // Clear all
-    document.getElementById("clearBtn").addEventListener("click", function(){
-      if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
-        localStorage.removeItem(STORAGE_KEY);
+      if(isAdmin){
+        // Show admin UI
+        formWrapper.classList.add("d-none");
+        adminWrapper.classList.remove("d-none");
+
         renderTable();
+
+        // Paid checkbox toggle
+        tableBody.addEventListener("change", (e)=>{
+          if(e.target.matches('.form-check-input[type="checkbox"]')){
+            const index = e.target.getAttribute("data-index");
+            const list = loadSignups();
+            if(list[index]){
+              list[index].paid = e.target.checked;
+              saveSignups(list);
+            }
+          }
+        });
+
+        // Delete player
+        tableBody.addEventListener("click", (e)=>{
+          if(e.target.closest(".delete-btn")){
+            const btn = e.target.closest(".delete-btn");
+            const index = btn.getAttribute("data-index");
+            const list = loadSignups();
+            const player = list[index];
+            if(player && confirm(`Remove ${player.firstName} ${player.lastName}?`)){
+              list.splice(index,1);
+              saveSignups(list);
+              renderTable();
+            }
+          }
+        });
+
+        // Admin notes: input + blur save
+        tableBody.addEventListener("input", (e)=>{
+          if(e.target.matches(".admin-note")){
+            const index = e.target.getAttribute("data-index");
+            saveAdminNotes(index, e.target.value);
+          }
+        });
+        tableBody.addEventListener("blur", (e)=>{
+          if(e.target.matches(".admin-note")){
+            const index = e.target.getAttribute("data-index");
+            const list = loadSignups();
+            if(list[index]){
+              list[index].adminNotes = e.target.value;
+              saveSignups(list);
+            }
+          }
+        }, true);
+
+        // Clear all
+        $("#clearBtn").addEventListener("click", ()=>{
+          if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
+            localStorage.removeItem(STORAGE_KEY);
+            renderTable();
+          }
+        });
+
+      } else {
+        // Player form mode
+        const form = $("#ayptForm");
+        const responseEl = $("#response");
+
+        form.addEventListener("submit", (e)=>{
+          e.preventDefault();
+
+          const entry = {
+            firstName: $("#firstName").value.trim(),
+            lastName: $("#lastName").value.trim(),
+            cellNumber: $("#cellNumber").value.trim(),
+            notes: $("#notes").value.trim(),
+            timestamp: new Date().toLocaleString(),
+            paid: false,
+            adminNotes: ""
+          };
+
+          if(!entry.firstName || !entry.lastName || !entry.cellNumber){
+            responseEl.textContent = "Please complete First, Last, and Cell.";
+            return;
+          }
+
+          const list = loadSignups();
+          list.push(entry);
+          saveSignups(list);
+
+          responseEl.innerHTML = `<strong>Thanks ${esc(entry.firstName)}, you are signed up ✅</strong>`;
+          form.reset();
+        });
       }
-    });
-
-  } else {
-    // Player form mode
-    const form = document.getElementById("ayptForm");
-    form.addEventListener("submit", function(e){
-      e.preventDefault();
-      const entry = {
-        firstName: document.getElementById("firstName").value.trim(),
-        lastName: document.getElementById("lastName").value.trim(),
-        cellNumber: document.getElementById("cellNumber").value.trim(),
-        notes: document.getElementById("notes").value.trim(), // player-provided note (read-only in admin)
-        timestamp: new Date().toLocaleString(),
-        paid: false,
-        adminNotes: "" // private, only editable in admin
-      };
-      const list = loadSignups();
-      list.push(entry);
-      saveSignups(list);
-
-      document.getElementById("response").innerHTML =
-        `<strong>Thanks ${entry.firstName}, you are signed up ✅</strong>`;
-      form.reset();
-    });
-  }
-})();
-</script>
+    })();
+  </script>
 </body>
 </html>
