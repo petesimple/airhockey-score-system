@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Are You Playing Tonight?</title>
   <style>
     body {
@@ -43,6 +40,7 @@
       border: 1px solid #444; padding: 8px; text-align: left;
     }
     th { background-color: #222; }
+    .paid-cell { text-align: center; }
   </style>
 </head>
 <body>
@@ -65,7 +63,8 @@
     <table id="signupTable">
       <thead>
         <tr>
-          <th>First</th><th>Last</th><th>Cell</th><th>Notes</th><th>Time</th>
+          <th>First</th><th>Last</th><th>Cell</th><th>Notes</th>
+          <th>Signed Up</th><th>Paid</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -92,16 +91,32 @@
     document.getElementById("adminWrapper").style.display = "block";
 
     const tbody = document.querySelector("#signupTable tbody");
-    loadSignups().forEach(s => {
+    const signups = loadSignups();
+
+    signups.forEach((s, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${s.firstName}</td>
         <td>${s.lastName}</td>
         <td>${s.cellNumber}</td>
         <td>${s.notes}</td>
-        <td>${s.timestamp}</td>`;
+        <td>${s.timestamp || ""}</td>
+        <td class="paid-cell">
+          <input type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
+        </td>`;
       tbody.appendChild(tr);
     });
+
+    // Handle paid checkbox toggles
+    tbody.addEventListener("change", function(e){
+      if(e.target.type === "checkbox"){
+        const index = e.target.getAttribute("data-index");
+        const signups = loadSignups();
+        signups[index].paid = e.target.checked;
+        saveSignups(signups);
+      }
+    });
+
   } else {
     // Form mode
     const form = document.getElementById("ayptForm");
@@ -112,7 +127,8 @@
         lastName: document.getElementById("lastName").value.trim(),
         cellNumber: document.getElementById("cellNumber").value.trim(),
         notes: document.getElementById("notes").value.trim(),
-        timestamp: new Date().toLocaleString()
+        timestamp: new Date().toLocaleString(),
+        paid: false
       };
       const list = loadSignups();
       list.push(entry);
