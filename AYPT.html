@@ -2,27 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
   <title>Are You Playing Tonight?</title>
   <style>
     body {
       background-color: #000;
       color: #fff;
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
       padding: 20px;
       text-align: center;
     }
-
-    h1 {
-      color: #fff;
-      margin-bottom: 10px;
-    }
-
-    .subtext {
-      color: #ccc;
-      margin-bottom: 20px;
-    }
-
+    h1 { margin-bottom: 10px; }
+    .subtext { color: #ccc; margin-bottom: 20px; }
     form {
       background-color: #111;
       border: 2px solid #444;
@@ -31,115 +25,105 @@
       max-width: 400px;
       margin: 0 auto;
     }
-
     input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: none;
-      border-radius: 5px;
-      font-size: 1em;
+      width: 100%; padding: 10px; margin-bottom: 15px;
+      border: none; border-radius: 5px; font-size: 1em;
     }
-
     button {
       background: linear-gradient(to right, red, white, blue);
-      color: black;
-      font-weight: bold;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1em;
+      color: black; font-weight: bold;
+      border: none; padding: 10px 20px;
+      border-radius: 5px; cursor: pointer;
     }
-
-    #response {
-      margin-top: 15px;
-      font-size: 0.9em;
-      color: yellow;
+    #response { margin-top: 15px; color: yellow; }
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 20px;
     }
-    .spinner {
-  display: none;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #000;
-  border-radius: 50%;
-  width: 14px;
-  height: 14px;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+    th, td {
+      border: 1px solid #444; padding: 8px; text-align: left;
+    }
+    th { background-color: #222; }
   </style>
 </head>
 <body>
   <h1>🎯 Are You Playing Tonight?</h1>
   <div class="subtext">Fill out this form to get added to tonight's tournament list.</div>
 
-  <form id="ayptForm">
-    <input type="text" id="firstName" placeholder="First Name" required />
-    <input type="text" id="lastName" placeholder="Last Name" required />
-    <input type="tel" id="cellNumber" placeholder="Cell Number" required />
-    <textarea id="notes" rows="3" placeholder="Any notes for the TD? (optional)"></textarea>
-    <button type="submit" id="submitBtn">
-  <span class="spinner" id="spinner"></span>
-  <span id="btnText">Submit</span>
-</button>
-  </form>
+  <div id="formWrapper">
+    <form id="ayptForm">
+      <input type="text" id="firstName" placeholder="First Name" required />
+      <input type="text" id="lastName" placeholder="Last Name" required />
+      <input type="tel" id="cellNumber" placeholder="Cell Number" required />
+      <textarea id="notes" rows="3" placeholder="Any notes for the TD? (optional)"></textarea>
+      <button type="submit">Submit</button>
+    </form>
+    <div id="response"></div>
+  </div>
 
-  <div id="response"></div>
+  <div id="adminWrapper" style="display:none;">
+    <h2>📋 AYPT Signups (Admin View)</h2>
+    <table id="signupTable">
+      <thead>
+        <tr>
+          <th>First</th><th>Last</th><th>Cell</th><th>Notes</th><th>Time</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-  <script>
-  document.getElementById('ayptForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const isAdmin = params.get("admin") === "1";
 
-    const submitBtn = document.getElementById('submitBtn');
-    const spinner = document.getElementById('spinner');
-    const btnText = document.getElementById('btnText');
+  const STORAGE_KEY = "ayptSignups";
 
-    submitBtn.disabled = true;
-    spinner.style.display = 'inline-block';
-    btnText.textContent = 'Submitting...';
-
-    const url = 'https://script.google.com/macros/s/AKfycbya8SytuiirWdLcjplf8vQWZ9N1aMd8H-fL-eZJKxu_Q6ElQTA2jXDNzniq_rHVwFI/exec';
-
-    const formData = new FormData();
-    formData.append('firstName', document.getElementById('firstName').value);
-    formData.append('lastName', document.getElementById('lastName').value);
-    formData.append('cellNumber', document.getElementById('cellNumber').value);
-    formData.append('notes', document.getElementById('notes').value);
-
-    fetch(url, {
-      method: 'POST',
-      body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-  if (data.result === 'success') {
-    const firstName = document.getElementById('firstName').value.trim();
-    const today = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = today.toLocaleDateString(undefined, options);
-
-    document.getElementById('response').innerHTML = `<strong>Thank you ${firstName}, you are signed up for the tournament tonight ${formattedDate}. ✅</strong>`;
-    document.getElementById('ayptForm').reset();
-  } else {
-    document.getElementById('response').textContent = "Error: " + data.message;
+  function loadSignups(){
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   }
-})
-    .catch(err => {
-      document.getElementById('response').textContent = "Submission failed. Please try again.";
-      console.error(err);
-    })
-    .finally(() => {
-      submitBtn.disabled = false;
-      spinner.style.display = 'none';
-      btnText.textContent = 'Submit';
+  function saveSignups(list){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  if(isAdmin){
+    // Admin mode
+    document.getElementById("formWrapper").style.display = "none";
+    document.getElementById("adminWrapper").style.display = "block";
+
+    const tbody = document.querySelector("#signupTable tbody");
+    loadSignups().forEach(s => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${s.firstName}</td>
+        <td>${s.lastName}</td>
+        <td>${s.cellNumber}</td>
+        <td>${s.notes}</td>
+        <td>${s.timestamp}</td>`;
+      tbody.appendChild(tr);
     });
-  });
+  } else {
+    // Form mode
+    const form = document.getElementById("ayptForm");
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      const entry = {
+        firstName: document.getElementById("firstName").value.trim(),
+        lastName: document.getElementById("lastName").value.trim(),
+        cellNumber: document.getElementById("cellNumber").value.trim(),
+        notes: document.getElementById("notes").value.trim(),
+        timestamp: new Date().toLocaleString()
+      };
+      const list = loadSignups();
+      list.push(entry);
+      saveSignups(list);
+
+      document.getElementById("response").innerHTML =
+        `<strong>Thanks ${entry.firstName}, you are signed up ✅</strong>`;
+      form.reset();
+    });
+  }
+})();
 </script>
 </body>
 </html>
