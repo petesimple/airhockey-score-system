@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Are You Playing Tonight?</title>
   <!-- prevent favicon 404s -->
   <link rel="icon" href="data:;base64,=">
@@ -15,18 +12,16 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
-    :root{
-      --ah-bg:#000; --ah-panel:#0f0f10; --ah-border:#2d2f33; --ah-text:#f5f7fa; --ah-muted:#9aa1a9;
-    }
+    :root{ --ah-bg:#000; --ah-panel:#0f0f10; --ah-border:#2d2f33; --ah-text:#f5f7fa; --ah-muted:#9aa1a9; }
     body{ background:var(--ah-bg); color:var(--ah-text); }
     .ah-card{ background:var(--ah-panel); border:1px solid var(--ah-border); }
     .ah-muted{ color:var(--ah-muted); }
-    .btn-gradient{
-      background: linear-gradient(90deg, #e53935, #ffffff, #1e88e5);
-      color:#000; font-weight:700; border:none;
-    }
+    .btn-gradient{ background: linear-gradient(90deg, #e53935, #ffffff, #1e88e5); color:#000; font-weight:700; border:none; }
     .btn-gradient:hover{ opacity:.9; color:#000; }
     .table thead th{ position:sticky; top:0; z-index:1; background:#141519; }
+    .admin-note{ width:100%; min-height:2.6rem; resize:vertical; }
+    .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease; }
+    .saved-dot.show{ opacity:1; }
   </style>
 </head>
 <body>
@@ -75,9 +70,7 @@
             </form>
           </div>
         </div>
-        <p class="text-center mt-3 small ah-muted">
-          Admin view: append <code>?admin=1</code> to the URL.
-        </p>
+        <p class="text-center mt-3 small ah-muted">Admin view: append <code>?admin=1</code> to the URL.</p>
       </div>
     </div>
 
@@ -86,29 +79,32 @@
       <div class="card ah-card shadow-sm">
         <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
           <h2 class="h5 mb-0">📋 AYPT Signups (Admin)</h2>
-          <button id="refreshBtn" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-          </button>
+          <div class="d-flex gap-2">
+            <button id="refreshBtn" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+          </div>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table id="signupTable" class="table table-dark table-hover align-middle mb-0">
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>First</th>
                   <th>Last</th>
                   <th>Cell</th>
                   <th>Player Notes</th>
                   <th>Signed Up</th>
+                  <th class="text-center">Paid</th>
+                  <th style="min-width:220px;">Admin Notes</th>
                 </tr>
               </thead>
               <tbody><!-- rows injected --></tbody>
             </table>
           </div>
         </div>
-        <div class="card-footer small ah-muted">
-          Tip: tap the phone number to dial on mobile.
-        </div>
+        <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
       </div>
       <div id="status" class="small ah-muted mt-2"></div>
     </div>
@@ -118,42 +114,25 @@
     // ==============================
     // CONFIG
     // ==============================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec"; // must end with /exec
+    const SCRIPT_URL = "YOUR_APPS_SCRIPT_EXEC_URL"; // must end with /exec
     const ADMIN_CODE = "2580"; // 🔐 admin passcode
 
     // ==============================
     // UTILITIES
     // ==============================
     const $  = (sel, root=document) => root.querySelector(sel);
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
-    function isAdminRequest() {
-      return new URLSearchParams(location.search).get("admin") === "1";
-    }
+    function isAdminRequest(){ return new URLSearchParams(location.search).get("admin") === "1"; }
 
     function setBusy(b){
-      $("#submitBtn").disabled = b;
+      const btn = $("#submitBtn"); if(!btn) return;
+      btn.disabled = b;
       $("#btnIdle").classList.toggle("d-none", b);
       $("#btnBusy").classList.toggle("d-none", !b);
     }
 
-    function normalizePhone(str){
-      return String(str).replace(/[^\d+\-\s().]/g, "").trim();
-    }
-
-    function esc(s){
-      return String(s ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#39;");
-    }
-
-    function fmtLocal(iso){
-      if(!iso) return "";
-      try { return new Date(iso).toLocaleString(); } catch { return iso; }
-    }
+    function normalizePhone(str){ return String(str).replace(/[^\d+\-\s().]/g, "").trim(); }
+    function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+    function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
 
     // JSONP helper (avoids CORS)
     function jsonp(url, params = {}, timeoutMs = 12000){
@@ -166,23 +145,14 @@
         s.src = `${url}?${qs}`;
         s.id  = cb;
 
-        const timeout = setTimeout(() => {
-          cleanup();
-          reject(new Error("JSONP timeout"));
-        }, timeoutMs);
-
-        window[cb] = (data) => {
-          cleanup();
-          resolve(data);
-        };
+        const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
+        window[cb] = (data) => { cleanup(); resolve(data); };
 
         function cleanup(){
           clearTimeout(timeout);
-          const el = document.getElementById(cb);
-          if (el) el.remove();
+          const el = document.getElementById(cb); if (el) el.remove();
           try { delete window[cb]; } catch(_) { window[cb] = undefined; }
         }
-
         document.body.appendChild(s);
       });
     }
@@ -207,12 +177,7 @@
 
       setBusy(true);
       try {
-        const data = await jsonp(SCRIPT_URL, {
-          firstName,
-          lastName,
-          cellNumber: cell,
-          notes
-        });
+        const data = await jsonp(SCRIPT_URL, { firstName, lastName, cellNumber: cell, notes });
         if (data && (data.ok || data.result === "success")) {
           responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅</strong>`;
           $("#ayptForm").reset();
@@ -228,7 +193,7 @@
     }
 
     // ==============================
-    // ADMIN LIST (LIST via JSONP)
+    // ADMIN (LIST & UPDATE via JSONP)
     // ==============================
     async function loadAdminTable(){
       const statusEl = $("#status");
@@ -237,27 +202,66 @@
       tbody.innerHTML = "";
 
       try {
-        // list=1 enables LIST MODE in the Apps Script doGet
+        // list=1 enables LIST MODE in Apps Script
         const data = await jsonp(SCRIPT_URL, { list: "1" });
         if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
-
         const rows = data.rows || [];
-        rows.forEach(r => {
+
+        rows.forEach((r, i) => {
           const tr = document.createElement("tr");
+          // r.id is the sheet row number (2-based, because row 1 is header)
           tr.innerHTML = `
+            <td class="text-muted">${esc(r.id)}</td>
             <td>${esc(r.firstName)}</td>
             <td>${esc(r.lastName)}</td>
             <td><a class="text-decoration-none" href="tel:${esc(r.cell)}">${esc(r.cell)}</a></td>
             <td>${esc(r.notes)}</td>
             <td>${fmtLocal(r.timestamp)}</td>
+            <td class="text-center">
+              <input type="checkbox" class="form-check-input paid-toggle" data-id="${esc(r.id)}" ${r.paid ? "checked" : ""}>
+            </td>
+            <td>
+              <textarea class="form-control admin-note" rows="2" data-id="${esc(r.id)}" placeholder="Private admin notes...">${esc(r.adminNotes || "")}</textarea>
+              <span class="saved-dot" id="saved-${esc(r.id)}" title="Saved"></span>
+            </td>
           `;
           tbody.appendChild(tr);
         });
+
+        // Wire up events after rows exist
+        tbody.addEventListener("change", async (e) => {
+          if (e.target.classList.contains("paid-toggle")) {
+            const id = e.target.getAttribute("data-id");
+            const paid = e.target.checked ? "1" : "0";
+            try { await jsonp(SCRIPT_URL, { update: "1", id, paid }); pulseSaved(id); }
+            catch (err) { console.error(err); statusEl.textContent = "Failed to update Paid."; }
+          }
+        });
+
+        // Debounce admin notes typing
+        let noteTimer = null;
+        tbody.addEventListener("input", (e) => {
+          if (e.target.classList.contains("admin-note")) {
+            const id = e.target.getAttribute("data-id");
+            const v = e.target.value;
+            clearTimeout(noteTimer);
+            noteTimer = setTimeout(async () => {
+              try { await jsonp(SCRIPT_URL, { update: "1", id, adminNote: v }); pulseSaved(id); }
+              catch (err) { console.error(err); statusEl.textContent = "Failed to save admin notes."; }
+            }, 350);
+          }
+        });
+
         statusEl.textContent = `${rows.length} signups loaded`;
       } catch (e) {
         console.error(e);
         statusEl.textContent = "Failed to load signups.";
       }
+    }
+
+    function pulseSaved(id){
+      const dot = document.getElementById(`saved-${id}`);
+      if (dot) { dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
     }
 
     // ==============================
@@ -283,10 +287,10 @@
       const adminReq = isAdminRequest();
 
       if (adminReq) {
-        if (!requireAdminAccess()) return; // stop if wrong code
+        if (!requireAdminAccess()) return;
         $("#formView").classList.add("d-none");
         $("#adminView").classList.remove("d-none");
-        $("#subtitle").textContent = "Admin view: read-only list from Google Sheets.";
+        $("#subtitle").textContent = "Admin view: live list from Google Sheets.";
         $("#modeSwitch").href = location.pathname; // back to player form
         $("#modeSwitch").textContent = "Player Form";
         loadAdminTable();
@@ -295,8 +299,7 @@
         $("#formView").classList.remove("d-none");
         $("#adminView").classList.add("d-none");
         $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
-        const u = new URL(location.href);
-        u.searchParams.set("admin","1");
+        const u = new URL(location.href); u.searchParams.set("admin","1");
         $("#modeSwitch").href = u.toString();
         $("#modeSwitch").textContent = "Admin View";
         $("#ayptForm").addEventListener("submit", handleSubmit);
