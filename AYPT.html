@@ -40,11 +40,18 @@
       border: 1px solid #444; padding: 8px; text-align: left;
     }
     th { background-color: #222; }
-    .paid-cell { text-align: center; }
+    .paid-cell, .delete-cell { text-align: center; }
     #clearBtn {
       margin-top: 15px;
       background: crimson;
       color: #fff;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ff5555;
+      font-size: 1.2em;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -69,7 +76,7 @@
       <thead>
         <tr>
           <th>First</th><th>Last</th><th>Cell</th><th>Notes</th>
-          <th>Signed Up</th><th>Paid</th>
+          <th>Signed Up</th><th>Paid</th><th>Delete</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -103,6 +110,9 @@
         <td>${s.timestamp || ""}</td>
         <td class="paid-cell">
           <input type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
+        </td>
+        <td class="delete-cell">
+          <button class="delete-btn" data-index="${idx}" title="Delete Player">🗑️</button>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -115,8 +125,10 @@
 
     renderTable();
 
+    const tbody = document.querySelector("#signupTable tbody");
+
     // Handle paid checkbox toggles
-    document.querySelector("#signupTable tbody").addEventListener("change", function(e){
+    tbody.addEventListener("change", function(e){
       if(e.target.type === "checkbox"){
         const index = e.target.getAttribute("data-index");
         const signups = loadSignups();
@@ -125,7 +137,21 @@
       }
     });
 
-    // Handle clear button
+    // Handle delete button
+    tbody.addEventListener("click", function(e){
+      if(e.target.classList.contains("delete-btn")){
+        const index = e.target.getAttribute("data-index");
+        const signups = loadSignups();
+        const player = signups[index];
+        if(confirm(`Remove ${player.firstName} ${player.lastName}?`)){
+          signups.splice(index, 1);
+          saveSignups(signups);
+          renderTable();
+        }
+      }
+    });
+
+    // Handle clear all
     document.getElementById("clearBtn").addEventListener("click", function(){
       if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
         localStorage.removeItem(STORAGE_KEY);
