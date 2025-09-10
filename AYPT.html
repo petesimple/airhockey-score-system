@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Are You Playing Tonight?</title>
   <!-- prevent favicon 404s -->
-  <link rel="icon" href="data:;base64,=">
+  <link rel="icon" type="image/png" href="AYPTlogo.png">
 
   <!-- Bootstrap 5 CSS + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,15 +22,29 @@
     .admin-note{ width:100%; min-height:2.6rem; resize:vertical; }
     .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease; }
     .saved-dot.show{ opacity:1; }
+    .aypt-logo {
+  height: 40px;          /* pleasant, not too big */
+  width: auto;
+  border-radius: 8px;    /* subtle rounded corners */
+  object-fit: contain;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06); /* soft outline on dark bg */
+}
+@media (min-width: 768px) {
+  .aypt-logo { height: 48px; }
+}
   </style>
 </head>
 <body>
   <div class="container py-4">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <div>
-        <h1 class="h4 fw-bold mb-0">🎯 Are You Playing Tonight?</h1>
-        <div class="ah-muted small" id="subtitle">Fill out this form to get added to tonight's tournament list.</div>
-      </div>
+    <div class="d-flex align-items-center gap-3">
+  <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
+  <div>
+    <h1 class="h4 fw-bold mb-0">🎯 Are You Playing Tonight?</h1>
+    <div class="ah-muted small" id="subtitle">
+      Fill out this form to get added to tonight's tournament list.
+    </div>
+  </div>
+</div>
       <a id="modeSwitch" class="btn btn-outline-light btn-sm" href="#">Switch View</a>
     </div>
 
@@ -78,7 +92,10 @@
     <div id="adminView" class="d-none">
       <div class="card ah-card shadow-sm">
         <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
-          <h2 class="h5 mb-0">📋 AYPT Signups (Admin)</h2>
+          <h2 class="h5 mb-0 d-flex align-items-center gap-2">
+  <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" style="height:28px;border-radius:6px" />
+  AYPT Signups (Admin)
+</h2>
           <div class="d-flex gap-2">
             <button id="refreshBtn" class="btn btn-outline-light btn-sm">
               <i class="bi bi-arrow-clockwise me-1"></i> Refresh
