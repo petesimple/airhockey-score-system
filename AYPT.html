@@ -41,6 +41,11 @@
     }
     th { background-color: #222; }
     .paid-cell { text-align: center; }
+    #clearBtn {
+      margin-top: 15px;
+      background: crimson;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -69,6 +74,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    <button id="clearBtn">🗑️ Clear All Players</button>
   </div>
 
 <script>
@@ -84,16 +90,10 @@
   function saveSignups(list){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
-
-  if(isAdmin){
-    // Admin mode
-    document.getElementById("formWrapper").style.display = "none";
-    document.getElementById("adminWrapper").style.display = "block";
-
+  function renderTable(){
     const tbody = document.querySelector("#signupTable tbody");
-    const signups = loadSignups();
-
-    signups.forEach((s, idx) => {
+    tbody.innerHTML = "";
+    loadSignups().forEach((s, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${s.firstName}</td>
@@ -106,14 +106,30 @@
         </td>`;
       tbody.appendChild(tr);
     });
+  }
+
+  if(isAdmin){
+    // Admin mode
+    document.getElementById("formWrapper").style.display = "none";
+    document.getElementById("adminWrapper").style.display = "block";
+
+    renderTable();
 
     // Handle paid checkbox toggles
-    tbody.addEventListener("change", function(e){
+    document.querySelector("#signupTable tbody").addEventListener("change", function(e){
       if(e.target.type === "checkbox"){
         const index = e.target.getAttribute("data-index");
         const signups = loadSignups();
         signups[index].paid = e.target.checked;
         saveSignups(signups);
+      }
+    });
+
+    // Handle clear button
+    document.getElementById("clearBtn").addEventListener("click", function(){
+      if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
+        localStorage.removeItem(STORAGE_KEY);
+        renderTable();
       }
     });
 
