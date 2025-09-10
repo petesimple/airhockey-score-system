@@ -38,6 +38,7 @@
     }
     th, td {
       border: 1px solid #444; padding: 8px; text-align: left;
+      vertical-align: top;
     }
     th { background-color: #222; }
     .paid-cell, .delete-cell { text-align: center; }
@@ -53,6 +54,25 @@
       font-size: 1.2em;
       cursor: pointer;
     }
+    .note-input {
+      width: 100%;
+      min-height: 52px;
+      resize: vertical;
+      background:#0e0e0e;
+      color:#fff;
+      border:1px solid #333;
+      border-radius:6px;
+      padding:8px;
+      font-family: inherit;
+      margin:0;
+    }
+    .saved-dot {
+      display:inline-block;
+      width:8px;height:8px;border-radius:50%;
+      background:#3ddc84;margin-left:6px;vertical-align:middle;
+      opacity:0; transition:opacity .2s ease;
+    }
+    .saved-dot.show { opacity:1; }
   </style>
 </head>
 <body>
@@ -75,8 +95,8 @@
     <table id="signupTable">
       <thead>
         <tr>
-          <th>First</th><th>Last</th><th>Cell</th><th>Notes</th>
-          <th>Signed Up</th><th>Paid</th><th>Delete</th>
+          <th>First</th><th>Last</th><th>Cell</th>
+          <th>Notes (editable)</th><th>Signed Up</th><th>Paid</th><th>Delete</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -97,6 +117,7 @@
   function saveSignups(list){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
+
   function renderTable(){
     const tbody = document.querySelector("#signupTable tbody");
     tbody.innerHTML = "";
@@ -106,7 +127,10 @@
         <td>${s.firstName}</td>
         <td>${s.lastName}</td>
         <td>${s.cellNumber}</td>
-        <td>${s.notes}</td>
+        <td>
+          <textarea class="note-input" data-index="${idx}" placeholder="Add notes...">${s.notes || ""}</textarea>
+          <span class="saved-dot" id="saved-${idx}" title="Saved"></span>
+        </td>
         <td>${s.timestamp || ""}</td>
         <td class="paid-cell">
           <input type="checkbox" ${s.paid ? "checked" : ""} data-index="${idx}">
@@ -116,6 +140,11 @@
         </td>`;
       tbody.appendChild(tr);
     });
+  }
+
+  // Small debounce helper for live saving notes
+  function debounce(fn, delay=300){
+    let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), delay); };
   }
 
   if(isAdmin){
@@ -137,7 +166,7 @@
       }
     });
 
-    // Handle delete button
+    // Handle per-player delete
     tbody.addEventListener("click", function(e){
       if(e.target.classList.contains("delete-btn")){
         const index = e.target.getAttribute("data-index");
@@ -151,7 +180,35 @@
       }
     });
 
-    // Handle clear all
+    // Handle editable notes (auto-save on input/blur)
+    const saveNotes = debounce((index, value) => {
+      const list = loadSignups();
+      if(list[index]){
+        list[index].notes = value;
+        saveSignups(list);
+        const dot = document.getElementById(`saved-${index}`);
+        if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
+      }
+    }, 250);
+
+    tbody.addEventListener("input", function(e){
+      if(e.target.classList.contains("note-input")){
+        const index = e.target.getAttribute("data-index");
+        saveNotes(index, e.target.value);
+      }
+    });
+    tbody.addEventListener("blur", function(e){
+      if(e.target.classList.contains("note-input")){
+        const index = e.target.getAttribute("data-index");
+        const list = loadSignups();
+        if(list[index]){
+          list[index].notes = e.target.value;
+          saveSignups(list);
+        }
+      }
+    }, true);
+
+    // Clear all
     document.getElementById("clearBtn").addEventListener("click", function(){
       if(confirm("Are you sure you want to clear ALL players? This cannot be undone.")){
         localStorage.removeItem(STORAGE_KEY);
