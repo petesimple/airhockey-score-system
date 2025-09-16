@@ -4,348 +4,349 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="manifest" href="manifestTD.json">
-<meta name="theme-color" content="#00bcd4">
-<link rel="icon" type="image/png" href="iconTD-192.png">
+  <meta name="theme-color" content="#00bcd4">
+  <link rel="icon" type="image/png" href="iconTD-192.png">
   <title>Tournament Director</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      padding: 20px;
-      text-align: center;
-    }
-    input, select, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: none;
-    }
-    input {
-      width: 150px;
-    }
-    button {
-      background: #00bcd4;
-      color: #000;
-      cursor: pointer;
-    }
-    #result, #qrcode {
-      margin-top: 20px;
-    }
-    a {
-      color: #00eaff;
-    }
-    #copyBtn {
-      margin-top: 10px;
-      padding: 6px 14px;
-      font-size: 0.9em;
-      background: #333;
-      color: #0f0;
-    }
-    #copyBtn.copied {
-      background: #0f0;
-      color: #000;
-    }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; text-align: center; }
+    input, select, button { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
+    input { width: 150px; }
+    button { background: #00bcd4; color: #000; cursor: pointer; }
+    #result, #qrcode { margin-top: 20px; }
+    a { color: #00eaff; }
+    #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
+    #copyBtn.copied { background: #0f0; color: #000; }
+    .muted { color:#aaa; font-size:0.9em }
   </style>
 </head>
 <body>
-        <img id="logo" src="TDlogo.png" alt="Logo"
-          style="height:200px; cursor: pointer;" 
-          draggable="false" 
-          unselectable="on" />
-          <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
+  <img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
+  <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
+
   <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
-  <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
-  <div style="margin-top: 10px; line-height: 1.5;">
-    <p><strong>1. Who's playing?</strong><br/>
-      Enter names for Player 1 and Player 2.</p>
-
-    <p><strong>2. Got a table?</strong><br/>
-      Enter a table number so the match assignment is clear for players and spectators.</p>
-
-    <p><strong>3. Got a ref?</strong><br/>
-      Enter a referee name if applicable—it’ll show up in the match summary and link.</p>
-
-    <p><strong>4. Pick match type.</strong><br/>
-      Choose Best of 3, 5, or 7. No scorekeeping math required.</p>
-
-    <p><strong>5. Generate the match link.</strong><br/>
-      Click "Generate Match Link" to create a shareable scoreboard link and QR code.</p>
-
-    <p><strong>6. Share it!</strong><br/>
-      You can scan the QR code or copy the link with the "Copy to Clipboard" button. Players just need to click or scan to open their scoreboard.</p>
-
-    <p><strong>7. Check your Match Log.</strong><br/>
-      Scroll down to the "📋 Show Match Log" section to see a running list of all links you’ve generated. Each entry is timestamped and clickable.</p>
-
-    <p><strong>8. Search and paginate.</strong><br/>
-      Use the search box to quickly find any past match by player, table, or ref name. Use "Next" and "Prev" to navigate between pages—great for 300+ matches!</p>
-
-    <p><strong>9. Export and clear.</strong><br/>
-      Use the Export button to save your log as a CSV spreadsheet. Use Clear Log when it’s time to start fresh (you’ll be asked to confirm).</p>
-
-    <p><strong>10. Upload your logo (Optional but awesome).</strong><br/>
-      Long-press the top logo image to upload a custom logo for your event. It’ll stick even if you reload the page!</p>
-
-    <p>You're now the matchmaker *and* the law. Go keep that tournament running smooth, Captain. 🖖</p>
-  </div>
-</details>
+    <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
+    <div style="margin-top: 10px; line-height: 1.5;">
+      <p><strong>1. Who's playing?</strong><br/>Enter names for Player 1 and Player 2.</p>
+      <p><strong>2. Got a table?</strong><br/>Enter a table number so the match assignment is clear for players and spectators.</p>
+      <p><strong>3. Got a ref?</strong><br/>Enter a referee name if applicable—it’ll show up in the match summary and link.</p>
+      <p><strong>4. Pick match type.</strong><br/>Choose Best of 3, 5, or 7. No scorekeeping math required.</p>
+      <p><strong>5. Generate the match link.</strong><br/>Click "Generate Match Link" to create a shareable scoreboard link and QR code.</p>
+      <p><strong>6. Share it!</strong><br/>Scan the QR or copy the link. Players just tap or scan to open their scoreboard.</p>
+      <p><strong>7. Match Log → AYPT.</strong><br/>Each generated match is saved locally and pushed to the AYPT spreadsheet ➜ <em>Match Log</em> sheet.</p>
+      <p><strong>8. Export & Clear.</strong><br/>Export CSV or clear local log when needed.</p>
+    </div>
+  </details>
 
   <div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
-  <input type="text" id="player1" placeholder="Player 1" autofocus />
-  <input type="text" id="player2" placeholder="Player 2" />
-  <input type="text" id="tableNumber" placeholder="Table #" />
-  <input type="text" id="refName" placeholder="Referee Name" />
-  <select id="matchLength">
-    <option value="2">Best of 3</option>
-    <option value="3">Best of 5</option>
-    <option value="4">Best of 7</option>
-  </select>
-  <button onclick="generateMatchLink()">Generate Match Link</button>
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">
-  ➕ Generate Match Sheet
-</a>
-</div>
+    <input type="text" id="player1" placeholder="Player 1" autofocus />
+    <input type="text" id="player2" placeholder="Player 2" />
+    <input type="text" id="tableNumber" placeholder="Table #" />
+    <input type="text" id="refName" placeholder="Referee Name" />
+    <select id="matchLength">
+      <option value="2">Best of 3</option>
+      <option value="3">Best of 5</option>
+      <option value="4">Best of 7</option>
+    </select>
+    <button onclick="generateMatchLink()">Generate Match Link</button>
+    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
+    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
+  </div>
 
   <div id="result"></div>
   <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
   <canvas id="qrcode"></canvas>
-  
+
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
+    // ==========================
+    // CONFIG: Set this endpoint
+    // ==========================
+    // Replace with your deployed Apps Script Web App URL (execute as Me, accessible to Anyone)
+    const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/PASTE_YOUR_WEB_APP_ID/exec"; // <-- TODO
+
     let generatedUrl = '';
+    let lastPayload = null; // for debugging/visibility
     let currentPage = 1;
-      const pageSize = 25;
+    const pageSize = 25;
 
     function generateMatchLink() {
-  const p1 = encodeURIComponent(document.getElementById('player1').value.trim());
-  const p2 = encodeURIComponent(document.getElementById('player2').value.trim());
-  const match = document.getElementById('matchLength').value;
-  const table = document.getElementById('tableNumber').value.trim();
-  const ref = encodeURIComponent(document.getElementById('refName').value.trim());
+      const p1Raw = document.getElementById('player1').value.trim();
+      const p2Raw = document.getElementById('player2').value.trim();
+      const p1 = encodeURIComponent(p1Raw);
+      const p2 = encodeURIComponent(p2Raw);
+      const match = document.getElementById('matchLength').value;
+      const table = document.getElementById('tableNumber').value.trim();
+      const refRaw = document.getElementById('refName').value.trim();
+      const ref = encodeURIComponent(refRaw);
 
-  const baseUrl = window.location.origin + '/airhockey-score-system/';
-  
-  // 🔹 Generate unique 4-char ID
-  const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-  
-  // 🔹 Generate date with dashes
-  const today = new Date();
-  const yyyymmdd = today.toISOString().slice(0,10); // YYYY-MM-DD format
+      const baseUrl = window.location.origin + '/airhockey-score-system/';
 
-  // 🔹 Combine into matchid
-  const matchId = `weekly${randomId}-${yyyymmdd}`;
-  
-  // Build generatedUrl
-  generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
-  if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
-  if (ref) generatedUrl += `&ref=${ref}`;
+      // Unique 4-char ID + Date
+      const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const yyyymmdd = new Date().toISOString().slice(0,10);
+      const matchId = `weekly${randomId}-${yyyymmdd}`;
 
-  // Match Sheet Link
-  const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
-  const matchSheetLink = document.getElementById('matchSheetLink');
-  matchSheetLink.href = matchSheetUrl;
-  matchSheetLink.style.display = 'inline-block';
+      // Scoreboard URL
+      generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
+      if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
+      if (ref) generatedUrl += `&ref=${ref}`;
 
-  // Display match link
-  const extraNote = `
-    ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
-    ${ref ? `<p><strong>Referee:</strong> ${decodeURIComponent(ref)}</p>` : ''}
-    <p><strong>Match ID:</strong> ${matchId}</p>
-  `;
-  document.getElementById('result').innerHTML = `
-    <p><strong>Match Link:</strong></p>
-    <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
-    ${extraNote}
-  `;
+      // Match Sheet URL
+      const matchSheetBase = 'https://petesimple.github.io/AHMS/';
+      const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+      const matchSheetLink = document.getElementById('matchSheetLink');
+      matchSheetLink.href = matchSheetUrl;
+      matchSheetLink.style.display = 'inline-block';
 
-  document.getElementById('copyBtn').style.display = 'inline-block';
-  document.getElementById('copyBtn').classList.remove('copied');
-  document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
+      // Display
+      const extraNote = `
+        ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
+        ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ''}
+        <p><strong>Match ID:</strong> ${matchId}</p>
+      `;
+      document.getElementById('result').innerHTML = `
+        <p><strong>Match Link:</strong></p>
+        <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+        ${extraNote}
+      `;
 
-  QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
-    width: 220,
-    color: { dark: "#ffffff", light: "#111111" }
-  }, function (error) {
-    if (error) console.error(error);
-  });
+      document.getElementById('copyBtn').style.display = 'inline-block';
+      document.getElementById('copyBtn').classList.remove('copied');
+      document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
 
-  const readableMatch = `${decodeURIComponent(p1)} vs ${decodeURIComponent(p2)} – Best of ${match}${table ? ` @ Table ${table}` : ''}${ref ? ` [Ref: ${decodeURIComponent(ref)}]` : ''}`;
-  addToMatchLog(readableMatch, generatedUrl);
-}
+      QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+        width: 220,
+        color: { dark: "#ffffff", light: "#111111" }
+      }, function (error) { if (error) console.error(error); });
+
+      const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
+
+      // Save locally and push to cloud
+      addToMatchLog(readableMatch, generatedUrl);
+      const payload = {
+        timestamp: new Date().toISOString(),
+        source: 'TD',
+        matchId,
+        p1: p1Raw,
+        p2: p2Raw,
+        matchType: `Best of ${match}`,
+        table: table || '',
+        referee: refRaw || '',
+        scoreboardUrl: generatedUrl,
+        matchSheetUrl: matchSheetUrl
+      };
+      lastPayload = payload;
+      saveToAYPTMatchLog(payload);
+    }
 
     function copyLink() {
       navigator.clipboard.writeText(generatedUrl).then(() => {
         const btn = document.getElementById('copyBtn');
         btn.classList.add('copied');
         btn.innerText = 'Copied!';
-        setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.innerText = 'Copy to Clipboard';
-        }, 2000);
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
       });
     }
-    
-function addToMatchLog(text, url) {
-  const now = new Date();
-  const logItem = {
-    text,
-    url,
-    time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-    date: now.toLocaleDateString()
-  };
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  log.unshift(logItem); // Add to top
-  localStorage.setItem('matchLog', JSON.stringify(log));
-  renderMatchLog();
-}
 
-function renderMatchLog() {
-  const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  const filtered = log.filter(item =>
-    item.text.toLowerCase().includes(searchQuery)
-  );
+    // ==============================
+    // Local Match Log (existing)
+    // ==============================
+    function addToMatchLog(text, url) {
+      const now = new Date();
+      const logItem = {
+        text,
+        url,
+        time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        date: now.toLocaleDateString()
+      };
+      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+      log.unshift(logItem);
+      localStorage.setItem('matchLog', JSON.stringify(log));
+      renderMatchLog();
+    }
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  if (currentPage > totalPages) currentPage = totalPages || 1;
+    function renderMatchLog() {
+      const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
+      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+      const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
+      const totalPages = Math.ceil(filtered.length / pageSize);
+      if (currentPage > totalPages) currentPage = totalPages || 1;
+      const start = (currentPage - 1) * pageSize;
+      const visible = filtered.slice(start, start + pageSize);
+      const logList = document.getElementById('logList');
+      logList.innerHTML = '';
+      visible.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
+        logList.appendChild(li);
+      });
+      const pageInfo = document.getElementById('pageInfo');
+      if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    }
 
-  const start = (currentPage - 1) * pageSize;
-  const visible = filtered.slice(start, start + pageSize);
+    function clearMatchLog() {
+      if (confirm("⚠️ Are you sure you want to clear the match log?")) {
+        localStorage.removeItem('matchLog');
+        renderMatchLog();
+      }
+    }
 
-  const logList = document.getElementById('logList');
-  logList.innerHTML = '';
-  visible.forEach(item => {
-    const li = document.createElement('li');
-    li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
-    logList.appendChild(li);
-  });
-
-  const pageInfo = document.getElementById('pageInfo');
-  if (pageInfo) {
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-  }
-}
-
-function clearMatchLog() {
-  const sure = confirm("⚠️ Are you sure you want to clear the match log?");
-  if (sure) {
-    localStorage.removeItem('matchLog');
-    renderMatchLog();
-  }
-}
     function exportMatchLogCSV() {
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  if (log.length === 0) {
-    alert("No matches to export.");
-    return;
-  }
+      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+      if (log.length === 0) { alert("No matches to export."); return; }
+      const headers = ['Date', 'Time', 'Match Info', 'Link'];
+      const rows = log.map(item => [item.date, item.time, item.text, item.url]);
+      const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
 
-  const headers = ['Date', 'Time', 'Match Info', 'Link'];
-  const rows = log.map(item => [item.date, item.time, item.text, item.url]);
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMatchLog();
+      flushCloudQueue();
+    });
 
-  const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+    // ==============================
+    // Cloud Sync → AYPT (Match Log)
+    // ==============================
+    const QUEUE_KEY = 'matchLogCloudQueue';
 
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-    document.addEventListener('DOMContentLoaded', renderMatchLog);
+    function showCloudStatus(msg, temp=false) {
+      const el = document.getElementById('cloudSyncStatus');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = 'block';
+      if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
+    }
+
+    function enqueue(payload) {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+      q.push(payload);
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+      showCloudStatus(`Saved offline (${q.length} pending)…`, true);
+    }
+
+    async function flushCloudQueue() {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+      if (!q.length) return;
+      showCloudStatus(`Syncing ${q.length} pending…`);
+      const remaining = [];
+      for (const item of q) {
+        const ok = await postToAYPT(item);
+        if (!ok) remaining.push(item);
+      }
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+      showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
+    }
+
+    async function saveToAYPTMatchLog(payload) {
+      // Try normal CORS first, then fall back to no-cors fire-and-forget
+      const ok = await postToAYPT(payload);
+      if (!ok) {
+        enqueue(payload);
+      } else {
+        showCloudStatus('Saved to AYPT ✓', true);
+      }
+    }
+
+    async function postToAYPT(payload) {
+      if (!AYPT_MATCHLOG_ENDPOINT || AYPT_MATCHLOG_ENDPOINT.includes('PASTE_YOUR_WEB_APP_ID')) {
+        console.warn('AYPT endpoint not configured');
+        return false;
+      }
+      try {
+        const resp = await fetch(AYPT_MATCHLOG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'appendMatchLog', data: payload })
+        });
+        // If Apps Script blocks CORS, attempt a no-cors fallback
+        if (!resp.ok) {
+          await fetch(AYPT_MATCHLOG_ENDPOINT, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'appendMatchLog', data: payload }) });
+          return true; // treat as fire-and-forget
+        }
+        const text = await resp.text();
+        // Some deployments return HTML; tolerate as success
+        if (!text) return true;
+        try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
+      } catch (e) {
+        console.warn('AYPT post failed, will queue:', e);
+        return false;
+      }
+    }
   </script>
+
   <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
-  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
-    
+    <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
+
     <input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
-<div id="paginationControls" style="margin: 10px 0;">
-  <button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
-  <span id="pageInfo" style="font-size: 0.9em;"></span>
-  <button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
-</div>
-    
-  <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
-  <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
-  <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
-  <div style="margin-top: 10px;">
-    <button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
-    <button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
-  </div>
-</details>
+    <div id="paginationControls" style="margin: 10px 0;">
+      <button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
+      <span id="pageInfo" style="font-size: 0.9em;"></span>
+      <button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
+    </div>
+
+    <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
+    <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
+    <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
+    <div style="margin-top: 10px;">
+      <button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
+      <button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
+    </div>
+  </details>
 
   <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker-td.js')
-      .then(() => console.log('TD Service Worker registered!'));
-  }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker-td.js').then(() => console.log('TD Service Worker registered!'));
+    }
 
-    const logo = document.getElementById("logo");
-  const uploader = document.getElementById("logoUploader");
-  let pressTimer;
+    const logo = document.getElementById('logo');
+    const uploader = document.getElementById('logoUploader');
+    let pressTimer;
 
     // Prevent default drag and selection behavior on the logo
-logo.addEventListener("dragstart", (e) => e.preventDefault());
-logo.addEventListener("selectstart", (e) => e.preventDefault());
-    
-  // Long press triggers file input
-  logo.addEventListener("mousedown", () => {
-    pressTimer = setTimeout(() => {
-      uploader.click();
-    }, 500); // 500ms for long press
-  });
+    logo.addEventListener('dragstart', (e) => e.preventDefault());
+    logo.addEventListener('selectstart', (e) => e.preventDefault());
 
-  logo.addEventListener("mouseup", () => clearTimeout(pressTimer));
-  logo.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+    // Long press triggers file input
+    logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+    logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+    logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
 
-// Add touch support for mobile
-logo.addEventListener("touchstart", () => {
-  pressTimer = setTimeout(() => {
-    uploader.click();
-  }, 500);
-});
-logo.addEventListener("touchend", () => clearTimeout(pressTimer));
-logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
-    
-  // When a file is selected, update the logo
-  uploader.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = function (evt) {
-        logo.src = evt.target.result;
-        localStorage.setItem("customLogo", evt.target.result); // Save for reload
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+    // Touch support
+    logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+    logo.addEventListener('touchend', () => clearTimeout(pressTimer));
+    logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
 
-  // Load from localStorage on page load
-  window.addEventListener("DOMContentLoaded", () => {
-    const savedLogo = localStorage.getItem("customLogo");
-    if (savedLogo) {
-      logo.src = savedLogo;
-    }
-  });
-    function resetLogo() {
-  localStorage.removeItem("customLogo");
-  logo.src = "TDlogo.png";
-}
-    function nextPage() {
-  currentPage++;
-  renderMatchLog();
-}
-function prevPage() {
-  if (currentPage > 1) {
-    currentPage--;
-    renderMatchLog();
-  }
-}
-</script>
+    // When a file is selected, update the logo
+    uploader.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          logo.src = evt.target.result;
+          localStorage.setItem('customLogo', evt.target.result); // Save for reload
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Load logo from localStorage on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedLogo = localStorage.getItem('customLogo');
+      if (savedLogo) logo.src = savedLogo;
+    });
+
+    function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
+    function nextPage() { currentPage++; renderMatchLog(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
+  </script>
 </body>
 </html>
