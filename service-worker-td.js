@@ -1,7 +1,7 @@
-// service-worker-td.js
+<script type="text/plain" data-filename="service-worker-td.js">
 const CACHE_NAME = 'td-static-v4';
 const ASSETS = [
-  './',               // if TD.html is at this path
+  './',
   './TD.html',
   './manifestTD.json',
   './iconTD-192.png',
@@ -10,17 +10,13 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(() => {})
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(() => {}));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null)))
-    )
+    caches.keys().then(keys => Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null))))
   );
   self.clients.claim();
 });
@@ -30,15 +26,8 @@ self.addEventListener('fetch', (event) => {
   try {
     const req = event.request;
     const url = new URL(req.url);
-
-    if (req.method !== 'GET' || url.origin !== self.location.origin) {
-      return; // don't call respondWith → browser handles normally
-    }
-
-    event.respondWith(
-      caches.match(req).then(cached => cached || fetch(req))
-    );
-  } catch (_) {
-    // swallow to avoid failing the event
-  }
+    if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+    event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
+  } catch (_) {}
 });
+</script>
