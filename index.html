@@ -481,30 +481,85 @@ function startAnotherMatchWithSameSettings(){ const p1n=players[0].name, p2n=pla
 let feedTimer = null;
 
 function getStartPageActive() {
-  // visible only when match hasn't started yet
   return document.getElementById('scoreSection')?.style.display !== 'block';
 }
-
 function showMatchFeed(show) {
   const feed = document.getElementById('matchFeed');
   if (!feed) return;
   feed.style.display = show ? 'block' : 'none';
 }
 
-async function fetchCalledMatches() {
-  try {
-    const res = await fetch(FEED_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Feed HTTP ' + res.status);
-    const data = await res.json();
+// --- helpers to normalize incoming data ---
+function coerceArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  if (payload && Array.isArray(payload.records)) return payload.records;
+  if (payload && Array.isArray(payload.items)) return payload.items;
+  // Common Google Sheets "values" format: {values:[ [headers...], [row...], ... ]}
+  if (payload && Array.isArray(payload.values) && payload.values.length > 1) {
+    const [headers, ...rows] = payload.values;
+    return rows.map(r => Object.fromEntries(headers.map((h,i)=>[h, r[i]])));
+  }
+  return [];
+}
+function normStatus(s) {
+  if (!s) return 'called';
+  const t = String(s).toLowerCase().trim();
+  // Accept several synonyms
+  if (['called','call','announced','ready','queued'].includes(t)) return 'called';
+  return t;
+}
+function normItem(raw) {
+  // Accept multiple likely header spellings from a Match Log sheet
+  const get = (...keys) => {
+    for (const k of keys) {
+      if (raw[k] != null && String(raw[k]).trim() !== '') return String(raw[k]).trim();
+    }
+    return '';
+  };
+  const bestOfRaw = get('bestOf','BestOf','best_of','Match','Bo','Best Of');
+  let bestOf = '4'; // default Bo7
+  if (['2','3','4'].includes(bestOfRaw)) bestOf = bestOfRaw;
+  if (/bo\s*3/i.test(bestOfRaw)) bestOf = '2';
+  if (/bo\s*5/i.test(bestOfRaw)) bestOf = '3';
+  if (/bo\s*7/i.test(bestOfRaw)) bestOf = '4';
 
-    // Only keep items that are "called" (if the feed includes mixed statuses)
-    const items = (Array.isArray(data) ? data : []).filter(i =>
-      (i.status || 'called').toLowerCase() === 'called'
-    );
+  return {
+    p1: get('p1','P1','Player1','Player 1','Player One','Home'),
+    p2: get('p2','P2','Player2','Player 2','Player Two','Away'),
+    table: get('table','Table','tbl','Table #','Table No'),
+    ref: get('ref','Ref','Referee','Official'),
+    matchid: get('matchid','MatchID','Match Id','ID','Id'),
+    bestOf,
+    status: normStatus(get('status','Status','STATE','state') || 'called'),
+    calledAt: get('calledAt','CalledAt','Called At','Timestamp','Time')
+  };
+}
+
+async function fetchCalledMatches() {
+  const list = document.getElementById('matchFeedList');
+  try {
+    const res = await fetch(FEED_URL + (FEED_URL.includes('?') ? '&' : '?') + 'ts=' + Date.now(), {
+      cache: 'no-store',
+      mode: 'cors'
+    });
+    const text = await res.text(); // be lenient; some endpoints return text with BOM
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) {
+      list.innerHTML = `<div class="feed-empty">Feed is not JSON (length ${text.length}).</div>`;
+      console.error('Feed not JSON:', e, text.slice(0,2000));
+      return;
+    }
+
+    const arr = coerceArray(json).map(normItem);
+
+    // Keep only items that are effectively "called"
+    const items = arr.filter(i => normStatus(i.status) === 'called');
 
     renderMatchFeed(items);
   } catch (e) {
-    renderMatchFeed([], 'Could not load feed');
+    renderMatchFeed([], 'Could not load feed (network/CORS)');
     console.error('Match feed error:', e);
   }
 }
@@ -513,17 +568,24 @@ function renderMatchFeed(items, errorMsg=null) {
   const list = document.getElementById('matchFeedList');
   if (!list) return;
 
+  const diagnostics = document.createElement('div');
+  diagnostics.className = 'feed-meta';
+  diagnostics.style.marginTop = '6px';
+  diagnostics.textContent = `Last refresh: ${new Date().toLocaleTimeString()} • Items: ${items?.length ?? 0}`;
+
   if (errorMsg) {
     list.innerHTML = `<div class="feed-empty">${errorMsg}</div>`;
+    list.appendChild(diagnostics);
     return;
   }
 
   if (!items.length) {
     list.innerHTML = `<div class="feed-empty">No called matches right now.</div>`;
+    list.appendChild(diagnostics);
     return;
   }
 
-  // Render newest first (optional)
+  // Newest first if timestamp present
   items.sort((a, b) => new Date(b.calledAt || 0) - new Date(a.calledAt || 0));
 
   list.innerHTML = items.map(item => {
@@ -534,11 +596,10 @@ function renderMatchFeed(items, errorMsg=null) {
     const matchid = item.matchid || '';
     const bestOf = (item.bestOf && ['2','3','4'].includes(String(item.bestOf))) ? String(item.bestOf) : '4';
 
-    // Build link to prefill your app with query params
-    const url = `${location.pathname}?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}&match=${bestOf}` +
-                `${table ? `&table=${encodeURIComponent(table)}` : ''}` +
-                `${ref ? `&ref=${encodeURIComponent(ref)}` : ''}` +
-                `${matchid ? `&matchid=${encodeURIComponent(matchid)}` : ''}`;
+    const url = `${location.pathname}?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}&match=${bestOf}`
+      + `${table ? `&table=${encodeURIComponent(table)}` : ''}`
+      + `${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`
+      + `${matchid ? `&matchid=${encodeURIComponent(matchid)}` : ''}`;
 
     const calledAt = item.calledAt ? new Date(item.calledAt).toLocaleString() : '';
 
@@ -554,39 +615,27 @@ function renderMatchFeed(items, errorMsg=null) {
         <a class="feed-link" href="${url}">Load</a>
       </div>`;
   }).join('');
+
+  list.appendChild(diagnostics);
 }
 
 function startMatchFeed() {
   if (feedTimer) return;
-  // Only run on the name-entry / start page
   if (getStartPageActive()) {
     showMatchFeed(true);
     fetchCalledMatches();
     feedTimer = setInterval(fetchCalledMatches, 10_000);
   }
 }
-
 function stopMatchFeed() {
-  if (feedTimer) {
-    clearInterval(feedTimer);
-    feedTimer = null;
-  }
+  if (feedTimer) { clearInterval(feedTimer); feedTimer = null; }
   showMatchFeed(false);
 }
 
-// Hook into your existing lifecycle:
-document.addEventListener('DOMContentLoaded', () => {
-  // Start feed on initial page load (only if still on start page)
-  startMatchFeed();
-});
-
-// When a match actually starts, hide/stop the feed so it’s not on the scoring view
+// boot & lifecycle
+document.addEventListener('DOMContentLoaded', () => { startMatchFeed(); });
 const _origStartMatch = startMatch;
-startMatch = function patchedStartMatch() {
-  stopMatchFeed();   // hide & stop
-  _origStartMatch(); // run original behavior
-};
-
+startMatch = function patchedStartMatch() { stopMatchFeed(); _origStartMatch(); };
 </script>
 
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.3 – (worlds)</div>
