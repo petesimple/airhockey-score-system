@@ -1,6 +1,6 @@
 <!-- =====================
- TD.html — Tournament Director (AYPT Match Log integrated)
- v1.1 — POST without preflight + endpoint UI + safe SW registration
+ TD.html — Tournament Director
+ v1.1 — CORS-safe Apps Script post + endpoint UI + offline queue
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -69,27 +69,16 @@
     // ==========================
     // Endpoint settings (local)
     // ==========================
-   function getAYPTEndpoint() {
-  return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || '';
-}
-
-function setAYPTEndpoint(url) {
-  if (!url) return;
-  localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim());
-  renderEndpointPreview();
-}
-
-function promptSetEndpoint() {
-  const current = getAYPTEndpoint();
-  const url = prompt(
-    'Paste your AYPT Web App URL (e.g. https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec):',
-    current || 'https://script.google.com/macros/s/.../exec'
-  );
-  if (url) {
-    setAYPTEndpoint(url);
-    showCloudStatus('AYPT endpoint saved ✓', true);
-  }
-}
+    function getAYPTEndpoint(){ return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || ''; }
+    function setAYPTEndpoint(url){ if (!url) return; localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim()); renderEndpointPreview(); }
+    function promptSetEndpoint(){
+      const current = getAYPTEndpoint();
+      const url = prompt(
+        'Paste your AYPT Web App URL (e.g. https://script.google.com/macros/s/AKfycbx.../exec):',
+        current || 'https://script.google.com/macros/s/.../exec'
+      );
+      if (url) { setAYPTEndpoint(url); showCloudStatus('AYPT endpoint saved ✓', true); }
+    }
     function renderEndpointPreview(){
       const el = document.getElementById('endpointPreview');
       const ep = getAYPTEndpoint();
@@ -272,7 +261,7 @@ function promptSetEndpoint() {
       try {
         const body = new URLSearchParams({
           action: 'appendMatchLog',
-          // secret: 'change-me-strong', // optional shared secret
+          // secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
           payload: JSON.stringify(payload)
         });
         return fetch(endpoint, {
@@ -292,6 +281,18 @@ function promptSetEndpoint() {
         console.warn('AYPT post failed, will queue:', e);
         return Promise.resolve(false);
       }
+    }
+
+    // Wrapper used by generateMatchLink()
+    function saveToAYPTMatchLog(payload){
+      return postToAYPT(payload).then(ok => {
+        if (!ok) {
+          enqueue(payload);            // store offline, auto-flushed later
+        } else {
+          showCloudStatus('Saved to AYPT ✓', true);
+        }
+        return ok;
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
