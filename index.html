@@ -102,6 +102,24 @@ body.mini-active { padding-top:360px; }
 /* Buttons */
 .score-btn { width:160px; height:50px; font-size:1em; margin:5px; border:none; border-radius:6px; cursor:pointer; }
 .large-tap { font-size:1.2em; height:60px; font-weight:bold; }
+
+.match-feed {
+  max-width: 720px; margin: 16px auto 0; text-align: left;
+  background: #0b0b0b; border: 1px solid #333; border-radius: 10px; padding: 12px 14px;
+}
+.feed-header { font-weight: 800; margin-bottom: 8px; color: #f5c04f; }
+.feed-list { display: flex; flex-direction: column; gap: 8px; }
+.feed-item { display: flex; justify-content: space-between; align-items: center;
+  background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 12px; }
+.feed-left { display: flex; flex-direction: column; gap: 2px; }
+.feed-title { font-weight: 700; }
+.feed-meta { font-size: .9em; color: #bbb; }
+.feed-link {
+  text-decoration: none; border: 1px solid #444; border-radius: 8px; padding: 8px 10px;
+  color: #fff; background: #1c1c1c;
+}
+.feed-empty { color: #aaa; font-style: italic; }
+       
 </style>
 </head>
 <body>
@@ -133,6 +151,14 @@ body.mini-active { padding-top:360px; }
 <option value="4" selected>Best of 7</option>
 </select>
 <button onclick="startMatch()">Start Match</button>
+</div>
+
+<!-- Live "Called Matches" feed (AYPT > Match Log) -->
+<div id="matchFeed" class="match-feed" style="display:none;">
+  <div class="feed-header">📣 Called Matches</div>
+  <div id="matchFeedList" class="feed-list">
+    <div class="feed-empty">Loading…</div>
+  </div>
 </div>
 
 <div id="scoreSection" style="display:none">
@@ -450,6 +476,117 @@ document.getElementById('betweenGamesTimer').addEventListener('click', clearBetw
 document.getElementById('startAnotherMatchBtn').addEventListener('click', ()=>{ const ok=confirm('⚠️ Warning: Match data from the current round will not appear in the next match.\nPlease export or save before continuing.'); if(ok) startAnotherMatchWithSameSettings(); });
 
 function startAnotherMatchWithSameSettings(){ const p1n=players[0].name, p2n=players[1].name, ml=winGames; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); players=[{id:'player1',name:p1n,points:0,games:0,timeoutUsed:false},{id:'player2',name:p2n,points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; winGames=ml; document.getElementById('history').innerHTML=''; document.getElementById('matchWinner').textContent=''; document.getElementById('gameWinner').textContent=''; document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('compactSummary').textContent=''; document.getElementById('scoreSection').style.display='block'; document.getElementById('player1Name').value=p1n; document.getElementById('player2Name').value=p2n; document.getElementById('matchLength').value=ml; updateScore(); updateTimer(); renderButtons(); updateSkinnyScoreboard(); updateMiniScoreboard(); document.getElementById('startAnotherMatchBtn').style.display='none'; startTimer(); }
+
+       const FEED_URL = 'https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec?source=ayptMatchLog&status=called';
+let feedTimer = null;
+
+function getStartPageActive() {
+  // visible only when match hasn't started yet
+  return document.getElementById('scoreSection')?.style.display !== 'block';
+}
+
+function showMatchFeed(show) {
+  const feed = document.getElementById('matchFeed');
+  if (!feed) return;
+  feed.style.display = show ? 'block' : 'none';
+}
+
+async function fetchCalledMatches() {
+  try {
+    const res = await fetch(FEED_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Feed HTTP ' + res.status);
+    const data = await res.json();
+
+    // Only keep items that are "called" (if the feed includes mixed statuses)
+    const items = (Array.isArray(data) ? data : []).filter(i =>
+      (i.status || 'called').toLowerCase() === 'called'
+    );
+
+    renderMatchFeed(items);
+  } catch (e) {
+    renderMatchFeed([], 'Could not load feed');
+    console.error('Match feed error:', e);
+  }
+}
+
+function renderMatchFeed(items, errorMsg=null) {
+  const list = document.getElementById('matchFeedList');
+  if (!list) return;
+
+  if (errorMsg) {
+    list.innerHTML = `<div class="feed-empty">${errorMsg}</div>`;
+    return;
+  }
+
+  if (!items.length) {
+    list.innerHTML = `<div class="feed-empty">No called matches right now.</div>`;
+    return;
+  }
+
+  // Render newest first (optional)
+  items.sort((a, b) => new Date(b.calledAt || 0) - new Date(a.calledAt || 0));
+
+  list.innerHTML = items.map(item => {
+    const p1 = item.p1 || 'Player 1';
+    const p2 = item.p2 || 'Player 2';
+    const table = item.table || '';
+    const ref = item.ref || '';
+    const matchid = item.matchid || '';
+    const bestOf = (item.bestOf && ['2','3','4'].includes(String(item.bestOf))) ? String(item.bestOf) : '4';
+
+    // Build link to prefill your app with query params
+    const url = `${location.pathname}?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}&match=${bestOf}` +
+                `${table ? `&table=${encodeURIComponent(table)}` : ''}` +
+                `${ref ? `&ref=${encodeURIComponent(ref)}` : ''}` +
+                `${matchid ? `&matchid=${encodeURIComponent(matchid)}` : ''}`;
+
+    const calledAt = item.calledAt ? new Date(item.calledAt).toLocaleString() : '';
+
+    return `
+      <div class="feed-item">
+        <div class="feed-left">
+          <div class="feed-title">${p1} vs ${p2}</div>
+          <div class="feed-meta">
+            ${matchid ? `ID: ${matchid} · ` : ''}Bo${bestOf === '2' ? '3' : bestOf === '3' ? '5' : '7'}
+            ${table ? ` · Table ${table}` : ''}${ref ? ` · Ref ${ref}` : ''}${calledAt ? ` · ${calledAt}` : ''}
+          </div>
+        </div>
+        <a class="feed-link" href="${url}">Load</a>
+      </div>`;
+  }).join('');
+}
+
+function startMatchFeed() {
+  if (feedTimer) return;
+  // Only run on the name-entry / start page
+  if (getStartPageActive()) {
+    showMatchFeed(true);
+    fetchCalledMatches();
+    feedTimer = setInterval(fetchCalledMatches, 10_000);
+  }
+}
+
+function stopMatchFeed() {
+  if (feedTimer) {
+    clearInterval(feedTimer);
+    feedTimer = null;
+  }
+  showMatchFeed(false);
+}
+
+// Hook into your existing lifecycle:
+document.addEventListener('DOMContentLoaded', () => {
+  // Start feed on initial page load (only if still on start page)
+  startMatchFeed();
+});
+
+// When a match actually starts, hide/stop the feed so it’s not on the scoring view
+const _origStartMatch = startMatch;
+startMatch = function patchedStartMatch() {
+  stopMatchFeed();   // hide & stop
+  _origStartMatch(); // run original behavior
+};
+
 </script>
 
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.3 – (worlds)</div>
