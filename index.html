@@ -102,6 +102,32 @@ body.mini-active { padding-top:360px; }
 /* Buttons */
 .score-btn { width:160px; height:50px; font-size:1em; margin:5px; border:none; border-radius:6px; cursor:pointer; }
 .large-tap { font-size:1.2em; height:60px; font-weight:bold; }
+
+/* --- Google iframe embed styling (dark theme wrapper) --- */
+.embed-wrap{
+  max-width: 960px; margin: 16px auto 0;
+  background:#0b0b0b; border:1px solid #333; border-radius:12px;
+  padding: 12px 14px; text-align:left;
+}
+.embed-header{ font-weight:800; margin-bottom:8px; color:#f5c04f; }
+.embed-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:.9em; color:#bbb; }
+.embed-refresh{ background:#1c1c1c; color:#fff; border:1px solid #444; border-radius:8px; padding:6px 10px; cursor:pointer; }
+
+.embed-frame-outer{
+  position:relative; width:100%;
+  /* 16:9 aspect on wide screens; grows taller on small screens */
+  padding-top: clamp(420px, 56.25%, 700px);  /* min 420px, default 16:9, max 700px */
+  background:#000; border:1px solid #222; border-radius:10px; overflow:hidden;
+}
+.embed-frame{
+  position:absolute; inset:0; width:100%; height:100%; border:0;
+}
+
+/* Optional: visually “darkify” bright Google UIs (toggleable below) */
+.embed-darkify .embed-frame { filter: invert(1) hue-rotate(180deg); }
+/* Fix common inverted colors (tweak if needed) */
+.embed-darkify img, .embed-darkify video { filter: invert(1) hue-rotate(180deg); }
+       
 </style>
 </head>
 <body>
@@ -133,6 +159,27 @@ body.mini-active { padding-top:360px; }
 <option value="4" selected>Best of 7</option>
 </select>
 <button onclick="startMatch()">Start Match</button>
+</div>
+
+<!-- Called Matches (Google "share to web" iframe) -->
+<div id="calledMatchesEmbed" class="embed-wrap" style="display:none;">
+  <div class="embed-header">📣 Called Matches</div>
+  <div class="embed-frame-outer">
+    <iframe
+      id="calledMatchesFrame"
+      class="embed-frame"
+      title="AYPT Match Log (Called)"
+      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRWjWOVQOatqAWfm4J042EUDNG-TsO6UhLy3OfSrNqZga-c84f8QTgyicqNf9X4nxwE-Z28lE1t3dzv/pubhtml?gid=1048193543&single=true&widget=true&headers=false"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      frameborder="0"
+      allowfullscreen
+    ></iframe>
+  </div>
+  <div class="embed-foot">
+    <span id="embedLastRefresh">Last refresh: –</span>
+    <button class="embed-refresh" type="button" onclick="refreshCalledMatchesFrame(true)">Refresh</button>
+  </div>
 </div>
 
 <div id="scoreSection" style="display:none">
@@ -450,6 +497,78 @@ document.getElementById('betweenGamesTimer').addEventListener('click', clearBetw
 document.getElementById('startAnotherMatchBtn').addEventListener('click', ()=>{ const ok=confirm('⚠️ Warning: Match data from the current round will not appear in the next match.\nPlease export or save before continuing.'); if(ok) startAnotherMatchWithSameSettings(); });
 
 function startAnotherMatchWithSameSettings(){ const p1n=players[0].name, p2n=players[1].name, ml=winGames; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); players=[{id:'player1',name:p1n,points:0,games:0,timeoutUsed:false},{id:'player2',name:p2n,points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; winGames=ml; document.getElementById('history').innerHTML=''; document.getElementById('matchWinner').textContent=''; document.getElementById('gameWinner').textContent=''; document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('compactSummary').textContent=''; document.getElementById('scoreSection').style.display='block'; document.getElementById('player1Name').value=p1n; document.getElementById('player2Name').value=p2n; document.getElementById('matchLength').value=ml; updateScore(); updateTimer(); renderButtons(); updateSkinnyScoreboard(); updateMiniScoreboard(); document.getElementById('startAnotherMatchBtn').style.display='none'; startTimer(); }
+
+// ===== Google "share to web" iframe logic =====
+let calledMatchesInterval = null;
+const CALLED_IFRAME_ID = 'calledMatchesFrame';
+const CALLED_WRAP_ID = 'calledMatchesEmbed';
+const REFRESH_MS = 10_000; // 10s
+
+function onStartPage() {
+  return document.getElementById('scoreSection')?.style.display !== 'block';
+}
+
+function showCalledMatchesEmbed(show) {
+  const wrap = document.getElementById(CALLED_WRAP_ID);
+  if (!wrap) return;
+  wrap.style.display = show ? 'block' : 'none';
+}
+
+function refreshCalledMatchesFrame(force=false) {
+  const iframe = document.getElementById(CALLED_IFRAME_ID);
+  const stampEl = document.getElementById('embedLastRefresh');
+  if (!iframe) return;
+
+  try {
+    // bust cache by appending ts param (keep original URL intact)
+    const u = new URL(iframe.src, location.href);
+    if (force) u.searchParams.set('manual', Date.now());
+    else u.searchParams.set('ts', Date.now());
+    iframe.src = u.toString();
+  } catch {
+    // fallback if src is not absolute
+    const sep = iframe.src.includes('?') ? '&' : '?';
+    iframe.src = iframe.src + sep + 'ts=' + Date.now();
+  }
+
+  if (stampEl) stampEl.textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
+}
+
+function startCalledMatchesEmbed() {
+  if (!onStartPage()) return;
+  showCalledMatchesEmbed(true);
+  refreshCalledMatchesFrame(); // initial
+  if (!calledMatchesInterval) {
+    calledMatchesInterval = setInterval(refreshCalledMatchesFrame, REFRESH_MS);
+  }
+}
+
+function stopCalledMatchesEmbed() {
+  if (calledMatchesInterval) {
+    clearInterval(calledMatchesInterval);
+    calledMatchesInterval = null;
+  }
+  showCalledMatchesEmbed(false);
+}
+
+// Boot on load (only if still on start page)
+document.addEventListener('DOMContentLoaded', startCalledMatchesEmbed);
+
+// Hide when a match starts (patch your existing startMatch)
+if (typeof startMatch === 'function') {
+  const __origStartMatch = startMatch;
+  startMatch = function patchedStartMatch() {
+    stopCalledMatchesEmbed();
+    __origStartMatch();
+  };
+}
+
+// Optional: if you have a “back to start” flow without a page reload,
+// call startCalledMatchesEmbed() at that time to show it again.
+
+// --- Optional: force darkify if the Google view is too bright ---
+// document.getElementById(CALLED_WRAP_ID)?.classList.add('embed-darkify');
+
 </script>
 
   <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.3 – (worlds)</div>
