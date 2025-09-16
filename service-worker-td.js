@@ -1,4 +1,3 @@
-<script type="text/plain" data-filename="service-worker-td.js">
 const CACHE_NAME = 'td-static-v4';
 const ASSETS = [
   './',
@@ -30,4 +29,3 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
   } catch (_) {}
 });
-</script>
