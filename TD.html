@@ -1,3 +1,7 @@
+<!-- =====================
+ TD.html — Tournament Director (AYPT Match Log integrated)
+ v1.1 — POST without preflight + endpoint UI + safe SW registration
+===================== -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,23 +21,23 @@
     #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
     #copyBtn.copied { background: #0f0; color: #000; }
     .muted { color:#aaa; font-size:0.9em }
+    details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
+    summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
   </style>
 </head>
 <body>
   <img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
   <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-  <details style="margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left;">
-    <summary style="cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff;">🧑‍⚖️ How to Use This Page (Quick & Dirty TD Guide)</summary>
+  <details class="block">
+    <summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
     <div style="margin-top: 10px; line-height: 1.5;">
-      <p><strong>1. Who's playing?</strong><br/>Enter names for Player 1 and Player 2.</p>
-      <p><strong>2. Got a table?</strong><br/>Enter a table number so the match assignment is clear for players and spectators.</p>
-      <p><strong>3. Got a ref?</strong><br/>Enter a referee name if applicable—it’ll show up in the match summary and link.</p>
-      <p><strong>4. Pick match type.</strong><br/>Choose Best of 3, 5, or 7. No scorekeeping math required.</p>
-      <p><strong>5. Generate the match link.</strong><br/>Click "Generate Match Link" to create a shareable scoreboard link and QR code.</p>
-      <p><strong>6. Share it!</strong><br/>Scan the QR or copy the link. Players just tap or scan to open their scoreboard.</p>
-      <p><strong>7. Match Log → AYPT.</strong><br/>Each generated match is saved locally and pushed to the AYPT spreadsheet ➜ <em>Match Log</em> sheet.</p>
-      <p><strong>8. Export & Clear.</strong><br/>Export CSV or clear local log when needed.</p>
+      <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
+      <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
+      <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
+      <p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
+      <p class="muted">Tip: Click <em>⚙️ Set AYPT Endpoint</em> to paste your Apps Script Web App URL.</p>
     </div>
   </details>
 
@@ -50,6 +54,10 @@
     <button onclick="generateMatchLink()">Generate Match Link</button>
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
     <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
+    <div class="muted" id="cloudSyncControls" style="margin-top:4px;">
+      <a href="#" onclick="promptSetEndpoint(); return false;">⚙️ Set AYPT Endpoint</a>
+      <span id="endpointPreview" style="display:inline-block; max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; margin-left:8px;"></span>
+    </div>
   </div>
 
   <div id="result"></div>
@@ -59,13 +67,22 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     // ==========================
-    // CONFIG: Set this endpoint
+    // Endpoint settings (local)
     // ==========================
-    // Replace with your deployed Apps Script Web App URL (execute as Me, accessible to Anyone)
-    const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec"; // <-- TODO
+    function getAYPTEndpoint(){ return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || ''; }
+    function setAYPTEndpoint(url){ if (!url) return; localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim()); renderEndpointPreview(); }
+    function promptSetEndpoint(){
+      const current = getAYPTEndpoint();
+      const url = prompt('https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec', current || 'https://script.google.com/macros/s/…/exec');
+      if (url) { setAYPTEndpoint(url); showCloudStatus('AYPT endpoint saved ✓', true); }
+    }
+    function renderEndpointPreview(){
+      const el = document.getElementById('endpointPreview');
+      const ep = getAYPTEndpoint();
+      el.textContent = ep ? `→ ${ep}` : '(no endpoint set)';
+    }
 
     let generatedUrl = '';
-    let lastPayload = null; // for debugging/visibility
     let currentPage = 1;
     const pageSize = 25;
 
@@ -116,7 +133,7 @@
 
       QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
         width: 220,
-        color: { dark: "#ffffff", light: "#111111" }
+        color: { dark: '#ffffff', light: '#111111' }
       }, function (error) { if (error) console.error(error); });
 
       const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
@@ -135,7 +152,6 @@
         scoreboardUrl: generatedUrl,
         matchSheetUrl: matchSheetUrl
       };
-      lastPayload = payload;
       saveToAYPTMatchLog(payload);
     }
 
@@ -149,16 +165,11 @@
     }
 
     // ==============================
-    // Local Match Log (existing)
+    // Local Match Log
     // ==============================
     function addToMatchLog(text, url) {
       const now = new Date();
-      const logItem = {
-        text,
-        url,
-        time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        date: now.toLocaleDateString()
-      };
+      const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
       const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
       log.unshift(logItem);
       localStorage.setItem('matchLog', JSON.stringify(log));
@@ -185,7 +196,7 @@
     }
 
     function clearMatchLog() {
-      if (confirm("⚠️ Are you sure you want to clear the match log?")) {
+      if (confirm('⚠️ Are you sure you want to clear the match log?')) {
         localStorage.removeItem('matchLog');
         renderMatchLog();
       }
@@ -193,7 +204,7 @@
 
     function exportMatchLogCSV() {
       const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-      if (log.length === 0) { alert("No matches to export."); return; }
+      if (log.length === 0) { alert('No matches to export.'); return; }
       const headers = ['Date', 'Time', 'Match Info', 'Link'];
       const rows = log.map(item => [item.date, item.time, item.text, item.url]);
       const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
@@ -208,13 +219,8 @@
       URL.revokeObjectURL(url);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      renderMatchLog();
-      flushCloudQueue();
-    });
-
     // ==============================
-    // Cloud Sync → AYPT (Match Log)
+    // Cloud Sync → AYPT (no preflight)
     // ==============================
     const QUEUE_KEY = 'matchLogCloudQueue';
 
@@ -246,53 +252,49 @@
       showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
     }
 
-    async function saveToAYPTMatchLog(payload) {
-      // Try normal CORS first, then fall back to no-cors fire-and-forget
-      const ok = await postToAYPT(payload);
-      if (!ok) {
-        enqueue(payload);
-      } else {
-        showCloudStatus('Saved to AYPT ✓', true);
-      }
-    }
-
-    async function postToAYPT(payload) {
-      if (!AYPT_MATCHLOG_ENDPOINT || AYPT_MATCHLOG_ENDPOINT.includes('PASTE_YOUR_WEB_APP_ID')) {
-        console.warn('AYPT endpoint not configured');
-        return false;
-      }
+    function postToAYPT(payload) {
+      const endpoint = getAYPTEndpoint();
+      if (!endpoint) { showCloudStatus('AYPT endpoint not set — click “Set AYPT Endpoint”.', true); return Promise.resolve(false); }
       try {
-        const resp = await fetch(AYPT_MATCHLOG_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'appendMatchLog', data: payload })
+        const body = new URLSearchParams({
+          action: 'appendMatchLog',
+          // secret: 'change-me-strong', // optional shared secret
+          payload: JSON.stringify(payload)
         });
-        // If Apps Script blocks CORS, attempt a no-cors fallback
-        if (!resp.ok) {
-          await fetch(AYPT_MATCHLOG_ENDPOINT, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'appendMatchLog', data: payload }) });
-          return true; // treat as fire-and-forget
-        }
-        const text = await resp.text();
-        // Some deployments return HTML; tolerate as success
-        if (!text) return true;
-        try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
+        return fetch(endpoint, {
+          method: 'POST',
+          cache: 'no-store',
+          body
+        }).then(async (resp) => {
+          if (!resp.ok) {
+            // Attempt fire-and-forget for strict proxies
+            await fetch(endpoint, { method: 'POST', mode: 'no-cors', body });
+            return true;
+          }
+          const text = await resp.text();
+          try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
+        }).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
       } catch (e) {
         console.warn('AYPT post failed, will queue:', e);
-        return false;
+        return Promise.resolve(false);
       }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMatchLog();
+      renderEndpointPreview();
+      flushCloudQueue();
+    });
   </script>
 
-  <details id="matchLog" style="margin-top: 40px; background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; max-width: 700px; margin-left: auto; margin-right: auto;">
-    <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff;">📋 Show Match Log</summary>
-
+  <details id="matchLog" class="block" style="max-width: 700px; margin-left: auto; margin-right: auto;">
+    <summary class="clicky">📋 Show Match Log</summary>
     <input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
     <div id="paginationControls" style="margin: 10px 0;">
       <button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
       <span id="pageInfo" style="font-size: 0.9em;"></span>
       <button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
     </div>
-
     <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
     <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
     <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
@@ -303,50 +305,47 @@
   </details>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker-td.js').then(() => console.log('TD Service Worker registered!'));
-    }
-
+    // ==========================
+    // Logo long-press + storage
+    // ==========================
     const logo = document.getElementById('logo');
     const uploader = document.getElementById('logoUploader');
     let pressTimer;
-
-    // Prevent default drag and selection behavior on the logo
     logo.addEventListener('dragstart', (e) => e.preventDefault());
     logo.addEventListener('selectstart', (e) => e.preventDefault());
-
-    // Long press triggers file input
     logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
     logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
     logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-
-    // Touch support
     logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
     logo.addEventListener('touchend', () => clearTimeout(pressTimer));
     logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
-
-    // When a file is selected, update the logo
     uploader.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file && file.type.startsWith('image/')) {
         const reader = new FileReader();
-        reader.onload = function (evt) {
-          logo.src = evt.target.result;
-          localStorage.setItem('customLogo', evt.target.result); // Save for reload
-        };
+        reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
         reader.readAsDataURL(file);
       }
     });
-
-    // Load logo from localStorage on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedLogo = localStorage.getItem('customLogo');
-      if (savedLogo) logo.src = savedLogo;
-    });
-
+    window.addEventListener('DOMContentLoaded', () => { const savedLogo = localStorage.getItem('customLogo'); if (savedLogo) logo.src = savedLogo; });
     function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
     function nextPage() { currentPage++; renderMatchLog(); }
     function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
+  </script>
+
+  <!-- ==========================
+       Safe SW registration gate
+       Add ?sw=off to disable SW for debugging
+  ========================== -->
+  <script>
+    const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
+    if ('serviceWorker' in navigator && !SW_OFF) {
+      navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
+        .then(() => console.log('TD Service Worker registered!'))
+        .catch(() => console.log('SW registration failed (ignored).'));
+    } else {
+      console.log('SW disabled for this session.');
+    }
   </script>
 </body>
 </html>
