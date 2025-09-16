@@ -69,13 +69,27 @@
     // ==========================
     // Endpoint settings (local)
     // ==========================
-    function getAYPTEndpoint(){ return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || ''; }
-    function setAYPTEndpoint(url){ if (!url) return; localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim()); renderEndpointPreview(); }
-    function promptSetEndpoint(){
-      const current = getAYPTEndpoint();
-      const url = prompt('https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec', current || 'https://script.google.com/macros/s/…/exec');
-      if (url) { setAYPTEndpoint(url); showCloudStatus('AYPT endpoint saved ✓', true); }
-    }
+   function getAYPTEndpoint() {
+  return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || '';
+}
+
+function setAYPTEndpoint(url) {
+  if (!url) return;
+  localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim());
+  renderEndpointPreview();
+}
+
+function promptSetEndpoint() {
+  const current = getAYPTEndpoint();
+  const url = prompt(
+    'Paste your AYPT Web App URL (e.g. https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec):',
+    current || 'https://script.google.com/macros/s/.../exec'
+  );
+  if (url) {
+    setAYPTEndpoint(url);
+    showCloudStatus('AYPT endpoint saved ✓', true);
+  }
+}
     function renderEndpointPreview(){
       const el = document.getElementById('endpointPreview');
       const ep = getAYPTEndpoint();
