@@ -1,6 +1,6 @@
 <!-- =====================
  TD.html — Tournament Director
- v1.1 — CORS-safe Apps Script post + endpoint UI + offline queue
+ v1.1 — CORS-safe Apps Script post + fixed endpoint + offline queue
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -24,45 +24,45 @@
     details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
     summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
 
-   /* ---- TD PIN gate overlay ---- */
-#tdGate {
-  position: fixed; inset: 0; z-index: 99999;
-  display: none; /* JS decides visibility */
-  background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
-  color: #fff; font-family: Arial, sans-serif;
-}
-.td-gate-inner {
-  max-width: 360px; margin: 15vh auto 0; text-align: center;
-  background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.5);
-}
-.td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
-.td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
-.td-pin {
-  width: 160px; text-align: center; letter-spacing: .2em;
-  padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
-}
-.td-gate-btn {
-  margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
-  background:#00bcd4; color:#000; cursor: pointer;
-}
-.td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
-.td-hint { margin-top: 10px; font-size:.85em; color:#888; }
-   
+    /* ---- TD PIN gate overlay ---- */
+    #tdGate {
+      position: fixed; inset: 0; z-index: 99999;
+      display: none; /* JS decides visibility */
+      background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
+      color: #fff; font-family: Arial, sans-serif;
+    }
+    .td-gate-inner {
+      max-width: 360px; margin: 15vh auto 0; text-align: center;
+      background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    }
+    .td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
+    .td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
+    .td-pin {
+      width: 160px; text-align: center; letter-spacing: .2em;
+      padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
+    }
+    .td-gate-btn {
+      margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
+      background:#00bcd4; color:#000; cursor: pointer;
+    }
+    .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
+    .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
   </style>
 </head>
 <body>
- <!-- TD PIN gate (client-side) -->
-<div id="tdGate">
-  <div class="td-gate-inner">
-    <div class="td-gate-title">Tournament Director — Locked</div>
-    <div class="td-gate-sub">Enter 4-digit code to continue</div>
-    <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
-    <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
-    <div id="tdGateMsg" class="td-gate-msg"></div>
-    <div class="td-hint">Tip: code is 4 digits</div>
+  <!-- TD PIN gate (client-side) -->
+  <div id="tdGate">
+    <div class="td-gate-inner">
+      <div class="td-gate-title">Tournament Director — Locked</div>
+      <div class="td-gate-sub">Enter 4-digit code to continue</div>
+      <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
+      <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
+      <div id="tdGateMsg" class="td-gate-msg"></div>
+      <div class="td-hint">Tip: code is 4 digits</div>
+    </div>
   </div>
-</div>
+
   <img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
   <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
@@ -74,7 +74,6 @@
       <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
       <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
       <p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
-      <p class="muted">Tip: Click <em>⚙️ Set AYPT Endpoint</em> to paste your Apps Script Web App URL.</p>
     </div>
   </details>
 
@@ -89,12 +88,11 @@
       <option value="4">Best of 7</option>
     </select>
     <button onclick="generateMatchLink()">Generate Match Link</button>
+
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
     <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
-    <div class="muted" id="cloudSyncControls" style="margin-top:4px;">
-      <a href="#" onclick="promptSetEndpoint(); return false;">⚙️ Set AYPT Endpoint</a>
-      <span id="endpointPreview" style="display:inline-block; max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; margin-left:8px;"></span>
-    </div>
+    <!-- Removed endpoint UI; fixed constant is used -->
+    <div class="muted" style="margin-top:4px;">AYPT endpoint is locked in this build.</div>
   </div>
 
   <div id="result"></div>
@@ -104,23 +102,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     // ==========================
-    // Endpoint settings (local)
+    // Endpoint (fixed constant)
     // ==========================
-    function getAYPTEndpoint(){ return localStorage.getItem('AYPT_MATCHLOG_ENDPOINT') || ''; }
-    function setAYPTEndpoint(url){ if (!url) return; localStorage.setItem('AYPT_MATCHLOG_ENDPOINT', url.trim()); renderEndpointPreview(); }
-    function promptSetEndpoint(){
-      const current = getAYPTEndpoint();
-      const url = prompt(
-        'Paste your AYPT Web App URL (e.g. https://script.google.com/macros/s/AKfycbx.../exec):',
-        current || 'https://script.google.com/macros/s/.../exec'
-      );
-      if (url) { setAYPTEndpoint(url); showCloudStatus('AYPT endpoint saved ✓', true); }
-    }
-    function renderEndpointPreview(){
-      const el = document.getElementById('endpointPreview');
-      const ep = getAYPTEndpoint();
-      el.textContent = ep ? `→ ${ep}` : '(no endpoint set)';
-    }
+    const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
     let generatedUrl = '';
     let currentPage = 1;
@@ -293,22 +277,20 @@
     }
 
     function postToAYPT(payload) {
-      const endpoint = getAYPTEndpoint();
-      if (!endpoint) { showCloudStatus('AYPT endpoint not set — click “Set AYPT Endpoint”.', true); return Promise.resolve(false); }
       try {
         const body = new URLSearchParams({
           action: 'appendMatchLog',
           // secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
           payload: JSON.stringify(payload)
         });
-        return fetch(endpoint, {
+        return fetch(AYPT_ENDPOINT, {
           method: 'POST',
           cache: 'no-store',
           body
         }).then(async (resp) => {
           if (!resp.ok) {
             // Attempt fire-and-forget for strict proxies
-            await fetch(endpoint, { method: 'POST', mode: 'no-cors', body });
+            await fetch(AYPT_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
             return true;
           }
           const text = await resp.text();
@@ -334,7 +316,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       renderMatchLog();
-      renderEndpointPreview();
       flushCloudQueue();
     });
   </script>
@@ -399,52 +380,53 @@
       console.log('SW disabled for this session.');
     }
   </script>
- <script>
-// ---- TD PIN gate logic ----
-(function initTDGate(){
-  const PIN = '2580';
-  const gate = document.getElementById('tdGate');
-  const pinEl = document.getElementById('tdPin');
-  const msgEl = document.getElementById('tdGateMsg');
 
-  // Auto-unlock if session already validated or code in URL (?code=2580)
-  const qp = new URL(location.href).searchParams;
-  const urlCode = qp.get('code');
-  const already = sessionStorage.getItem('TD_UNLOCK') === '1';
+  <script>
+    // ---- TD PIN gate logic ----
+    (function initTDGate(){
+      const PIN = '2580';
+      const gate = document.getElementById('tdGate');
+      const pinEl = document.getElementById('tdPin');
+      const msgEl = document.getElementById('tdGateMsg');
 
-  function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
+      // Auto-unlock if session already validated or code in URL (?code=2580)
+      const qp = new URL(location.href).searchParams;
+      const urlCode = qp.get('code');
+      const already = sessionStorage.getItem('TD_UNLOCK') === '1';
 
-  window.unlockTD = function unlockTD(){
-    const val = (pinEl.value || '').trim();
-    if (val === PIN || urlCode === PIN) {
-      sessionStorage.setItem('TD_UNLOCK', '1');
-      showGate(false);
-      msgEl.textContent = '';
-    } else {
-      msgEl.textContent = 'Incorrect code. Try again.';
-      pinEl.value = '';
-      pinEl.focus();
-    }
-  };
+      function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
 
-  // Optional: allow manual relock
-  window.lockTD = function lockTD(){
-    sessionStorage.removeItem('TD_UNLOCK');
-    showGate(true);
-    setTimeout(()=> pinEl && pinEl.focus(), 50);
-  };
+      window.unlockTD = function unlockTD(){
+        const val = (pinEl.value || '').trim();
+        if (val === PIN || urlCode === PIN) {
+          sessionStorage.setItem('TD_UNLOCK', '1');
+          showGate(false);
+          msgEl.textContent = '';
+        } else {
+          msgEl.textContent = 'Incorrect code. Try again.';
+          pinEl.value = '';
+          pinEl.focus();
+        }
+      };
 
-  if (already || urlCode === PIN) {
-    showGate(false);
-  } else {
-    showGate(true);
-    setTimeout(()=> pinEl && pinEl.focus(), 50);
-  }
+      // Optional: allow manual relock
+      window.lockTD = function lockTD(){
+        sessionStorage.removeItem('TD_UNLOCK');
+        showGate(true);
+        setTimeout(()=> pinEl && pinEl.focus(), 50);
+      };
 
-  pinEl && pinEl.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter') unlockTD();
-  });
-})();
-</script>
+      if (already || urlCode === PIN) {
+        showGate(false);
+      } else {
+        showGate(true);
+        setTimeout(()=> pinEl && pinEl.focus(), 50);
+      }
+
+      pinEl && pinEl.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter') unlockTD();
+      });
+    })();
+  </script>
 </body>
 </html>
