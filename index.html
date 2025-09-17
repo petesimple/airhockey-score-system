@@ -411,8 +411,140 @@ document.getElementById('nextGameBtn').style.display='none'; document.getElement
 isPlayer1Left = !isPlayer1Left; renderButtons(); updateScore(); startBetweenGamesTimer();
 }
 
-function resetMatch(){ if(!confirm('Do you really want to reset the match?')) return; players=[{id:'player1',name:'',points:0,games:0,timeoutUsed:false},{id:'player2',name:'',points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); document.getElementById('player1Name').value=localStorage.getItem('player1Name')||''; document.getElementById('player2Name').value=localStorage.getItem('player2Name')||''; document.getElementById('matchLength').value='2'; ['scoreSection','matchWinner','gameWinner','compactSummary'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(id==='scoreSection') el.style.display='none'; else el.textContent=''; }); document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('history').innerHTML=''; const lock=document.getElementById('lockTopToggle'); if(lock.checked) lock.checked=false; document.getElementById('fullscoreboard').classList.remove('locked-top'); document.body.classList.remove('locked-body'); document.getElementById('scoreboardSpacer').style.height='0'; localStorage.setItem('scoreboardLocked','false'); updateScore(); updateTimer(); updateSkinnyScoreboard(); updateMiniScoreboard(); }
+//function resetMatch(){ if(!confirm('Do you really want to reset the match?')) return; players=[{id:'player1',name:'',points:0,games:0,timeoutUsed:false},{id:'player2',name:'',points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); document.getElementById('player1Name').value=localStorage.getItem('player1Name')||''; document.getElementById('player2Name').value=localStorage.getItem('player2Name')||''; document.getElementById('matchLength').value='2'; ['scoreSection','matchWinner','gameWinner','compactSummary'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(id==='scoreSection') el.style.display='none'; else el.textContent=''; }); document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('history').innerHTML=''; const lock=document.getElementById('lockTopToggle'); if(lock.checked) lock.checked=false; document.getElementById('fullscoreboard').classList.remove('locked-top'); document.body.classList.remove('locked-body'); document.getElementById('scoreboardSpacer').style.height='0'; localStorage.setItem('scoreboardLocked','false'); updateScore(); updateTimer(); updateSkinnyScoreboard(); updateMiniScoreboard(); }
 
+// --- replace existing resetMatch() with this ---
+function resetMatch() {
+  if (!confirm('Do you really want to reset the match?')) return;
+
+  // Stop timers
+  clearInterval(timerInterval);
+  clearTimeoutTimer();
+  clearBetweenGamesTimer();
+  timerInterval = null;
+  timerRunning = false;
+  timeElapsed = 0;
+
+  // Reset core state
+  players = [
+    { id:'player1', name:'', points:0, games:0, timeoutUsed:false },
+    { id:'player2', name:'', points:0, games:0, timeoutUsed:false }
+  ];
+  gameHistory = [];
+  isPlayer1Left = true;
+
+  // Restore names from localStorage (so TD doesn’t have to retype)
+  document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
+
+  // Reset match length to default "Best of 7" (value="4") — change if you prefer another default
+  document.getElementById('matchLength').value = '4';
+
+  // Clear UI text blocks
+  const idsToClearText = ['matchWinner','gameWinner','compactSummary','miniCompactSummary'];
+  idsToClearText.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+  const history = document.getElementById('history'); if (history) history.innerHTML = '';
+  const postCard = document.getElementById('postMatchNotice'); if (postCard) postCard.style.display = 'none';
+  const matchCardScores = document.getElementById('matchCardScores'); if (matchCardScores) matchCardScores.textContent = '';
+
+  // Hide action/summary buttons
+  const sb = document.getElementById('summaryButtons'); if (sb) sb.style.display = 'none';
+  const ng = document.getElementById('nextGameBtn'); if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
+
+  // Unlock and normalize scoreboard position
+  const lock = document.getElementById('lockTopToggle');
+  if (lock && lock.checked) lock.checked = false;
+  document.getElementById('fullscoreboard').classList.remove('locked-top');
+  document.body.classList.remove('locked-body');
+  const spacer = document.getElementById('scoreboardSpacer'); if (spacer) spacer.style.height = '0';
+  localStorage.setItem('scoreboardLocked','false');
+
+  // Turn off overlays & mirrors
+  const skinny = document.getElementById('skinnyScoreboard');
+  const mini   = document.getElementById('miniScoreboard');
+  const tSkinny = document.getElementById('toggleSkinny');
+  const tMini   = document.getElementById('toggleMini');
+  const tMirror = document.getElementById('mirrorAll');
+
+  if (tSkinny) tSkinny.checked = false;
+  if (tMini)   tMini.checked   = false;
+  if (tMirror) tMirror.checked = false;
+
+  if (skinny) {
+    skinny.style.display = 'none';
+    skinny.classList.remove('locked','mirrored');
+    const skinnyContent = document.getElementById('skinnyContent');
+    if (skinnyContent) skinnyContent.innerHTML = '';
+    const compact = document.getElementById('compactSummary');
+    if (compact) compact.innerHTML = '';
+  }
+  if (mini) {
+    mini.style.display = 'none';
+    mini.classList.remove('mirrored');
+    const miniContent = document.getElementById('miniContent');
+    if (miniContent) miniContent.innerHTML = '';
+  }
+  document.body.classList.remove('mini-active');
+
+  // Reset scoreboard/timer displays to a clean state
+  const scoreBoard = document.getElementById('scoreBoard');
+  if (scoreBoard) scoreBoard.innerHTML = '';
+  const timer = document.getElementById('timer');
+  if (timer) {
+    timer.classList.remove('running');
+    timer.style.color = 'white';
+    timer.textContent = 'Match Time: 0:00';
+  }
+
+  // Show start screen, hide in-match UI
+  const scoreSection = document.getElementById('scoreSection');
+  if (scoreSection) scoreSection.style.display = 'none';
+  showStartScreen();
+
+  // Re-render buttons/score (safe no-ops in start screen)
+  renderButtons();
+  updateScore();
+  updateTimer();
+
+  // Show Called Matches embed again on the start page
+  if (typeof startCalledMatchesEmbed === 'function') startCalledMatchesEmbed();
+}
+
+// --- add this helper right after resetMatch() ---
+function showStartScreen() {
+  // Bring back logo
+  const logo = document.querySelector('img[alt="Air Hockey Score System Logo"]');
+  if (logo) {
+    logo.classList.remove('fade-out');
+    logo.style.display = ''; // default (visible)
+  }
+
+  // Bring back name inputs
+  const nameEntry = document.querySelector('.name-entry');
+  if (nameEntry) {
+    nameEntry.classList.remove('fade-out');
+    nameEntry.style.display = ''; // default (visible)
+  }
+
+  // Bring back setup controls (match length + start button)
+  const setup = document.getElementById('setupControls');
+  if (setup) {
+    setup.classList.remove('fade-out');
+    setup.style.display = ''; // default (visible)
+  }
+
+  // Version label visible again (if present)
+  const ver = document.getElementById('versionLabel');
+  if (ver && ver.style) ver.style.display = '';
+
+  // Ensure timeout/between-games timers are hidden
+  const tt = document.getElementById('timeoutTimer'); if (tt) tt.style.display = 'none';
+  const bgt = document.getElementById('betweenGamesTimer'); if (bgt) bgt.style.display = 'none';
+}
+  
 function getMatchSummary(){ const [p1,p2]=players; const lines=[`Match between ${p1.name} and ${p2.name}`, `Final Score: ${p1.name} ${p1.games} - ${p2.games} ${p2.name}`,'','Game History:',...gameHistory.map((g,i)=>`Game ${i+1}: ${g}`), `Total Match Time: ${document.getElementById('timer').textContent.replace('Match Time: ','')}`]; return lines.join('\n'); }
 
 let timeoutCountdown=null, timeoutTimeLeft=0;
