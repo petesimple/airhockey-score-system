@@ -573,8 +573,9 @@ function updateMirrorState(){ // apply mirror class to overlays and rerender eve
 const mirror = isMirrored();
 document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
 document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
-//renderButtons(); updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard();
-updateSkinnyScoreboard(); updateMiniScoreboard();  
+//renderButtons(); 
+updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard();
+//updateSkinnyScoreboard(); updateMiniScoreboard();  
 }
 
 function updateSkinnyScoreboard(winnerId=null){
