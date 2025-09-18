@@ -601,8 +601,8 @@ const summaryEl=document.getElementById('compactSummary'); if(summaryEl && gameH
 function updateMiniScoreboard(winnerId=null){
 const mini=document.getElementById('miniScoreboard'); if(!mini || mini.style.display==='none') return;
 const mirror = isMirrored(); mini.classList.toggle('mirrored', mirror);
-let [L,R] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
-const left = mirror ? R : L; const right = mirror ? L : R;
+let [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+// Do NOT swap by mirror here; CSS .mirrored reorders mini-left/mini-right.
 const timerText = document.getElementById('timer').textContent.replace('Match Time: ','').replace(' (Paused)','') || '0:00';
 const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
 const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
