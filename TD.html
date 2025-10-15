@@ -99,6 +99,19 @@
   <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
   <canvas id="qrcode"></canvas>
 
+  <details class="block" style="max-width:700px;margin:20px auto">
+  <summary class="clicky">🖧 Table IPs (edit & save)</summary>
+  <div style="margin-top:10px">
+    <div id="ipEditor" style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center"></div>
+    <div style="margin-top:10px">
+      <button id="addRowBtn">Add Table</button>
+      <button id="saveIPsBtn">Save IPs</button>
+      <button id="testIPsBtn">Test All</button>
+    </div>
+    <div id="ipMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+</details>
+ 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     // ==========================
@@ -109,6 +122,76 @@
     let generatedUrl = '';
     let currentPage = 1;
     const pageSize = 25;
+
+   const LISTENER_PORT = 7070;
+  const AUTH_TOKEN = "changeme-123";
+  const LS_KEY = "AH_TD_TABLE_IPS";
+  const DEFAULT_TABLE_IPS = {"1":"10.0.0.51","2":"10.0.0.52","3":"10.0.0.53","4":"10.0.0.54"};
+
+  function loadTableIPs(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || {...DEFAULT_TABLE_IPS}; } catch { return {...DEFAULT_TABLE_IPS}; } }
+  function saveTableIPs(map){ localStorage.setItem(LS_KEY, JSON.stringify(map)); }
+  function msg(text){ const m = document.getElementById("ipMsg"); if (m) { m.textContent = text; m.style.display = "block"; } }
+
+  function addRow(tableVal, ipVal){
+    const wrap = document.getElementById("ipEditor");
+    const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
+    const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.51"; i.value=ipVal;
+    const rm = document.createElement("button"); rm.textContent="Remove";
+    const row = document.createElement("div"); row.style.display="contents";
+    rm.onclick = () => row.remove();
+    row.appendChild(t); row.appendChild(i); row.appendChild(rm);
+    wrap.appendChild(row);
+  }
+
+  function renderIpEditor(){
+    const wrap = document.getElementById("ipEditor");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    const map = loadTableIPs();
+    Object.keys(map).sort((a,b)=>a-b).forEach(tbl => addRow(tbl, map[tbl]));
+    document.getElementById("addRowBtn").onclick = () => addRow("", "");
+    document.getElementById("saveIPsBtn").onclick = saveFromEditor;
+    document.getElementById("testIPsBtn").onclick = testAll;
+  }
+
+  function saveFromEditor(){
+    const wrap = document.getElementById("ipEditor");
+    const inputs = Array.from(wrap.querySelectorAll("input"));
+    const map = {};
+    for (let k=0; k<inputs.length; k+=2){
+      const table = (inputs[k].value||"").trim();
+      const ip = (inputs[k+1].value||"").trim();
+      if (table && ip) map[table] = ip;
+    }
+    saveTableIPs(map);
+    msg("Saved IPs.");
+  }
+
+  async function testAll(){
+    const map = loadTableIPs();
+    const entries = Object.entries(map);
+    if (!entries.length) return msg("No tables configured.");
+    msg("Testing...");
+    const out = [];
+    for (const [tbl, ip] of entries){
+      try {
+        const r = await fetch(`http://${ip}:${LISTENER_PORT}/ping`, {method:"GET", cache:"no-store", signal: AbortSignal.timeout?.(1500)});
+        out.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
+      } catch { out.push(`${tbl}: fail (${ip})`); }
+    }
+    msg(out.join(" | "));
+  }
+
+  async function sendToTablet(table, url){
+    const ip = loadTableIPs()[String(table)];
+    if (!ip) throw new Error(`No IP for table ${table}`);
+    const endpoint = `http://${ip}:${LISTENER_PORT}/open?url=${encodeURIComponent(url)}&token=${encodeURIComponent(AUTH_TOKEN)}`;
+    const r = await fetch(endpoint, { method: "GET" });
+    if (!r.ok) throw new Error(`Tablet ${table} HTTP ${r.status}`);
+    return r.json();
+  }
+
+  document.addEventListener("DOMContentLoaded", renderIpEditor);
 
     function generateMatchLink() {
       const p1Raw = document.getElementById('player1').value.trim();
@@ -177,6 +260,11 @@
         matchSheetUrl: matchSheetUrl
       };
       saveToAYPTMatchLog(payload);
+     if (table) {
+    sendToTablet(table, generatedUrl)
+      .then(() => console.log(`✅ Sent to tablet ${table}`))
+      .catch(err => alert(`❌ Tablet ${table} push failed: ${err.message}`));
+  }
     }
 
     function copyLink() {
