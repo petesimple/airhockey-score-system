@@ -88,6 +88,20 @@ background:#00bcd4; color:#000; cursor: pointer;
 <option value="4">Best of 7</option>
 </select>
 <button onclick="generateMatchLink()">Generate Match Link</button>
+<button id="copyCurlBtn" style="display:none;">Copy Curl Command</button>
+
+    <details class="block" style="max-width:700px;margin:20px auto">
+  <summary class="clicky">🖧 Table IPs (edit & save)</summary>
+  <div style="margin-top:10px">
+    <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
+    <div style="margin-top:10px">
+      <button id="addRowBtn" type="button">Add Table</button>
+      <button id="saveIPsBtn" type="button">Save IPs</button>
+      <button id="testIPsBtn" type="button">Test All</button>
+    </div>
+    <div id="ipMsg" class="muted" style="margin-top:8px"></div>
+  </div>
+</details>
 
 <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
 <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
@@ -152,6 +166,8 @@ document.getElementById('result').innerHTML = `
      `;
 
 document.getElementById('copyBtn').style.display = 'inline-block';
+const curlBtn = document.getElementById('copyCurlBtn');
+if (curlBtn) curlBtn.style.display = 'inline-block';
 document.getElementById('copyBtn').classList.remove('copied');
 document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
 
@@ -427,6 +443,111 @@ pinEl && pinEl.addEventListener('keydown', (e)=>{
 if (e.key === 'Enter') unlockTD();
 });
 })();
+
+    // === IP storage & helpers ===
+  const LS_KEY_IPS = "AH_TD_TABLE_IPS";
+  const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
+  const LISTENER_PORT = 7070;           // tablet listener port
+  const AUTH_TOKEN    = "changeme-123"; // must match tablet /config
+
+  function loadTableIPs(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
+    catch { return {...DEFAULT_TABLE_IPS}; }
+  }
+  function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+
+  function msg(text){
+    const m = document.getElementById("ipMsg");
+    if (m) { m.textContent = text; m.style.display = "block"; }
+  }
+
+  function addRow(tableVal, ipVal){
+    const wrap = document.getElementById("ipEditor");
+    const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
+    const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
+    const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
+    const row = document.createElement("div"); row.style.display = "contents";
+    rm.onclick = () => row.remove();
+    row.appendChild(t); row.appendChild(i); row.appendChild(rm);
+    wrap.appendChild(row);
+  }
+
+  function renderIpEditor(){
+    const wrap = document.getElementById("ipEditor");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    const map = loadTableIPs();
+    Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
+    document.getElementById("addRowBtn").onclick  = () => addRow("", "");
+    document.getElementById("saveIPsBtn").onclick = saveFromEditor;
+    document.getElementById("testIPsBtn").onclick = testAll;
+  }
+
+  function saveFromEditor(){
+    const wrap = document.getElementById("ipEditor");
+    const inputs = Array.from(wrap.querySelectorAll("input"));
+    const map = {};
+    for (let k=0; k<inputs.length; k+=2){
+      const table = (inputs[k].value||"").trim();
+      const ip    = (inputs[k+1].value||"").trim();
+      if (table && ip) map[table] = ip;
+    }
+    saveTableIPs(map);
+    msg("Saved IPs.");
+  }
+
+  async function testAll(){
+    const entries = Object.entries(loadTableIPs());
+    if (!entries.length) return msg("No tables configured.");
+    msg("Testing...");
+    const results = [];
+    for (const [tbl, ip] of entries){
+      try {
+        // NOTE: if TD is served over https://, browser may block these http:// calls (mixed content)
+        const r = await Promise.race([
+          fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
+          new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
+        ]);
+        results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
+      } catch {
+        results.push(`${tbl}: fail (${ip})`);
+      }
+    }
+    if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
+      results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
+    }
+    msg(results.join(" | "));
+  }
+
+  // === Curl builder uses the stored IPs ===
+  function buildCurlCommand(url, table) {
+    const map = loadTableIPs();
+    const ip  = map[String(table)] || "<TABLE_IP_HERE>";
+    // Safer: JSON body with POST (no URL-encoding headaches)
+    const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
+  -H "Content-Type: application/json" \\
+  -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+    return cmd;
+  }
+
+  function copyCurlCommand() {
+    const table = document.getElementById('tableNumber').value.trim();
+    if (!table) return alert("Enter a Table # first.");
+    if (!generatedUrl) return alert("Generate the match link first.");
+    const cmd = buildCurlCommand(generatedUrl, table);
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copyCurlBtn');
+      btn.innerText = "Copied!";
+      setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
+    });
+  }
+
+  // Hook up the Copy Curl button after DOM is ready
+  document.addEventListener("DOMContentLoaded", ()=>{
+    renderIpEditor();
+    const btn = document.getElementById("copyCurlBtn");
+    if (btn) btn.addEventListener("click", copyCurlCommand);
+  });
 </script>
 </body>
 </html>
