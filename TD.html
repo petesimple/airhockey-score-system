@@ -1,520 +1,432 @@
 <!-- =====================
- TD.html — Tournament Director
- v1.1 — CORS-safe Apps Script post + fixed endpoint + offline queue
+TD.html — Tournament Director
+v1.1 — CORS-safe Apps Script post + fixed endpoint + offline queue
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="manifestTD.json">
-  <meta name="theme-color" content="#00bcd4">
-  <link rel="icon" type="image/png" href="iconTD-192.png">
-  <title>Tournament Director</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; text-align: center; }
-    input, select, button { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
-    input { width: 150px; }
-    button { background: #00bcd4; color: #000; cursor: pointer; }
-    #result, #qrcode { margin-top: 20px; }
-    a { color: #00eaff; }
-    #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
-    #copyBtn.copied { background: #0f0; color: #000; }
-    .muted { color:#aaa; font-size:0.9em }
-    details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
-    summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="manifestTD.json">
+<meta name="theme-color" content="#00bcd4">
+<link rel="icon" type="image/png" href="iconTD-192.png">
+<title>Tournament Director</title>
+<style>
+body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; text-align: center; }
+input, select, button { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
+input { width: 150px; }
+button { background: #00bcd4; color: #000; cursor: pointer; }
+#result, #qrcode { margin-top: 20px; }
+a { color: #00eaff; }
+#copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
+#copyBtn.copied { background: #0f0; color: #000; }
+.muted { color:#aaa; font-size:0.9em }
+details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
+summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
 
-    /* ---- TD PIN gate overlay ---- */
-    #tdGate {
-      position: fixed; inset: 0; z-index: 99999;
-      display: none; /* JS decides visibility */
-      background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
-      color: #fff; font-family: Arial, sans-serif;
-    }
-    .td-gate-inner {
-      max-width: 360px; margin: 15vh auto 0; text-align: center;
-      background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.5);
-    }
-    .td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
-    .td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
-    .td-pin {
-      width: 160px; text-align: center; letter-spacing: .2em;
-      padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
-    }
-    .td-gate-btn {
-      margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
-      background:#00bcd4; color:#000; cursor: pointer;
-    }
-    .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
-    .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
-  </style>
+/* ---- TD PIN gate overlay ---- */
+#tdGate {
+position: fixed; inset: 0; z-index: 99999;
+display: none; /* JS decides visibility */
+background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
+color: #fff; font-family: Arial, sans-serif;
+}
+.td-gate-inner {
+max-width: 360px; margin: 15vh auto 0; text-align: center;
+background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
+box-shadow: 0 12px 40px rgba(0,0,0,.5);
+}
+.td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
+.td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
+.td-pin {
+width: 160px; text-align: center; letter-spacing: .2em;
+padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
+}
+.td-gate-btn {
+margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
+background:#00bcd4; color:#000; cursor: pointer;
+}
+.td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
+.td-hint { margin-top: 10px; font-size:.85em; color:#888; }
+</style>
 </head>
 <body>
-  <!-- TD PIN gate (client-side) -->
-  <div id="tdGate">
-    <div class="td-gate-inner">
-      <div class="td-gate-title">Tournament Director — Locked</div>
-      <div class="td-gate-sub">Enter 4-digit code to continue</div>
-      <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
-      <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
-      <div id="tdGateMsg" class="td-gate-msg"></div>
-      <div class="td-hint">Tip: code is 4 digits</div>
-    </div>
-  </div>
+<!-- TD PIN gate (client-side) -->
+<div id="tdGate">
+<div class="td-gate-inner">
+<div class="td-gate-title">Tournament Director — Locked</div>
+<div class="td-gate-sub">Enter 4-digit code to continue</div>
+<input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
+<div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
+<div id="tdGateMsg" class="td-gate-msg"></div>
+<div class="td-hint">Tip: code is 4 digits</div>
+</div>
+</div>
 
-  <img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
-  <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
+<img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
+<input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-  <details class="block">
-    <summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
-    <div style="margin-top: 10px; line-height: 1.5;">
-      <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
-      <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
-      <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
-      <p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
-    </div>
-  </details>
-
-  <div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
-    <input type="text" id="player1" placeholder="Player 1" autofocus />
-    <input type="text" id="player2" placeholder="Player 2" />
-    <input type="text" id="tableNumber" placeholder="Table #" />
-    <input type="text" id="refName" placeholder="Referee Name" />
-    <select id="matchLength">
-      <option value="2">Best of 3</option>
-      <option value="3">Best of 5</option>
-      <option value="4">Best of 7</option>
-    </select>
-    <button onclick="generateMatchLink()">Generate Match Link</button>
-
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
-    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
-    <!-- Removed endpoint UI; fixed constant is used -->
-    <div class="muted" style="margin-top:4px;">AYPTML endpoint is locked in this build.</div>
-  </div>
-
-  <div id="result"></div>
-  <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
-  <canvas id="qrcode"></canvas>
-
-  <details class="block" style="max-width:700px;margin:20px auto">
-  <summary class="clicky">🖧 Table IPs (edit & save)</summary>
-  <div style="margin-top:10px">
-    <div id="ipEditor" style="display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center"></div>
-    <div style="margin-top:10px">
-      <button id="addRowBtn">Add Table</button>
-      <button id="saveIPsBtn">Save IPs</button>
-      <button id="testIPsBtn">Test All</button>
-    </div>
-    <div id="ipMsg" class="muted" style="margin-top:8px"></div>
-  </div>
+<details class="block">
+<summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
+<div style="margin-top: 10px; line-height: 1.5;">
+<p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
+<p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
+<p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+<p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
+<p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
+</div>
 </details>
- 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script>
-    // ==========================
-    // Endpoint (fixed constant)
-    // ==========================
-    const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
-    let generatedUrl = '';
-    let currentPage = 1;
-    const pageSize = 25;
+<div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
+<input type="text" id="player1" placeholder="Player 1" autofocus />
+<input type="text" id="player2" placeholder="Player 2" />
+<input type="text" id="tableNumber" placeholder="Table #" />
+<input type="text" id="refName" placeholder="Referee Name" />
+<select id="matchLength">
+<option value="2">Best of 3</option>
+<option value="3">Best of 5</option>
+<option value="4">Best of 7</option>
+</select>
+<button onclick="generateMatchLink()">Generate Match Link</button>
 
-   const LISTENER_PORT = 7070;
-  const AUTH_TOKEN = "changeme-123";
-  const LS_KEY = "AH_TD_TABLE_IPS";
-  const DEFAULT_TABLE_IPS = {"1":"10.0.0.51","2":"10.0.0.52","3":"10.0.0.53","4":"10.0.0.54"};
+<a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
+<div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
+<!-- Removed endpoint UI; fixed constant is used -->
+    <div class="muted" style="margin-top:4px;">AYPTML endpoint is locked in this build.</div>
+</div>
 
-  function loadTableIPs(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || {...DEFAULT_TABLE_IPS}; } catch { return {...DEFAULT_TABLE_IPS}; } }
-  function saveTableIPs(map){ localStorage.setItem(LS_KEY, JSON.stringify(map)); }
-  function msg(text){ const m = document.getElementById("ipMsg"); if (m) { m.textContent = text; m.style.display = "block"; } }
+<div id="result"></div>
+<button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
+<canvas id="qrcode"></canvas>
 
-  function addRow(tableVal, ipVal){
-    const wrap = document.getElementById("ipEditor");
-    const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
-    const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.51"; i.value=ipVal;
-    const rm = document.createElement("button"); rm.textContent="Remove";
-    const row = document.createElement("div"); row.style.display="contents";
-    rm.onclick = () => row.remove();
-    row.appendChild(t); row.appendChild(i); row.appendChild(rm);
-    wrap.appendChild(row);
-  }
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+// ==========================
+// Endpoint (fixed constant)
+// ==========================
+const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
-  function renderIpEditor(){
-    const wrap = document.getElementById("ipEditor");
-    if (!wrap) return;
-    wrap.innerHTML = "";
-    const map = loadTableIPs();
-    Object.keys(map).sort((a,b)=>a-b).forEach(tbl => addRow(tbl, map[tbl]));
-    document.getElementById("addRowBtn").onclick = () => addRow("", "");
-    document.getElementById("saveIPsBtn").onclick = saveFromEditor;
-    document.getElementById("testIPsBtn").onclick = testAll;
-  }
+let generatedUrl = '';
+let currentPage = 1;
+const pageSize = 25;
 
-  function saveFromEditor(){
-    const wrap = document.getElementById("ipEditor");
-    const inputs = Array.from(wrap.querySelectorAll("input"));
-    const map = {};
-    for (let k=0; k<inputs.length; k+=2){
-      const table = (inputs[k].value||"").trim();
-      const ip = (inputs[k+1].value||"").trim();
-      if (table && ip) map[table] = ip;
-    }
-    saveTableIPs(map);
-    msg("Saved IPs.");
-  }
+function generateMatchLink() {
+const p1Raw = document.getElementById('player1').value.trim();
+const p2Raw = document.getElementById('player2').value.trim();
+const p1 = encodeURIComponent(p1Raw);
+const p2 = encodeURIComponent(p2Raw);
+const match = document.getElementById('matchLength').value;
+const table = document.getElementById('tableNumber').value.trim();
+const refRaw = document.getElementById('refName').value.trim();
+const ref = encodeURIComponent(refRaw);
 
-  async function testAll(){
-    const map = loadTableIPs();
-    const entries = Object.entries(map);
-    if (!entries.length) return msg("No tables configured.");
-    msg("Testing...");
-    const out = [];
-    for (const [tbl, ip] of entries){
-      try {
-        const r = await fetch(`http://${ip}:${LISTENER_PORT}/ping`, {method:"GET", cache:"no-store", signal: AbortSignal.timeout?.(1500)});
-        out.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
-      } catch { out.push(`${tbl}: fail (${ip})`); }
-    }
-    msg(out.join(" | "));
-  }
+const baseUrl = window.location.origin + '/airhockey-score-system/';
 
-  async function sendToTablet(table, url){
-    const ip = loadTableIPs()[String(table)];
-    if (!ip) throw new Error(`No IP for table ${table}`);
-    const endpoint = `http://${ip}:${LISTENER_PORT}/open?url=${encodeURIComponent(url)}&token=${encodeURIComponent(AUTH_TOKEN)}`;
-    const r = await fetch(endpoint, { method: "GET" });
-    if (!r.ok) throw new Error(`Tablet ${table} HTTP ${r.status}`);
-    return r.json();
-  }
+// Unique 4-char ID + Date
+const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+const yyyymmdd = new Date().toISOString().slice(0,10);
+const matchId = `weekly${randomId}-${yyyymmdd}`;
 
-  document.addEventListener("DOMContentLoaded", renderIpEditor);
+// Scoreboard URL
+generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
+if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
+if (ref) generatedUrl += `&ref=${ref}`;
 
-    function generateMatchLink() {
-      const p1Raw = document.getElementById('player1').value.trim();
-      const p2Raw = document.getElementById('player2').value.trim();
-      const p1 = encodeURIComponent(p1Raw);
-      const p2 = encodeURIComponent(p2Raw);
-      const match = document.getElementById('matchLength').value;
-      const table = document.getElementById('tableNumber').value.trim();
-      const refRaw = document.getElementById('refName').value.trim();
-      const ref = encodeURIComponent(refRaw);
+// Match Sheet URL
+const matchSheetBase = 'https://petesimple.github.io/AHMS/';
+const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+const matchSheetLink = document.getElementById('matchSheetLink');
+matchSheetLink.href = matchSheetUrl;
+matchSheetLink.style.display = 'inline-block';
 
-      const baseUrl = window.location.origin + '/airhockey-score-system/';
+// Display
+const extraNote = `
+       ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
+       ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ''}
+       <p><strong>Match ID:</strong> ${matchId}</p>
+     `;
+document.getElementById('result').innerHTML = `
+       <p><strong>Match Link:</strong></p>
+       <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+       ${extraNote}
+     `;
 
-      // Unique 4-char ID + Date
-      const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const yyyymmdd = new Date().toISOString().slice(0,10);
-      const matchId = `weekly${randomId}-${yyyymmdd}`;
+document.getElementById('copyBtn').style.display = 'inline-block';
+document.getElementById('copyBtn').classList.remove('copied');
+document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
 
-      // Scoreboard URL
-      generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
-      if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
-      if (ref) generatedUrl += `&ref=${ref}`;
+QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+width: 220,
+color: { dark: '#ffffff', light: '#111111' }
+}, function (error) { if (error) console.error(error); });
 
-      // Match Sheet URL
-      const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-      const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
-      const matchSheetLink = document.getElementById('matchSheetLink');
-      matchSheetLink.href = matchSheetUrl;
-      matchSheetLink.style.display = 'inline-block';
+const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
 
-      // Display
-      const extraNote = `
-        ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
-        ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ''}
-        <p><strong>Match ID:</strong> ${matchId}</p>
-      `;
-      document.getElementById('result').innerHTML = `
-        <p><strong>Match Link:</strong></p>
-        <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
-        ${extraNote}
-      `;
+// Save locally and push to cloud
+addToMatchLog(readableMatch, generatedUrl);
+const payload = {
+timestamp: new Date().toISOString(),
+source: 'TD',
+matchId,
+p1: p1Raw,
+p2: p2Raw,
+matchType: `Best of ${match}`,
+table: table || '',
+referee: refRaw || '',
+scoreboardUrl: generatedUrl,
+matchSheetUrl: matchSheetUrl
+};
+saveToAYPTMatchLog(payload);
+}
 
-      document.getElementById('copyBtn').style.display = 'inline-block';
-      document.getElementById('copyBtn').classList.remove('copied');
-      document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
+function copyLink() {
+navigator.clipboard.writeText(generatedUrl).then(() => {
+const btn = document.getElementById('copyBtn');
+btn.classList.add('copied');
+btn.innerText = 'Copied!';
+setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
+});
+}
 
-      QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
-        width: 220,
-        color: { dark: '#ffffff', light: '#111111' }
-      }, function (error) { if (error) console.error(error); });
+// ==============================
+// Local Match Log
+// ==============================
+function addToMatchLog(text, url) {
+const now = new Date();
+const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+log.unshift(logItem);
+localStorage.setItem('matchLog', JSON.stringify(log));
+renderMatchLog();
+}
 
-      const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
+function renderMatchLog() {
+const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
+const totalPages = Math.ceil(filtered.length / pageSize);
+if (currentPage > totalPages) currentPage = totalPages || 1;
+const start = (currentPage - 1) * pageSize;
+const visible = filtered.slice(start, start + pageSize);
+const logList = document.getElementById('logList');
+logList.innerHTML = '';
+visible.forEach(item => {
+const li = document.createElement('li');
+li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
+logList.appendChild(li);
+});
+const pageInfo = document.getElementById('pageInfo');
+if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+}
 
-      // Save locally and push to cloud
-      addToMatchLog(readableMatch, generatedUrl);
-      const payload = {
-        timestamp: new Date().toISOString(),
-        source: 'TD',
-        matchId,
-        p1: p1Raw,
-        p2: p2Raw,
-        matchType: `Best of ${match}`,
-        table: table || '',
-        referee: refRaw || '',
-        scoreboardUrl: generatedUrl,
-        matchSheetUrl: matchSheetUrl
-      };
-      saveToAYPTMatchLog(payload);
-     if (table) {
-    sendToTablet(table, generatedUrl)
-      .then(() => console.log(`✅ Sent to tablet ${table}`))
-      .catch(err => alert(`❌ Tablet ${table} push failed: ${err.message}`));
-  }
-    }
+function clearMatchLog() {
+if (confirm('⚠️ Are you sure you want to clear the match log?')) {
+localStorage.removeItem('matchLog');
+renderMatchLog();
+}
+}
 
-    function copyLink() {
-      navigator.clipboard.writeText(generatedUrl).then(() => {
-        const btn = document.getElementById('copyBtn');
-        btn.classList.add('copied');
-        btn.innerText = 'Copied!';
-        setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
-      });
-    }
+function exportMatchLogCSV() {
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+if (log.length === 0) { alert('No matches to export.'); return; }
+const headers = ['Date', 'Time', 'Match Info', 'Link'];
+const rows = log.map(item => [item.date, item.time, item.text, item.url]);
+const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+const blob = new Blob([csvContent], { type: 'text/csv' });
+const url = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = url;
+link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+URL.revokeObjectURL(url);
+}
 
-    // ==============================
-    // Local Match Log
-    // ==============================
-    function addToMatchLog(text, url) {
-      const now = new Date();
-      const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
-      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-      log.unshift(logItem);
-      localStorage.setItem('matchLog', JSON.stringify(log));
-      renderMatchLog();
-    }
+// ==============================
+// Cloud Sync → AYPT (no preflight)
+// ==============================
+const QUEUE_KEY = 'matchLogCloudQueue';
 
-    function renderMatchLog() {
-      const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
-      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-      const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
-      const totalPages = Math.ceil(filtered.length / pageSize);
-      if (currentPage > totalPages) currentPage = totalPages || 1;
-      const start = (currentPage - 1) * pageSize;
-      const visible = filtered.slice(start, start + pageSize);
-      const logList = document.getElementById('logList');
-      logList.innerHTML = '';
-      visible.forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
-        logList.appendChild(li);
-      });
-      const pageInfo = document.getElementById('pageInfo');
-      if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-    }
+function showCloudStatus(msg, temp=false) {
+const el = document.getElementById('cloudSyncStatus');
+if (!el) return;
+el.textContent = msg;
+el.style.display = 'block';
+if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
 
-    function clearMatchLog() {
-      if (confirm('⚠️ Are you sure you want to clear the match log?')) {
-        localStorage.removeItem('matchLog');
-        renderMatchLog();
-      }
-    }
+function enqueue(payload) {
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+q.push(payload);
+localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+showCloudStatus(`Saved offline (${q.length} pending)…`, true);
+}
 
-    function exportMatchLogCSV() {
-      const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-      if (log.length === 0) { alert('No matches to export.'); return; }
-      const headers = ['Date', 'Time', 'Match Info', 'Link'];
-      const rows = log.map(item => [item.date, item.time, item.text, item.url]);
-      const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+async function flushCloudQueue() {
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+if (!q.length) return;
+showCloudStatus(`Syncing ${q.length} pending…`);
+const remaining = [];
+for (const item of q) {
+const ok = await postToAYPT(item);
+if (!ok) remaining.push(item);
+}
+localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
+}
 
-    // ==============================
-    // Cloud Sync → AYPT (no preflight)
-    // ==============================
-    const QUEUE_KEY = 'matchLogCloudQueue';
+function postToAYPT(payload) {
+try {
+const body = new URLSearchParams({
+action: 'appendMatchLog',
+// secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
+payload: JSON.stringify(payload)
+});
+return fetch(AYPT_ENDPOINT, {
+method: 'POST',
+cache: 'no-store',
+body
+}).then(async (resp) => {
+if (!resp.ok) {
+// Attempt fire-and-forget for strict proxies
+await fetch(AYPT_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
+return true;
+}
+const text = await resp.text();
+try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
+}).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
+} catch (e) {
+console.warn('AYPT post failed, will queue:', e);
+return Promise.resolve(false);
+}
+}
 
-    function showCloudStatus(msg, temp=false) {
-      const el = document.getElementById('cloudSyncStatus');
-      if (!el) return;
-      el.textContent = msg;
-      el.style.display = 'block';
-      if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
-    }
+// Wrapper used by generateMatchLink()
+function saveToAYPTMatchLog(payload){
+return postToAYPT(payload).then(ok => {
+if (!ok) {
+enqueue(payload);            // store offline, auto-flushed later
+} else {
+showCloudStatus('Saved to AYPT ✓', true);
+}
+return ok;
+});
+}
 
-    function enqueue(payload) {
-      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-      q.push(payload);
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-      showCloudStatus(`Saved offline (${q.length} pending)…`, true);
-    }
+document.addEventListener('DOMContentLoaded', () => {
+renderMatchLog();
+flushCloudQueue();
+});
+</script>
 
-    async function flushCloudQueue() {
-      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-      if (!q.length) return;
-      showCloudStatus(`Syncing ${q.length} pending…`);
-      const remaining = [];
-      for (const item of q) {
-        const ok = await postToAYPT(item);
-        if (!ok) remaining.push(item);
-      }
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-      showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
-    }
+<details id="matchLog" class="block" style="max-width: 700px; margin-left: auto; margin-right: auto;">
+<summary class="clicky">📋 Show Match Log</summary>
+<input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
+<div id="paginationControls" style="margin: 10px 0;">
+<button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
+<span id="pageInfo" style="font-size: 0.9em;"></span>
+<button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
+</div>
+<ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
+<button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
+<button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
+<div style="margin-top: 10px;">
+<button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
+<button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
+</div>
+</details>
 
-    function postToAYPT(payload) {
-      try {
-        const body = new URLSearchParams({
-          action: 'appendMatchLog',
-          // secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
-          payload: JSON.stringify(payload)
-        });
-        return fetch(AYPT_ENDPOINT, {
-          method: 'POST',
-          cache: 'no-store',
-          body
-        }).then(async (resp) => {
-          if (!resp.ok) {
-            // Attempt fire-and-forget for strict proxies
-            await fetch(AYPT_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
-            return true;
-          }
-          const text = await resp.text();
-          try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-        }).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
-      } catch (e) {
-        console.warn('AYPT post failed, will queue:', e);
-        return Promise.resolve(false);
-      }
-    }
+<script>
+// ==========================
+// Logo long-press + storage
+// ==========================
+const logo = document.getElementById('logo');
+const uploader = document.getElementById('logoUploader');
+let pressTimer;
+logo.addEventListener('dragstart', (e) => e.preventDefault());
+logo.addEventListener('selectstart', (e) => e.preventDefault());
+logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener('touchend', () => clearTimeout(pressTimer));
+logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+uploader.addEventListener('change', (e) => {
+const file = e.target.files[0];
+if (file && file.type.startsWith('image/')) {
+const reader = new FileReader();
+reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
+reader.readAsDataURL(file);
+}
+});
+window.addEventListener('DOMContentLoaded', () => { const savedLogo = localStorage.getItem('customLogo'); if (savedLogo) logo.src = savedLogo; });
+function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
+function nextPage() { currentPage++; renderMatchLog(); }
+function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
+</script>
 
-    // Wrapper used by generateMatchLink()
-    function saveToAYPTMatchLog(payload){
-      return postToAYPT(payload).then(ok => {
-        if (!ok) {
-          enqueue(payload);            // store offline, auto-flushed later
-        } else {
-          showCloudStatus('Saved to AYPT ✓', true);
-        }
-        return ok;
-      });
-    }
+<!-- ==========================
+      Safe SW registration gate
+      Add ?sw=off to disable SW for debugging
+ ========================== -->
+<script>
+const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
+if ('serviceWorker' in navigator && !SW_OFF) {
+navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
+.then(() => console.log('TD Service Worker registered!'))
+.catch(() => console.log('SW registration failed (ignored).'));
+} else {
+console.log('SW disabled for this session.');
+}
+</script>
 
-    document.addEventListener('DOMContentLoaded', () => {
-      renderMatchLog();
-      flushCloudQueue();
-    });
-  </script>
+<script>
+// ---- TD PIN gate logic ----
+(function initTDGate(){
+const PIN = '2580';
+const gate = document.getElementById('tdGate');
+const pinEl = document.getElementById('tdPin');
+const msgEl = document.getElementById('tdGateMsg');
 
-  <details id="matchLog" class="block" style="max-width: 700px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">📋 Show Match Log</summary>
-    <input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
-    <div id="paginationControls" style="margin: 10px 0;">
-      <button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
-      <span id="pageInfo" style="font-size: 0.9em;"></span>
-      <button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
-    </div>
-    <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
-    <button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
-    <button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
-    <div style="margin-top: 10px;">
-      <button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
-      <button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
-    </div>
-  </details>
+// Auto-unlock if session already validated or code in URL (?code=2580)
+const qp = new URL(location.href).searchParams;
+const urlCode = qp.get('code');
+const already = sessionStorage.getItem('TD_UNLOCK') === '1';
 
-  <script>
-    // ==========================
-    // Logo long-press + storage
-    // ==========================
-    const logo = document.getElementById('logo');
-    const uploader = document.getElementById('logoUploader');
-    let pressTimer;
-    logo.addEventListener('dragstart', (e) => e.preventDefault());
-    logo.addEventListener('selectstart', (e) => e.preventDefault());
-    logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-    logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
-    logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-    logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-    logo.addEventListener('touchend', () => clearTimeout(pressTimer));
-    logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
-    uploader.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
-        reader.readAsDataURL(file);
-      }
-    });
-    window.addEventListener('DOMContentLoaded', () => { const savedLogo = localStorage.getItem('customLogo'); if (savedLogo) logo.src = savedLogo; });
-    function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
-    function nextPage() { currentPage++; renderMatchLog(); }
-    function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
-  </script>
+function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
 
-  <!-- ==========================
-       Safe SW registration gate
-       Add ?sw=off to disable SW for debugging
-  ========================== -->
-  <script>
-    const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
-    if ('serviceWorker' in navigator && !SW_OFF) {
-      navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
-        .then(() => console.log('TD Service Worker registered!'))
-        .catch(() => console.log('SW registration failed (ignored).'));
-    } else {
-      console.log('SW disabled for this session.');
-    }
-  </script>
+window.unlockTD = function unlockTD(){
+const val = (pinEl.value || '').trim();
+if (val === PIN || urlCode === PIN) {
+sessionStorage.setItem('TD_UNLOCK', '1');
+showGate(false);
+msgEl.textContent = '';
+} else {
+msgEl.textContent = 'Incorrect code. Try again.';
+pinEl.value = '';
+pinEl.focus();
+}
+};
 
-  <script>
-    // ---- TD PIN gate logic ----
-    (function initTDGate(){
-      const PIN = '2580';
-      const gate = document.getElementById('tdGate');
-      const pinEl = document.getElementById('tdPin');
-      const msgEl = document.getElementById('tdGateMsg');
+// Optional: allow manual relock
+window.lockTD = function lockTD(){
+sessionStorage.removeItem('TD_UNLOCK');
+showGate(true);
+setTimeout(()=> pinEl && pinEl.focus(), 50);
+};
 
-      // Auto-unlock if session already validated or code in URL (?code=2580)
-      const qp = new URL(location.href).searchParams;
-      const urlCode = qp.get('code');
-      const already = sessionStorage.getItem('TD_UNLOCK') === '1';
+if (already || urlCode === PIN) {
+showGate(false);
+} else {
+showGate(true);
+setTimeout(()=> pinEl && pinEl.focus(), 50);
+}
 
-      function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
-
-      window.unlockTD = function unlockTD(){
-        const val = (pinEl.value || '').trim();
-        if (val === PIN || urlCode === PIN) {
-          sessionStorage.setItem('TD_UNLOCK', '1');
-          showGate(false);
-          msgEl.textContent = '';
-        } else {
-          msgEl.textContent = 'Incorrect code. Try again.';
-          pinEl.value = '';
-          pinEl.focus();
-        }
-      };
-
-      // Optional: allow manual relock
-      window.lockTD = function lockTD(){
-        sessionStorage.removeItem('TD_UNLOCK');
-        showGate(true);
-        setTimeout(()=> pinEl && pinEl.focus(), 50);
-      };
-
-      if (already || urlCode === PIN) {
-        showGate(false);
-      } else {
-        showGate(true);
-        setTimeout(()=> pinEl && pinEl.focus(), 50);
-      }
-
-      pinEl && pinEl.addEventListener('keydown', (e)=>{
-        if (e.key === 'Enter') unlockTD();
-      });
-    })();
-  </script>
+pinEl && pinEl.addEventListener('keydown', (e)=>{
+if (e.key === 'Enter') unlockTD();
+});
+})();
+</script>
 </body>
 </html>
