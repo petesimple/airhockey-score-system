@@ -23,112 +23,112 @@
     .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease; }
     .saved-dot.show{ opacity:1; }
     .aypt-logo {
-  height: 40px;          /* pleasant, not too big */
-  width: auto;
-  border-radius: 8px;    /* subtle rounded corners */
-  object-fit: contain;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06); /* soft outline on dark bg */
-}
-@media (min-width: 768px) {
-  .aypt-logo { height: 48px; }
-}
+      height: 40px;
+      width: auto;
+      border-radius: 8px;
+      object-fit: contain;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    @media (min-width: 768px) {
+      .aypt-logo { height: 48px; }
+    }
     .form-label {
-  color: var(--ah-text) !important;   /* uses your bright text variable */
-  font-weight: 600;                   /* optional, makes them stand out */
-}
+      color: var(--ah-text) !important;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <div class="container py-4">
     <div class="d-flex align-items-center gap-3">
-  <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
-  <div>
-    <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
-    <div class="ah-muted small" id="subtitle">
-      Fill out this form to get added to tonight's tournament list.
+      <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
+      <div>
+        <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
+        <div class="ah-muted small" id="subtitle">
+          Fill out this form to get added to tonight's tournament list.
+        </div>
+      </div>
+    </div>
+    <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
+  </div>
+
+  <!-- Player Form View -->
+  <div id="formView" class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+      <div class="card ah-card shadow-sm">
+        <div class="card-body">
+          <form id="ayptForm" novalidate>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label for="firstName" class="form-label">First Name</label>
+                <input type="text" id="firstName" class="form-control form-control-lg" required />
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="lastName" class="form-label">Last Name</label>
+                <input type="text" id="lastName" class="form-control form-control-lg" required />
+              </div>
+              <div class="col-12">
+                <label for="cellNumber" class="form-label">Cell Number</label>
+                <input type="tel" id="cellNumber" inputmode="tel" class="form-control form-control-lg" required />
+                <div class="invalid-feedback">Enter a valid US cell number like (555) 123-4567.</div>
+              </div>
+              <div class="col-12">
+                <label for="notes" class="form-label">Notes for TD (optional)</label>
+                <textarea id="notes" rows="3" class="form-control"></textarea>
+              </div>
+              <div class="col-12 d-grid">
+                <button id="submitBtn" class="btn btn-gradient btn-lg" type="submit">
+                  <span id="btnIdle"><i class="bi bi-send-fill me-1"></i> Submit</span>
+                  <span id="btnBusy" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Submitting…</span>
+                </button>
+              </div>
+              <div class="col-12">
+                <div id="response" class="small text-warning"></div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <p class="text-center mt-3 small ah-muted">Admin view: append <code>?admin=1</code> to the URL.</p>
     </div>
   </div>
-</div>
-      <a id="modeSwitch" class="btn btn-outline-light btn-sm" href="#">Switch View</a>
-    </div>
 
-    <!-- Player Form View -->
-    <div id="formView" class="row justify-content-center">
-      <div class="col-12 col-sm-10 col-md-8 col-lg-6">
-        <div class="card ah-card shadow-sm">
-          <div class="card-body">
-            <form id="ayptForm" novalidate>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label for="firstName" class="form-label">First Name</label>
-                  <input type="text" id="firstName" class="form-control form-control-lg" required />
-                </div>
-                <div class="col-12 col-md-6">
-                  <label for="lastName" class="form-label">Last Name</label>
-                  <input type="text" id="lastName" class="form-control form-control-lg" required />
-                </div>
-                <div class="col-12">
-                  <label for="cellNumber" class="form-label">Cell Number</label>
-                  <input type="tel" id="cellNumber" inputmode="tel" class="form-control form-control-lg" required />
-                </div>
-                <div class="col-12">
-                  <label for="notes" class="form-label">Notes for TD (optional)</label>
-                  <textarea id="notes" rows="3" class="form-control"></textarea>
-                </div>
-                <div class="col-12 d-grid">
-                  <button id="submitBtn" class="btn btn-gradient btn-lg" type="submit">
-                    <span id="btnIdle"><i class="bi bi-send-fill me-1"></i> Submit</span>
-                    <span id="btnBusy" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Submitting…</span>
-                  </button>
-                </div>
-                <div class="col-12">
-                  <div id="response" class="small text-warning"></div>
-                </div>
-              </div>
-            </form>
-          </div>
+  <!-- Admin View -->
+  <div id="adminView" class="d-none">
+    <div class="card ah-card shadow-sm">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <h2 class="h5 mb-0 d-flex align-items-center gap-2">
+          <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" style="height:28px;border-radius:6px" />
+          AYPT Signups (Admin)
+        </h2>
+        <div class="d-flex gap-2">
+          <button id="refreshBtn" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+          </button>
         </div>
-        <p class="text-center mt-3 small ah-muted">Admin view: append <code>?admin=1</code> to the URL.</p>
       </div>
-    </div>
-
-    <!-- Admin View -->
-    <div id="adminView" class="d-none">
-      <div class="card ah-card shadow-sm">
-        <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
-          <h2 class="h5 mb-0 d-flex align-items-center gap-2">
-  <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" style="height:28px;border-radius:6px" />
-  AYPT Signups (Admin)
-</h2>
-          <div class="d-flex gap-2">
-            <button id="refreshBtn" class="btn btn-outline-light btn-sm">
-              <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-            </button>
-          </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table id="signupTable" class="table table-dark table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>First</th>
+                <th>Last</th>
+                <th>Cell</th>
+                <th>Player Notes</th>
+                <th>Signed Up</th>
+                <th class="text-center">Paid</th>
+                <th style="min-width:220px;">Admin Notes</th>
+              </tr>
+            </thead>
+            <tbody><!-- rows injected --></tbody>
+          </table>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table id="signupTable" class="table table-dark table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>First</th>
-                  <th>Last</th>
-                  <th>Cell</th>
-                  <th>Player Notes</th>
-                  <th>Signed Up</th>
-                  <th class="text-center">Paid</th>
-                  <th style="min-width:220px;">Admin Notes</th>
-                </tr>
-              </thead>
-              <tbody><!-- rows injected --></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
       </div>
-      <div id="status" class="small ah-muted mt-2"></div>
+      <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
     </div>
+    <div id="status" class="small ah-muted mt-2"></div>
   </div>
 
   <script>
@@ -136,7 +136,7 @@
     // CONFIG
     // ==============================
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec"; // must end with /exec
-    const ADMIN_CODE = "2580"; // 🔐 admin passcode
+    const ADMIN_CODE = "2580"; // admin passcode
 
     // ==============================
     // UTILITIES
@@ -151,7 +151,36 @@
       $("#btnBusy").classList.toggle("d-none", !b);
     }
 
-    function normalizePhone(str){ return String(str).replace(/[^\d+\-\s().]/g, "").trim(); }
+    // Phone helpers
+    function digitsOnly(str){ return String(str||"").replace(/\D+/g,""); }
+
+    // NANP validity: allow 1 prefix, require 10 digits, area and exchange cannot start with 0 or 1
+    function isValidUSPhoneDigits(d){
+      if(d.length === 11 && d.startsWith("1")) d = d.slice(1);
+      if(d.length !== 10) return false;
+      const area = d.slice(0,3), exch = d.slice(3,6);
+      if(area[0] < "2" || exch[0] < "2") return false;
+      return true;
+    }
+
+    // Pretty format for UI
+    function formatUSPhone(str){
+      let d = digitsOnly(str);
+      let lead = "";
+      if(d.startsWith("1")){ lead = "1 "; d = d.slice(1); }
+      if(d.length <= 3) return lead + d;
+      if(d.length <= 6) return `${lead}(${d.slice(0,3)}) ${d.slice(3)}`;
+      return `${lead}(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
+    }
+
+    // Store to Sheets as +1XXXXXXXXXX when possible
+    function normalizePhone(str){
+      const d = digitsOnly(String(str||"").trim());
+      if (d.length === 11 && d.startsWith("1")) return "+1" + d.slice(1);
+      if (d.length === 10) return "+1" + d;
+      return String(str||"").trim();
+    }
+
     function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
     function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
 
@@ -188,13 +217,22 @@
 
       const firstName = $("#firstName").value.trim();
       const lastName  = $("#lastName").value.trim();
-      const cell      = normalizePhone($("#cellNumber").value);
+      const cellRaw   = $("#cellNumber").value;
       const notes     = $("#notes").value.trim();
 
-      if(!firstName || !lastName || !cell){
-        responseEl.textContent = "Please complete First, Last, and Cell.";
+      if(!firstName || !lastName){
+        responseEl.textContent = "Please complete First and Last.";
         return;
       }
+
+      const d = digitsOnly(cellRaw);
+      if(!isValidUSPhoneDigits(d)){
+        $("#cellNumber").classList.add("is-invalid");
+        responseEl.textContent = "Please enter a valid US cell number.";
+        return;
+      }
+
+      const cell = normalizePhone(cellRaw);
 
       setBusy(true);
       try {
@@ -202,6 +240,7 @@
         if (data && (data.ok || data.result === "success")) {
           responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you at 8PM!! PLAY PUCK</strong>`;
           $("#ayptForm").reset();
+          $("#cellNumber").classList.remove("is-invalid");
         } else {
           responseEl.textContent = "Error: " + (data && data.message ? data.message : "Submission failed");
         }
@@ -223,14 +262,12 @@
       tbody.innerHTML = "";
 
       try {
-        // list=1 enables LIST MODE in Apps Script
         const data = await jsonp(SCRIPT_URL, { list: "1" });
         if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
         const rows = data.rows || [];
 
-        rows.forEach((r, i) => {
+        rows.forEach((r) => {
           const tr = document.createElement("tr");
-          // r.id is the sheet row number (2-based, because row 1 is header)
           tr.innerHTML = `
             <td class="text-muted">${esc(r.id)}</td>
             <td>${esc(r.firstName)}</td>
@@ -249,7 +286,6 @@
           tbody.appendChild(tr);
         });
 
-        // Wire up events after rows exist
         tbody.addEventListener("change", async (e) => {
           if (e.target.classList.contains("paid-toggle")) {
             const id = e.target.getAttribute("data-id");
@@ -259,7 +295,6 @@
           }
         });
 
-        // Debounce admin notes typing
         let noteTimer = null;
         tbody.addEventListener("input", (e) => {
           if (e.target.classList.contains("admin-note")) {
@@ -297,7 +332,7 @@
         return true;
       }
       alert("Incorrect code. Returning to player form.");
-      window.location.href = location.pathname; // drop query string
+      window.location.href = location.pathname;
       return false;
     }
 
@@ -307,12 +342,34 @@
     document.addEventListener("DOMContentLoaded", () => {
       const adminReq = isAdminRequest();
 
+      // Wire up phone input live behavior if present
+      const cellInput = document.getElementById("cellNumber");
+      if (cellInput) {
+        cellInput.addEventListener("input", () => {
+          const caret = cellInput.selectionStart;
+          const before = cellInput.value;
+          cellInput.value = formatUSPhone(before);
+          try { cellInput.setSelectionRange(caret, caret); } catch (_) {}
+
+          const d = digitsOnly(cellInput.value);
+          const ok = isValidUSPhoneDigits(d);
+          cellInput.classList.toggle("is-invalid", !ok && d.length > 0);
+        });
+
+        cellInput.addEventListener("blur", () => {
+          const d = digitsOnly(cellInput.value);
+          const ok = isValidUSPhoneDigits(d);
+          cellInput.classList.toggle("is-invalid", !ok);
+          if (ok) cellInput.value = formatUSPhone(cellInput.value);
+        });
+      }
+
       if (adminReq) {
         if (!requireAdminAccess()) return;
         $("#formView").classList.add("d-none");
         $("#adminView").classList.remove("d-none");
         $("#subtitle").textContent = "Admin view: live list from Google Sheets.";
-        $("#modeSwitch").href = location.pathname; // back to player form
+        $("#modeSwitch").href = location.pathname;
         $("#modeSwitch").textContent = "Player Form";
         loadAdminTable();
         $("#refreshBtn").addEventListener("click", loadAdminTable);
