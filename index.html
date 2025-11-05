@@ -10,6 +10,12 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
 
+/* THEME VARS - can be changed by user in the gear menu */
+:root{
+  --teamA:#d32f2f; /* red default */
+  --teamB:#1976d2; /* blue default */
+}
+
 .scoreboard {
 font-family: 'Arial Black', sans-serif;
 font-size: 1.2em;
@@ -50,8 +56,9 @@ touch-action: manipulation;
 .player-buttons { display: flex; flex-direction: column; align-items: center; }
 button { margin: 5px; padding: 10px; font-size: 1em; border: none; border-radius: 5px; cursor: pointer; }
 .small-btn { font-size: 0.8em; padding: 5px 10px; }
-.red-btn { background-color: #d32f2f; color: white; }
-.blue-btn { background-color: #1976d2; color: white; }
+/* these are overridden inline from JS using the current theme */
+.red-btn { background-color: var(--teamA); color: #fff; }
+.blue-btn { background-color: var(--teamB); color: #fff; }
 .disabled-btn { background-color: #555 !important; cursor: not-allowed; }
 .timeout-label { font-size: 0.8em; color: orange; margin-top: 4px; }
 #summaryButtons, #nextGameBtn { display: none; margin-top: 20px; }
@@ -115,54 +122,79 @@ body.mini-active { padding-top:360px; }
 
 .embed-frame-outer{
   position:relative; width:100%;
-  /* 16:9 aspect on wide screens; grows taller on small screens */
-  padding-top: clamp(420px, 56.25%, 700px);  /* min 420px, default 16:9, max 700px */
+  padding-top: clamp(420px, 56.25%, 700px);
   background:#000; border:1px solid #222; border-radius:10px; overflow:hidden;
 }
 .embed-frame{
   position:absolute; inset:0; width:100%; height:100%; border:0;
 }
-
-/* Optional: visually “darkify” bright Google UIs (toggleable below) */
 .embed-darkify .embed-frame { filter: invert(1) hue-rotate(180deg); }
-/* Fix common inverted colors (tweak if needed) */
 .embed-darkify img, .embed-darkify video { filter: invert(1) hue-rotate(180deg); }
-       
+
+/* Gear button and settings panel */
+#gearButton{
+  position:fixed; right:16px; bottom:16px; z-index:1100;
+  width:56px; height:56px; border-radius:50%; border:2px solid #444;
+  background:#1b1b1b; color:#fff; font-size:26px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.5); cursor:pointer;
+}
+#settingsPanel{
+  position:fixed; right:16px; bottom:84px; z-index:1100;
+  width:320px; max-width: calc(100% - 32px);
+  background:#0f0f10; border:1px solid #333; border-radius:12px; color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.6);
+  display:none; text-align:left;
+}
+#settingsHeader{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 12px; border-bottom:1px solid #222; font-weight:800;
+}
+#settingsBody{ padding:12px; }
+.set-row{ margin-bottom:12px; }
+.set-row label{ display:block; font-size:.9em; margin-bottom:6px; color:#bbb; }
+.set-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.set-actions button{ background:#1f1f1f; border:1px solid #444; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
+.color-pickers{ display:flex; gap:12px; }
+.color-pickers .picker{ display:flex; align-items:center; gap:8px; }
+.color-pickers input[type="color"]{ width:40px; height:30px; border:none; background:transparent; padding:0; cursor:pointer; }
+#settingsFooter{ padding:10px 12px; border-top:1px solid #222; display:flex; justify-content:flex-end; gap:8px; }
 </style>
 </head>
 <body>
 <!-- Skinny (wide) scoreboard -->
 <div id="skinnyScoreboard">
-<div id="skinnyContent" style="width: 100% !important;"></div>
-<div id="compactSummary" style="margin-top: 5px; font-size: 0.9em; color: #ccc;"></div>
+  <div id="skinnyContent" style="width: 100% !important;"></div>
+  <div id="compactSummary" style="margin-top: 5px; font-size: 0.9em; color: #ccc;"></div>
 </div>
 
 <!-- Mini (square) scoreboard -->
 <div id="miniScoreboard">
-<div id="miniContent"></div>
-<div id="miniCompactSummary" style="padding:6px 8px; font-size:.9em; color:#ccc;"></div>
+  <div id="miniContent"></div>
+  <div id="miniCompactSummary" style="padding:6px 8px; font-size:.9em; color:#ccc;"></div>
 </div>
 
 <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
-<img src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
+  <img id="appLogo" src="logo.png" alt="Air Hockey Score System Logo" style="max-width: 200px; height: auto;" />
 </div>
 
 <div class="name-entry">
-<input id="player1Name" placeholder="Player 1">
-<input id="player2Name" placeholder="Player 2">
+  <input id="player1Name" placeholder="Player 1">
+  <input id="player2Name" placeholder="Player 2">
 </div>
 
 <div id="setupControls" style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
-<select id="matchLength">
-<option value="2">Best of 3</option>
-<option value="3">Best of 5</option>
-<option value="4" selected>Best of 7</option>
-</select>
-<button onclick="startMatch()">Start Match</button>
+  <select id="matchLength">
+    <option value="2">Best of 3</option>
+    <option value="3">Best of 5</option>
+    <option value="4" selected>Best of 7</option>
+  </select>
+  <button onclick="startMatch()">Start Match</button>
 </div>
 
-<!-- Called Matches (Google "share to web" iframe) -->
-<!-- <div id="calledMatchesEmbed" class="embed-wrap" style="display:none;">
+<!-- Called Matches (Google "share to web" iframe) - optional wrapper kept -->
+<!--
+<div id="calledMatchesEmbed" class="embed-wrap" style="display:none;">
   <div class="embed-header">📣 Called Matches</div>
   <div class="embed-frame-outer">
     <iframe
@@ -180,72 +212,209 @@ body.mini-active { padding-top:360px; }
     <span id="embedLastRefresh">Last refresh: –</span>
     <button class="embed-refresh" type="button" onclick="refreshCalledMatchesFrame(true)">Refresh</button>
   </div>
-</div>-->
+</div>
+-->
 
 <div id="scoreSection" style="display:none">
-<div id="fullscoreboard">
-<div id="scoreBoard" class="scoreboard"></div>
-<div id="timer">Match Time: 0:00</div>
-<div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
-<div id="betweenGamesTimer" style="font-size: 2em; margin-top: 10px; display: none; cursor: pointer;"></div>
+  <div id="fullscoreboard">
+    <div id="scoreBoard" class="scoreboard"></div>
+    <div id="timer">Match Time: 0:00</div>
+    <div id="timeoutTimer" style="font-size: 2em; color: yellow; margin-top: 10px; display: none; cursor: pointer;"></div>
+    <div id="betweenGamesTimer" style="font-size: 2em; margin-top: 10px; display: none; cursor: pointer;"></div>
+  </div>
+  <div id="scoreboardSpacer" style="height: 0;"></div>
+
+  <button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
+
+  <div class="button-columns" id="buttonColumns">
+    <div class="player-buttons" id="leftPlayerButtons"></div>
+    <div class="player-buttons" id="rightPlayerButtons"></div>
+  </div>
+
+  <div id="tableNumberBanner" style="font-size: 1.2em; margin-top: 10px; color: yellow; display: none;"></div>
+  <div id="refNameBanner" style="font-size: 1em; color: #ccc; margin-top: 5px; margin-bottom: 15px; display: none;"></div>
+
+  <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
+    <div id="matchidDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
+    <hr>
+    <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Streaming Scoreboard</label>
+  </div>
+
+  <div id="miniToggleWrapper" style="margin-bottom: 10px;">
+    <label><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard()" /> Mini (Square) Streaming Scoreboard</label>
+  </div>
+
+  <!-- mirror applies to all views -->
+  <div id="mirrorAllWrapper" style="margin-bottom: 10px;">
+    <label><input type="checkbox" id="mirrorAll" onchange="updateMirrorState()" /> Mirror Scoreboard View (applies to Skinny, Mini, and Full)</label>
+  </div>
+
+  <div id="lockTopWrapper" style="margin-bottom: 10px;">
+    <label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" /> Lock Scoreboard to Top</label>
+  </div>
+
+  <div style="margin-top: 15px;">
+    <button onclick="resetMatch()">Reset Match</button>
+    <button onclick="flipSides()" style="margin-left: 10px;">Flip Sides</button>
+  </div>
+
+  <div id="gameWinner"></div>
+  <div id="matchWinner"></div>
+  <div id="history"></div>
+
+  <div id="summaryButtons">
+    <button onclick="exportSummary()">Export Summary</button>
+    <button onclick="shareSummary()">Share Summary</button>
+    <button onclick="generateCSV()">Export CSV</button>
+    <button id="startAnotherMatchBtn" style="display:none;">Start Another Match</button>
+  </div>
+
+  <div id="postMatchNotice" style="display:none; margin-top:16px; padding:12px 14px; border:2px dashed #f5c04f; background:rgba(245,192,79,.08); color:#f5c04f; font-weight:700; border-radius:10px; max-width:500px; margin-left:auto; margin-right:auto;">
+    📋 Please fill out the paper match card and have the winner (if on winners side of the chart) or loser (if on losers side of the chart) turn it into the command center.
+    <div id="matchCardScores" style="margin-top: 8px; font-weight: normal; color: #fff;"></div>
+  </div>
 </div>
-<div id="scoreboardSpacer" style="height: 0;"></div>
 
-<button id="nextGameBtn" onclick="startNextGame()">Start Next Game</button>
+<!-- Settings gear and panel -->
+<button id="gearButton" title="Settings" aria-label="Settings">⚙️</button>
+<div id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div id="settingsHeader">
+    <div id="settingsTitle">Scoreboard Settings</div>
+    <button onclick="toggleSettings(false)" title="Close" aria-label="Close">✕</button>
+  </div>
+  <div id="settingsBody">
+    <div class="set-row">
+      <label>Custom Logo</label>
+      <input id="logoFile" type="file" accept="image/*">
+      <div class="set-actions" style="margin-top:8px;">
+        <button onclick="saveLogoFromPicker()">Use This Logo</button>
+        <button onclick="clearCustomLogo()">Clear Logo</button>
+      </div>
+      <div id="logoPreviewWrap" style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+        <img id="logoPreview" src="" alt="Logo preview" style="max-height:40px; display:none;">
+        <small id="logoHint" style="color:#bbb;">PNG with transparent background looks best</small>
+      </div>
+    </div>
 
-<div class="button-columns" id="buttonColumns">
-<div class="player-buttons" id="leftPlayerButtons"></div>
-<div class="player-buttons" id="rightPlayerButtons"></div>
-</div>
-
-<div id="tableNumberBanner" style="font-size: 1.2em; margin-top: 10px; color: yellow; display: none;"></div>
-<div id="refNameBanner" style="font-size: 1em; color: #ccc; margin-top: 5px; margin-bottom: 15px; display: none;"></div>
-
-<div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
-<div id="matchidDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
-<hr>
-<label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Streaming Scoreboard</label>
-</div>
-
-<div id="miniToggleWrapper" style="margin-bottom: 10px;">
-<label><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard()" /> Mini (Square) Streaming Scoreboard</label>
-</div>
-
-<!-- NEW: one mirror to rule them all -->
-<div id="mirrorAllWrapper" style="margin-bottom: 10px;">
-<label><input type="checkbox" id="mirrorAll" onchange="updateMirrorState()" /> Mirror Scoreboard View (applies to Skinny, Mini, and Full)</label>
-</div>
-
-<div id="lockTopWrapper" style="margin-bottom: 10px;">
-<label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" /> Lock Scoreboard to Top</label>
-</div>
-
-<div style="margin-top: 15px;">
-<button onclick="resetMatch()">Reset Match</button>
-<button onclick="flipSides()" style="margin-left: 10px;">Flip Sides</button>
-</div>
-
-<div id="gameWinner"></div>
-<div id="matchWinner"></div>
-<div id="history"></div>
-
-<div id="summaryButtons">
-<button onclick="exportSummary()">Export Summary</button>
-<button onclick="shareSummary()">Share Summary</button>
-<button onclick="generateCSV()">Export CSV</button>
-<button id="startAnotherMatchBtn" style="display:none;">Start Another Match</button>
-</div>
-
-<div id="postMatchNotice" style="display:none; margin-top:16px; padding:12px 14px; border:2px dashed #f5c04f; background:rgba(245,192,79,.08); color:#f5c04f; font-weight:700; border-radius:10px; max-width:500px; margin-left:auto; margin-right:auto;">
-📋 Please fill out the paper match card and have the winner (if on winners side of the chart) or loser (if on losers side of the chart) turn it into the command center.
-<div id="matchCardScores" style="margin-top: 8px; font-weight: normal; color: #fff;"></div>
-</div>
+    <div class="set-row">
+      <label>Side Colors</label>
+      <div class="color-pickers">
+        <div class="picker">
+          <span style="min-width:54px;">A side</span>
+          <input id="colorA" type="color" value="#d32f2f" oninput="setTeamColor('A', this.value)">
+        </div>
+        <div class="picker">
+          <span style="min-width:54px;">B side</span>
+          <input id="colorB" type="color" value="#1976d2" oninput="setTeamColor('B', this.value)">
+        </div>
+      </div>
+      <div class="set-actions" style="margin-top:8px;">
+        <button onclick="resetThemeColors()">Reset Colors</button>
+      </div>
+    </div>
+  </div>
+  <div id="settingsFooter">
+    <button onclick="toggleSettings(false)">Done</button>
+  </div>
 </div>
 
 <canvas id="confettiCanvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script>
+/* ---------- THEME AND LOGO HELPERS ---------- */
+const THEME_KEYS = {
+  A: 'ahss_theme_teamA',
+  B: 'ahss_theme_teamB',
+  LOGO: 'ahss_custom_logo_data'
+};
+
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
+
+function getTeamColor(id){
+  // player1 is side A by default, player2 is side B
+  return id === 'player1' ? cssVar('--teamA') : cssVar('--teamB');
+}
+function setTeamColor(side, color){
+  if(side === 'A'){ setCssVar('--teamA', color); localStorage.setItem(THEME_KEYS.A, color); }
+  if(side === 'B'){ setCssVar('--teamB', color); localStorage.setItem(THEME_KEYS.B, color); }
+  // re-render UI with new colors
+  renderButtons();
+  updateScore();
+  updateSkinnyScoreboard();
+  updateMiniScoreboard();
+  syncColorPickers();
+}
+function applySavedTheme(){
+  const a = localStorage.getItem(THEME_KEYS.A);
+  const b = localStorage.getItem(THEME_KEYS.B);
+  if(a) setCssVar('--teamA', a);
+  if(b) setCssVar('--teamB', b);
+}
+function resetThemeColors(){
+  setTeamColor('A', '#d32f2f');
+  setTeamColor('B', '#1976d2');
+}
+function syncColorPickers(){
+  const a = cssVar('--teamA') || '#d32f2f';
+  const b = cssVar('--teamB') || '#1976d2';
+  const pa = document.getElementById('colorA');
+  const pb = document.getElementById('colorB');
+  if(pa) pa.value = toHexOrDefault(a, '#d32f2f');
+  if(pb) pb.value = toHexOrDefault(b, '#1976d2');
+}
+function toHexOrDefault(v, def){
+  // handles rgb or hex
+  if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return v;
+  const m = v.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/i);
+  if(!m) return def;
+  const [r,g,b] = [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])];
+  return "#" + [r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('');
+}
+
+function toggleSettings(force){
+  const panel = document.getElementById('settingsPanel');
+  if(typeof force === 'boolean'){ panel.style.display = force ? 'block' : 'none'; return; }
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+document.getElementById('gearButton').addEventListener('click', ()=>toggleSettings());
+
+async function saveLogoFromPicker(){
+  const input = document.getElementById('logoFile');
+  if(!input.files || !input.files[0]){ alert('Pick an image first'); return; }
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const dataUrl = reader.result;
+      localStorage.setItem(THEME_KEYS.LOGO, dataUrl);
+      applyCustomLogo();
+    }catch(e){
+      console.error('Logo save failed', e);
+      alert('Could not save this image on this device');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+function applyCustomLogo(){
+  const stored = localStorage.getItem(THEME_KEYS.LOGO);
+  const img = document.getElementById('appLogo');
+  const prev = document.getElementById('logoPreview');
+  if(stored){
+    img.src = stored;
+    if(prev){ prev.src = stored; prev.style.display = 'inline-block'; }
+  }else{
+    img.src = 'logo.png';
+    if(prev){ prev.src = ''; prev.style.display = 'none'; }
+  }
+}
+function clearCustomLogo(){
+  localStorage.removeItem(THEME_KEYS.LOGO);
+  applyCustomLogo();
+}
+
+/* ---------- EXISTING APP LOGIC (with theme-aware colors) ---------- */
 let players = [
 { id: 'player1', name: '', points: 0, games: 0, timeoutUsed: false },
 { id: 'player2', name: '', points: 0, games: 0, timeoutUsed: false }
@@ -294,24 +463,29 @@ updateMiniScoreboard();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-document.getElementById('timer').addEventListener('click', toggleTimer);
-const urlParams = new URLSearchParams(window.location.search);
-const p1 = urlParams.get('p1');
-const p2 = urlParams.get('p2');
-const match = urlParams.get('match');
-const table = urlParams.get('table');
-const matchid = urlParams.get('matchid');
-window.matchidFromUrl = matchid;
-if (p1) { document.getElementById('player1Name').value = p1; localStorage.setItem('player1Name', p1); }
-if (p2) { document.getElementById('player2Name').value = p2; localStorage.setItem('player2Name', p2); }
-if (match && ['2','3','4'].includes(match)) { document.getElementById('matchLength').value = match; }
-if (table) { const banner = document.getElementById('tableNumberBanner'); banner.textContent = `📍 Table ${table}`; banner.style.display = 'block'; }
-if (matchid) { const matchInput = document.getElementById('matchid'); if (matchInput) matchInput.value = matchid; localStorage.setItem('matchid', matchid); }
-const ref = urlParams.get('ref'); if (ref) { const refBanner = document.getElementById('refNameBanner'); refBanner.textContent = `🎤 Ref: ${ref}`; refBanner.style.display = 'block'; }
-if (localStorage.getItem('scoreboardLocked') === 'true') { document.getElementById('lockTopToggle').checked = true; toggleLockTop(); }
-if (!p1) document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
-if (!p2) document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
-const display = document.getElementById('matchidDisplay'); if (display) display.textContent = matchidFromUrl ? `📄 Match ID: ${matchidFromUrl}` : '⚠️ No Match ID in URL';
+  // theme and logo first
+  applySavedTheme();
+  syncColorPickers();
+  applyCustomLogo();
+
+  document.getElementById('timer').addEventListener('click', toggleTimer);
+  const urlParams = new URLSearchParams(window.location.search);
+  const p1 = urlParams.get('p1');
+  const p2 = urlParams.get('p2');
+  const match = urlParams.get('match');
+  const table = urlParams.get('table');
+  const matchid = urlParams.get('matchid');
+  window.matchidFromUrl = matchid;
+  if (p1) { document.getElementById('player1Name').value = p1; localStorage.setItem('player1Name', p1); }
+  if (p2) { document.getElementById('player2Name').value = p2; localStorage.setItem('player2Name', p2); }
+  if (match && ['2','3','4'].includes(match)) { document.getElementById('matchLength').value = match; }
+  if (table) { const banner = document.getElementById('tableNumberBanner'); banner.textContent = `📍 Table ${table}`; banner.style.display = 'block'; }
+  if (matchid) { const matchInput = document.getElementById('matchid'); if (matchInput) matchInput.value = matchid; localStorage.setItem('matchid', matchid); }
+  const ref = urlParams.get('ref'); if (ref) { const refBanner = document.getElementById('refNameBanner'); refBanner.textContent = `🎤 Ref: ${ref}`; refBanner.style.display = 'block'; }
+  if (localStorage.getItem('scoreboardLocked') === 'true') { document.getElementById('lockTopToggle').checked = true; toggleLockTop(); }
+  if (!p1) document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  if (!p2) document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
+  const display = document.getElementById('matchidDisplay'); if (display) display.textContent = matchidFromUrl ? `📄 Match ID: ${matchidFromUrl}` : '⚠️ No Match ID in URL';
 });
 
 function renderButtons() {
@@ -323,12 +497,12 @@ document.getElementById('rightPlayerButtons').innerHTML = generateButtonHTML(rig
 }
 
 function generateButtonHTML(player) {
-const colorClass = player.id === 'player1' ? 'red-btn' : 'blue-btn';
+const color = getTeamColor(player.id);
 const num = player.id === 'player1' ? '1' : '2';
 return `
-       <button class="score-btn ${colorClass} large-tap" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
-       <button class="score-btn ${colorClass}" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
-       <button id="timeoutBtn${num}" class="score-btn ${colorClass} large-tap" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
+       <button class="score-btn large-tap" style="background:${color}; color:#fff" onclick="scorePoint('${player.id}')">+1 ${player.name}</button>
+       <button class="score-btn" style="background:${color}; color:#fff" onclick="removePoint('${player.id}')">-1 ${player.name}</button>
+       <button id="timeoutBtn${num}" class="score-btn large-tap" style="background:${color}; color:#fff" onclick="callTimeout('${player.id}')">Timeout (${player.id === 'player1' ? 'A' : 'D'})</button>
        <button class="score-btn" onclick="undoTimeout('${player.id}')">Undo Timeout</button>
        <div id="timeoutLabel${num}" class="timeout-label">${player.timeoutUsed ? 'Timeout Used' : ''}</div>
      `;
@@ -362,9 +536,13 @@ updateSkinnyScoreboard(); updateMiniScoreboard();
 
 function formatPlayerScore(player) {
 const [first, last] = player.name.split(' ');
-const nameHTML = last ? `<div>${first}<br><small style=\"font-size:.7em;\">${last}</small></div>` : `<div>${first}</div>`;
-const color = player.id === 'player1' ? '#d32f2f' : '#1976d2';
-return `<div style=\"text-align:center;\">${nameHTML}<div style=\"font-size:3em;font-weight:bold;color:${color};margin:10px 0;cursor:pointer;\" onclick=\"scorePoint('${player.id}')\">${player.points}</div><div style=\"font-size:.9em;\">Games: ${player.games}</div></div>`;
+const nameHTML = last ? `<div>${first}<br><small style="font-size:.7em;">${last}</small></div>` : `<div>${first}</div>`;
+const color = getTeamColor(player.id);
+return `<div style="text-align:center;">
+  ${nameHTML}
+  <div style="font-size:3em;font-weight:bold;color:${color};margin:10px 0;cursor:pointer;" onclick="scorePoint('${player.id}')">${player.points}</div>
+  <div style="font-size:.9em;">Games: ${player.games}</div>
+</div>`;
 }
 
 function updateTimer() {
@@ -378,7 +556,7 @@ function toggleTimer() { const t = document.getElementById('timer'); if (timerRu
 function startTimer(){ timerInterval = setInterval(()=>{ timeElapsed++; updateTimer(); },1000); timerRunning=true; const t=document.getElementById('timer'); t.style.color='white'; t.classList.add('running'); updateTimer(); }
 
 function callTimeout(id){ const p=players.find(x=>x.id===id); const num=id==='player1'?'1':'2'; if(!p.timeoutUsed){ p.timeoutUsed=true; document.getElementById(`timeoutBtn${num}`).disabled=true; document.getElementById(`timeoutBtn${num}`).classList.add('disabled-btn'); document.getElementById(`timeoutLabel${num}`).textContent='Timeout Used'; startTimeoutTimer(); } }
-function undoTimeout(id){ const p=players.find(x=>x.id===id); const num=id==='player1'?'1':'2'; p.timeoutUsed=false; document.getElementById(`timeoutBtn${num}`).disabled=false; document.getElementById(`timeoutBtn${num}`).classList.remove('disabled-btn'); document.getElementById(`timeoutLabel${num}`).textContent=''; clearTimeoutTimer(); }
+function undoTimeout(id){ const p=players.find(x=>x.id===id); const num=id==='player1'?'1':'2'; p.timeoutUsed=false; const btn=document.getElementById(`timeoutBtn${num}`); if(btn){ btn.disabled=false; btn.classList.remove('disabled-btn'); } document.getElementById(`timeoutLabel${num}`).textContent=''; clearTimeoutTimer(); }
 
 function updateHistory(){ const html=gameHistory.map((g,i)=>`<li>Game ${i+1}: ${g}</li>`).join(''); document.getElementById('history').innerHTML=`<h3>Previous Games:</h3><ul>${html}</ul>`; }
 
@@ -411,68 +589,47 @@ document.getElementById('nextGameBtn').style.display='none'; document.getElement
 isPlayer1Left = !isPlayer1Left; renderButtons(); updateScore(); startBetweenGamesTimer();
 }
 
-//function resetMatch(){ if(!confirm('Do you really want to reset the match?')) return; players=[{id:'player1',name:'',points:0,games:0,timeoutUsed:false},{id:'player2',name:'',points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); document.getElementById('player1Name').value=localStorage.getItem('player1Name')||''; document.getElementById('player2Name').value=localStorage.getItem('player2Name')||''; document.getElementById('matchLength').value='2'; ['scoreSection','matchWinner','gameWinner','compactSummary'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(id==='scoreSection') el.style.display='none'; else el.textContent=''; }); document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('history').innerHTML=''; const lock=document.getElementById('lockTopToggle'); if(lock.checked) lock.checked=false; document.getElementById('fullscoreboard').classList.remove('locked-top'); document.body.classList.remove('locked-body'); document.getElementById('scoreboardSpacer').style.height='0'; localStorage.setItem('scoreboardLocked','false'); updateScore(); updateTimer(); updateSkinnyScoreboard(); updateMiniScoreboard(); }
-
-// --- replace existing resetMatch() with this ---
+// --- resetMatch from your latest build, unchanged except for showStartScreen call ---
 function resetMatch() {
   if (!confirm('Do you really want to reset the match?')) return;
-
-  // Stop timers
   clearInterval(timerInterval);
   clearTimeoutTimer();
   clearBetweenGamesTimer();
   timerInterval = null;
   timerRunning = false;
   timeElapsed = 0;
-
-  // Reset core state
   players = [
     { id:'player1', name:'', points:0, games:0, timeoutUsed:false },
     { id:'player2', name:'', points:0, games:0, timeoutUsed:false }
   ];
   gameHistory = [];
   isPlayer1Left = true;
-
-  // Restore names from localStorage (so TD doesn’t have to retype)
   document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
   document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
-
-  // Reset match length to default "Best of 7" (value="4") — change if you prefer another default
   document.getElementById('matchLength').value = '4';
-
-  // Clear UI text blocks
-  const idsToClearText = ['matchWinner','gameWinner','compactSummary','miniCompactSummary'];
-  idsToClearText.forEach(id => {
+  ['matchWinner','gameWinner','compactSummary','miniCompactSummary'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '';
   });
   const history = document.getElementById('history'); if (history) history.innerHTML = '';
   const postCard = document.getElementById('postMatchNotice'); if (postCard) postCard.style.display = 'none';
   const matchCardScores = document.getElementById('matchCardScores'); if (matchCardScores) matchCardScores.textContent = '';
-
-  // Hide action/summary buttons
   const sb = document.getElementById('summaryButtons'); if (sb) sb.style.display = 'none';
   const ng = document.getElementById('nextGameBtn'); if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
-
-  // Unlock and normalize scoreboard position
   const lock = document.getElementById('lockTopToggle');
   if (lock && lock.checked) lock.checked = false;
   document.getElementById('fullscoreboard').classList.remove('locked-top');
   document.body.classList.remove('locked-body');
   const spacer = document.getElementById('scoreboardSpacer'); if (spacer) spacer.style.height = '0';
   localStorage.setItem('scoreboardLocked','false');
-
-  // Turn off overlays & mirrors
   const skinny = document.getElementById('skinnyScoreboard');
   const mini   = document.getElementById('miniScoreboard');
   const tSkinny = document.getElementById('toggleSkinny');
   const tMini   = document.getElementById('toggleMini');
   const tMirror = document.getElementById('mirrorAll');
-
   if (tSkinny) tSkinny.checked = false;
   if (tMini)   tMini.checked   = false;
   if (tMirror) tMirror.checked = false;
-
   if (skinny) {
     skinny.style.display = 'none';
     skinny.classList.remove('locked','mirrored');
@@ -488,8 +645,6 @@ function resetMatch() {
     if (miniContent) miniContent.innerHTML = '';
   }
   document.body.classList.remove('mini-active');
-
-  // Reset scoreboard/timer displays to a clean state
   const scoreBoard = document.getElementById('scoreBoard');
   if (scoreBoard) scoreBoard.innerHTML = '';
   const timer = document.getElementById('timer');
@@ -498,53 +653,36 @@ function resetMatch() {
     timer.style.color = 'white';
     timer.textContent = 'Match Time: 0:00';
   }
-
-  // Show start screen, hide in-match UI
   const scoreSection = document.getElementById('scoreSection');
   if (scoreSection) scoreSection.style.display = 'none';
   showStartScreen();
-
-  // Re-render buttons/score (safe no-ops in start screen)
   renderButtons();
   updateScore();
   updateTimer();
-
-  // Show Called Matches embed again on the start page
   if (typeof startCalledMatchesEmbed === 'function') startCalledMatchesEmbed();
 }
-
-// --- add this helper right after resetMatch() ---
 function showStartScreen() {
-  // Bring back logo
-  const logo = document.querySelector('img[alt="Air Hockey Score System Logo"]');
+  const logo = document.getElementById('appLogo');
   if (logo) {
     logo.classList.remove('fade-out');
-    logo.style.display = ''; // default (visible)
+    logo.style.display = '';
   }
-
-  // Bring back name inputs
   const nameEntry = document.querySelector('.name-entry');
   if (nameEntry) {
     nameEntry.classList.remove('fade-out');
-    nameEntry.style.display = ''; // default (visible)
+    nameEntry.style.display = '';
   }
-
-  // Bring back setup controls (match length + start button)
   const setup = document.getElementById('setupControls');
   if (setup) {
     setup.classList.remove('fade-out');
-    setup.style.display = ''; // default (visible)
+    setup.style.display = '';
   }
-
-  // Version label visible again (if present)
   const ver = document.getElementById('versionLabel');
   if (ver && ver.style) ver.style.display = '';
-
-  // Ensure timeout/between-games timers are hidden
   const tt = document.getElementById('timeoutTimer'); if (tt) tt.style.display = 'none';
   const bgt = document.getElementById('betweenGamesTimer'); if (bgt) bgt.style.display = 'none';
 }
-  
+
 function getMatchSummary(){ const [p1,p2]=players; const lines=[`Match between ${p1.name} and ${p2.name}`, `Final Score: ${p1.name} ${p1.games} - ${p2.games} ${p2.name}`,'','Game History:',...gameHistory.map((g,i)=>`Game ${i+1}: ${g}`), `Total Match Time: ${document.getElementById('timer').textContent.replace('Match Time: ','')}`]; return lines.join('\n'); }
 
 let timeoutCountdown=null, timeoutTimeLeft=0;
@@ -569,13 +707,11 @@ function toggleSkinnyScoreboard(){ const skinny=document.getElementById('skinnyS
 
 function toggleMiniScoreboard(){ const mini=document.getElementById('miniScoreboard'); const on=document.getElementById('toggleMini').checked; mini.style.display = on ? 'block' : 'none'; document.body.classList.toggle('mini-active', on); if(on){ if(document.getElementById('toggleSkinny').checked){ document.getElementById('toggleSkinny').checked=false; toggleSkinnyScoreboard(); } if(document.getElementById('lockTopToggle').checked){ document.getElementById('lockTopToggle').checked=false; toggleLockTop(); } document.getElementById('lockTopWrapper').style.display='none'; } else { document.getElementById('lockTopWrapper').style.display='block'; } updateMiniScoreboard(); }
 
-function updateMirrorState(){ // apply mirror class to overlays and rerender everything
+function updateMirrorState(){
 const mirror = isMirrored();
 document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
 document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
-//renderButtons(); 
 updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard();
-//updateSkinnyScoreboard(); updateMiniScoreboard();  
 }
 
 function updateSkinnyScoreboard(winnerId=null){
@@ -586,15 +722,25 @@ const left = mirror ? R : L; const right = mirror ? L : R;
 const timerText = document.getElementById('timer').textContent.replace('Match Time: ','').replace(' (Paused)','') || '0:00';
 const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
 const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
-const timeoutHTML = timeoutActive ? `<div style=\"color:yellow;font-size:.9em;margin-top:2px;\">Timeout: ${timeoutText}</div>` : '';
+const timeoutHTML = timeoutActive ? `<div style="color:yellow;font-size:.9em;margin-top:2px;">Timeout: ${timeoutText}</div>` : '';
 const bgActive = document.getElementById('betweenGamesTimer').style.display==='block';
 const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
-const bgHTML = bgActive ? `<div style=\"color:${betweenGamesTimeLeft<=60?'red':'yellow'};font-size:.9em;margin-top:2px;\">Next Game: ${bgText}</div>` : '';
+const bgHTML = bgActive ? `<div style="color:${betweenGamesTimeLeft<=60?'red':'yellow'};font-size:.9em;margin-top:2px;">Next Game: ${bgText}</div>` : '';
 const winId = winnerId?.trim?.() || null;
 function getPipLine(forId){ return gameHistory.map(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); if(!m) return '–'; const s1=parseInt(m[1]), s2=parseInt(m[2]); const p1win=s1>s2; const sk=(s1===7&&s2===0)||(s2===7&&s1===0); const w=(forId==='player1'&&p1win)||(forId==='player2'&&!p1win); if(w) return '●'; if(sk) return '🦨'; return '○'; }).join(' ');}      
-const leftHTML = `<div class=\"skinny-player ${winId===left.id?'winner':''}\" style=\"text-align:left;\"><div>${left.name}</div><div class=\"score-value\" style=\"color:${left.id==='player1'?'#d32f2f':'#1976d2'};\">${left.points}</div><div style=\"font-size:1.2em;color:${left.id==='player1'?'#d32f2f':'#1976d2'};\">${getPipLine(left.id)}</div></div>`;
-const rightHTML = `<div class=\"skinny-player ${winId===right.id?'winner':''}\" style=\"text-align:right;\"><div>${right.name}</div><div class=\"score-value\" style=\"color:${right.id==='player1'?'#d32f2f':'#1976d2'};\">${right.points}</div><div style=\"font-size:1.2em;color:${right.id==='player1'?'#d32f2f':'#1976d2'};\">${getPipLine(right.id)}</div></div>`;
-document.getElementById('skinnyContent').innerHTML = `<div style=\"display:flex;justify-content:space-between;width:100%;padding:0 5px;font-family:'Arial Black';font-size:1.2em;\">${leftHTML}<div style=\"text-align:center;min-width:100px;font-size:1.4em;\"><div style=\"font-weight:bold;\">${timerText}</div>${timeoutHTML}${bgHTML}</div>${rightHTML}</div>`;
+const leftColor = getTeamColor(left.id);
+const rightColor = getTeamColor(right.id);
+const leftHTML = `<div class="skinny-player ${winId===left.id?'winner':''}" style="text-align:left;">
+  <div>${left.name}</div>
+  <div class="score-value" style="color:${leftColor};">${left.points}</div>
+  <div style="font-size:1.2em;color:${leftColor};">${getPipLine(left.id)}</div>
+</div>`;
+const rightHTML = `<div class="skinny-player ${winId===right.id?'winner':''}" style="text-align:right;">
+  <div>${right.name}</div>
+  <div class="score-value" style="color:${rightColor};">${right.points}</div>
+  <div style="font-size:1.2em;color:${rightColor};">${getPipLine(right.id)}</div>
+</div>`;
+document.getElementById('skinnyContent').innerHTML = `<div style="display:flex;justify-content:space-between;width:100%;padding:0 5px;font-family:'Arial Black';font-size:1.2em;">${leftHTML}<div style="text-align:center;min-width:100px;font-size:1.4em;"><div style="font-weight:bold;">${timerText}</div>${timeoutHTML}${bgHTML}</div>${rightHTML}</div>`;
 const summaryEl=document.getElementById('compactSummary'); if(summaryEl && gameHistory.length>0){ const c=getCompactMatchSummary(); const seg=c.split(', '); const lines=[]; for(let i=0;i<seg.length;i+=4) lines.push(seg.slice(i,i+4).join(', ')); summaryEl.innerHTML = lines.map(l=>`<div>${l}</div>`).join(''); } else if(summaryEl) summaryEl.innerHTML='';
 }
 
@@ -602,7 +748,6 @@ function updateMiniScoreboard(winnerId=null){
 const mini=document.getElementById('miniScoreboard'); if(!mini || mini.style.display==='none') return;
 const mirror = isMirrored(); mini.classList.toggle('mirrored', mirror);
 let [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
-// Do NOT swap by mirror here; CSS .mirrored reorders mini-left/mini-right.
 const timerText = document.getElementById('timer').textContent.replace('Match Time: ','').replace(' (Paused)','') || '0:00';
 const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
 const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
@@ -612,9 +757,17 @@ const bgText = document.getElementById('betweenGamesTimer').textContent.replace(
 const betweenHTML = bgActive ? `Next: ${bgText}` : '';
 const winId = winnerId?.trim?.() || null;
 function getPipLine(forId){ return gameHistory.map(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); if(!m) return '–'; const s1=parseInt(m[1]), s2=parseInt(m[2]); const p1win=s1>s2; const sk=(s1===7&&s2===0)||(s2===7&&s1===0); const w=(forId==='player1'&&p1win)||(forId==='player2'&&!p1win); if(w) return '●'; if(sk) return '🦨'; return '○'; }).join(' ');}      
-const leftHTML = `<div class=\"mini-player mini-left ${winId===left.id?'winner':''}\"><div class=\"mini-name\">${left.name}</div><div class=\"mini-score\" style=\"color:${left.id==='player1'?'#d32f2f':'#1976d2'};\">${left.points}</div></div>`;
-const rightHTML = `<div class=\"mini-player mini-right ${winId===right.id?'winner':''}\"><div class=\"mini-name\">${right.name}</div><div class=\"mini-score\" style=\"color:${right.id==='player1'?'#d32f2f':'#1976d2'};\">${right.points}</div></div>`;
-document.getElementById('miniContent').innerHTML = `<div class=\"mini-top\">${leftHTML}${rightHTML}</div><div class=\"mini-center\"><div class=\"mini-timer\">${timerText}</div><div class=\"mini-status\">${timeoutHTML || betweenHTML || ''}</div></div><div class=\"mini-bottom\"><div class=\"mini-pips\" style=\"color:${left.id==='player1'?'#d32f2f':'#1976d2'};\">${getPipLine(left.id)}</div><div class=\"mini-pips\" style=\"color:${right.id==='player1'?'#d32f2f':'#1976d2'};\">${getPipLine(right.id)}</div></div>`;
+const leftColor = getTeamColor(left.id);
+const rightColor = getTeamColor(right.id);
+const leftHTML = `<div class="mini-player mini-left ${winId===left.id?'winner':''}">
+  <div class="mini-name">${left.name}</div>
+  <div class="mini-score" style="color:${leftColor};">${left.points}</div>
+</div>`;
+const rightHTML = `<div class="mini-player mini-right ${winId===right.id?'winner':''}">
+  <div class="mini-name">${right.name}</div>
+  <div class="mini-score" style="color:${rightColor};">${right.points}</div>
+</div>`;
+document.getElementById('miniContent').innerHTML = `<div class="mini-top">${leftHTML}${rightHTML}</div><div class="mini-center"><div class="mini-timer">${timerText}</div><div class="mini-status">${timeoutHTML || betweenHTML || ''}</div></div><div class="mini-bottom"><div class="mini-pips" style="color:${leftColor};">${getPipLine(left.id)}</div><div class="mini-pips" style="color:${rightColor};">${getPipLine(right.id)}</div></div>`;
 const summaryEl=document.getElementById('miniCompactSummary'); if(summaryEl && gameHistory.length>0){ const c=getCompactMatchSummary(); const seg=c.split(', '); const lines=[]; for(let i=0;i<seg.length;i+=3) lines.push(seg.slice(i,i+3).join(', ')); summaryEl.innerHTML = lines.map(l=>`<div>${l}</div>`).join(''); } else if(summaryEl) summaryEl.innerHTML='';
 }
 
@@ -627,68 +780,31 @@ function clearBetweenGamesTimer(){ if(betweenGamesCountdown){ clearInterval(betw
 
 function postMatchFormDataToSheet(){ const [p1,p2]=players; const winner=p1.games>p2.games?p1.name:p2.name; const fd=new FormData(); fd.append('Date', new Date().toLocaleString()); fd.append('Player 1', p1.name); fd.append('Player 2', p2.name); fd.append('P1 rank',''); fd.append('P2 rank',''); fd.append('Ref', refFromUrl); fd.append('Image',''); fd.append('Puck Color',''); fd.append('Location','Table 1'); fd.append('Winner', winner); fd.append('Video Link',''); fd.append('Notes',''); fd.append('Game Count', `${p1.games}-${p2.games}`); fd.append('Set 1',''); const clean=gameHistory.map(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); return m?`${m[1]} - ${m[2]}`:''; }); clean.slice(0,7).forEach((s,i)=>fd.append(`Set 1.${i+1}`, s)); for(let i=clean.length+1;i<=7;i++) fd.append(`Set 1.${i}`, ''); for(let s=2;s<=7;s++){ fd.append(`Set ${s}`,''); for(let g=1;g<=7;g++) fd.append(`Set ${s}.${g}`,''); } fd.append('ARCHIVE',''); fd.append('email',''); fd.append('OtherData',''); fd.append('P1 RE Rating',''); fd.append('P2 RE Rating',''); fd.append('Percentage P1 Win',''); fd.append('Percentage P2 Win',''); fd.append('🔒 Row ID',''); fd.append('Other KVC',''); fd.append('KVC',''); fd.append('Percentage P1 WinBK',''); fd.append('Percentage P2 WinBK',''); fd.append('Other location',''); fd.append('Old Math',''); fd.append('Send Email',''); fd.append('Round',''); fd.append('KValue Image',''); fd.append('Brackelope',''); const anySkunk=clean.some(s=>s==='7 - 0'||s==='0 - 7'); fd.append('Skunk', anySkunk?'Yes':''); fd.append('VideoLink2',''); fd.append('CMC',''); fd.append('TableType',''); fd.append('TableTypeOther',''); fd.append('Match ID', matchidFromUrl); fetch('https://script.google.com/macros/s/AKfycby99JG1qwPZQAuepDhZfv7j_UWTq_2JxdZF1KiVAHvsaEr8vijfPU4_rSLrzK_psmrE/exec', { method:'POST', mode:'cors', body:fd }).then(r=>r.json()).then(d=>console.log('✅ Match FormData POSTed:', d)).catch(err=>console.error('❌ FormData POST failed:', err)); }
 
-document.getElementById('betweenGamesTimer').addEventListener('click', clearBetweenGamesTimer);
-document.getElementById('startAnotherMatchBtn').addEventListener('click', ()=>{ const ok=confirm('⚠️ Warning: Match data from the current round will not appear in the next match.\nPlease export or save before continuing.'); if(ok) startAnotherMatchWithSameSettings(); });
-
-function startAnotherMatchWithSameSettings(){ const p1n=players[0].name, p2n=players[1].name, ml=winGames; clearInterval(timerInterval); clearTimeoutTimer(); clearBetweenGamesTimer(); players=[{id:'player1',name:p1n,points:0,games:0,timeoutUsed:false},{id:'player2',name:p2n,points:0,games:0,timeoutUsed:false}]; gameHistory=[]; timeElapsed=0; timerRunning=false; isPlayer1Left=true; winGames=ml; document.getElementById('history').innerHTML=''; document.getElementById('matchWinner').textContent=''; document.getElementById('gameWinner').textContent=''; document.getElementById('summaryButtons').style.display='none'; document.getElementById('nextGameBtn').style.display='none'; document.getElementById('compactSummary').textContent=''; document.getElementById('scoreSection').style.display='block'; document.getElementById('player1Name').value=p1n; document.getElementById('player2Name').value=p2n; document.getElementById('matchLength').value=ml; updateScore(); updateTimer(); renderButtons(); updateSkinnyScoreboard(); updateMiniScoreboard(); document.getElementById('startAnotherMatchBtn').style.display='none'; startTimer(); }
-
-// ===== Google "share to web" iframe logic =====
+/* Called Matches iframe helpers kept from your build */
 let calledMatchesInterval = null;
 const CALLED_IFRAME_ID = 'calledMatchesFrame';
 const CALLED_WRAP_ID = 'calledMatchesEmbed';
-const REFRESH_MS = 10_000; // 10s
-
-function onStartPage() {
-  return document.getElementById('scoreSection')?.style.display !== 'block';
-}
-
-function showCalledMatchesEmbed(show) {
-  const wrap = document.getElementById(CALLED_WRAP_ID);
-  if (!wrap) return;
-  wrap.style.display = show ? 'block' : 'none';
-}
-
+const REFRESH_MS = 10_000;
+function onStartPage() { return document.getElementById('scoreSection')?.style.display !== 'block'; }
+function showCalledMatchesEmbed(show) { const wrap = document.getElementById(CALLED_WRAP_ID); if (!wrap) return; wrap.style.display = show ? 'block' : 'none'; }
 function refreshCalledMatchesFrame(force=false) {
   const iframe = document.getElementById(CALLED_IFRAME_ID);
   const stampEl = document.getElementById('embedLastRefresh');
   if (!iframe) return;
-
   try {
-    // bust cache by appending ts param (keep original URL intact)
     const u = new URL(iframe.src, location.href);
     if (force) u.searchParams.set('manual', Date.now());
     else u.searchParams.set('ts', Date.now());
     iframe.src = u.toString();
   } catch {
-    // fallback if src is not absolute
     const sep = iframe.src.includes('?') ? '&' : '?';
     iframe.src = iframe.src + sep + 'ts=' + Date.now();
   }
-
   if (stampEl) stampEl.textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
 }
-
-function startCalledMatchesEmbed() {
-  if (!onStartPage()) return;
-  showCalledMatchesEmbed(true);
-  refreshCalledMatchesFrame(); // initial
-  if (!calledMatchesInterval) {
-    calledMatchesInterval = setInterval(refreshCalledMatchesFrame, REFRESH_MS);
-  }
-}
-
-function stopCalledMatchesEmbed() {
-  if (calledMatchesInterval) {
-    clearInterval(calledMatchesInterval);
-    calledMatchesInterval = null;
-  }
-  showCalledMatchesEmbed(false);
-}
-
-// Boot on load (only if still on start page)
+function startCalledMatchesEmbed() { if (!onStartPage()) return; showCalledMatchesEmbed(true); refreshCalledMatchesFrame(); if (!calledMatchesInterval) { calledMatchesInterval = setInterval(refreshCalledMatchesFrame, REFRESH_MS); } }
+function stopCalledMatchesEmbed() { if (calledMatchesInterval) { clearInterval(calledMatchesInterval); calledMatchesInterval = null; } showCalledMatchesEmbed(false); }
 document.addEventListener('DOMContentLoaded', startCalledMatchesEmbed);
-
-// Hide when a match starts (patch your existing startMatch)
 if (typeof startMatch === 'function') {
   const __origStartMatch = startMatch;
   startMatch = function patchedStartMatch() {
@@ -696,15 +812,9 @@ if (typeof startMatch === 'function') {
     __origStartMatch();
   };
 }
-
-// Optional: if you have a “back to start” flow without a page reload,
-// call startCalledMatchesEmbed() at that time to show it again.
-
-// --- Optional: force darkify if the Google view is too bright ---
 document.getElementById(CALLED_WRAP_ID)?.classList.add('embed-darkify');
-
 </script>
 
-  <div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.3 – (worlds)</div>
+<div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.4 - (worlds-customizable)</div>
 </body>
 </html>
