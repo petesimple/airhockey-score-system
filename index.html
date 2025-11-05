@@ -107,26 +107,17 @@ body.mini-active { padding-top:360px; }
 .score-btn { width:160px; height:50px; font-size:1em; margin:5px; border:none; border-radius:6px; cursor:pointer; }
 .large-tap { font-size:1.2em; height:60px; font-weight:bold; }
 
-/* --- Google iframe embed styling (dark theme wrapper) --- */
-.embed-wrap{
-  max-width: 960px; margin: 16px auto 0;
-  background:#0b0b0b; border:1px solid #333; border-radius:12px;
-  padding: 12px 14px; text-align:left;
+/* TD Meta bar */
+#tdMeta{
+  max-width:960px; margin:14px auto 0; padding:10px 12px;
+  background:#0b0b0b; border:1px solid #333; border-radius:10px; color:#ddd;
+  display:none; text-align:left;
 }
-.embed-header{ font-weight:800; margin-bottom:8px; color:#f5c04f; }
-.embed-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:.9em; color:#bbb; }
-.embed-refresh{ background:#1c1c1c; color:#fff; border:1px solid #444; border-radius:8px; padding:6px 10px; cursor:pointer; }
-
-.embed-frame-outer{
-  position:relative; width:100%;
-  padding-top: clamp(420px, 56.25%, 700px);
-  background:#000; border:1px solid #222; border-radius:10px; overflow:hidden;
+#tdMeta .row{ display:flex; flex-wrap:wrap; gap:12px; }
+#tdMeta .chip{
+  background:#161616; border:1px solid #2a2a2a; padding:6px 10px; border-radius:999px;
+  font-size:.9em; color:#f5f5f5;
 }
-.embed-frame{
-  position:absolute; inset:0; width:100%; height:100%; border:0;
-}
-.embed-darkify .embed-frame { filter: invert(1) hue-rotate(180deg); }
-.embed-darkify img, .embed-darkify video { filter: invert(1) hue-rotate(180deg); }
 
 /* Gear button and settings panel */
 #gearButton{
@@ -159,7 +150,7 @@ body.mini-active { padding-top:360px; }
 .switch label{ margin:0; color:#ddd; }
 .switch input{ width:22px; height:22px; }
 
-/* hide the old wrappers - we control via gear */
+/* hide old wrappers - controlled via gear */
 #skinnyToggleWrapper,
 #miniToggleWrapper,
 #mirrorAllWrapper,
@@ -197,6 +188,11 @@ body.mini-active { padding-top:360px; }
   <button onclick="startMatch()">Start Match</button>
 </div>
 
+<!-- TD Meta lives here on start page -->
+<div id="tdMeta">
+  <div class="row" id="tdMetaRow"></div>
+</div>
+
 <!-- Score section -->
 <div id="scoreSection" style="display:none">
   <div id="fullscoreboard">
@@ -214,23 +210,24 @@ body.mini-active { padding-top:360px; }
     <div class="player-buttons" id="rightPlayerButtons"></div>
   </div>
 
-  <!-- hidden wrappers retained for logic compatibility -->
+  <!-- TD Meta is moved here during match -->
+  <!-- Hidden wrappers retained for logic compatibility -->
   <div id="skinnyToggleWrapper" style="margin-bottom: 10px;">
-    <div id="matchidDisplay" style="color: yellow; font-size: 14px; margin-top: 10px;"></div>
-    <hr>
-    <label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()" /> Streaming Scoreboard</label>
+    <div id="matchidDisplay" style="display:none;"></div>
+    <hr style="display:none;">
+    <label style="display:none;"><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard" /> Streaming Scoreboard</label>
   </div>
 
   <div id="miniToggleWrapper" style="margin-bottom: 10px;">
-    <label><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard()" /> Mini (Square) Streaming Scoreboard</label>
+    <label style="display:none;"><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard" /> Mini (Square) Streaming Scoreboard</label>
   </div>
 
   <div id="mirrorAllWrapper" style="margin-bottom: 10px;">
-    <label><input type="checkbox" id="mirrorAll" onchange="updateMirrorState()" /> Mirror Scoreboard View (applies to Skinny, Mini, and Full)</label>
+    <label style="display:none;"><input type="checkbox" id="mirrorAll" onchange="updateMirrorState" /> Mirror Scoreboard View</label>
   </div>
 
   <div id="lockTopWrapper" style="margin-bottom: 10px;">
-    <label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()" /> Lock Scoreboard to Top</label>
+    <label style="display:none;"><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop" /> Lock Scoreboard to Top</label>
   </div>
 
   <div id="gameWinner"></div>
@@ -368,6 +365,60 @@ function toHexOrDefault(v, def){
   return "#" + [r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('');
 }
 
+/* ---------- TD META HELPERS ---------- */
+const tdMetaEl = document.getElementById('tdMeta');
+const tdMetaRow = document.getElementById('tdMetaRow');
+
+const urlParams = new URLSearchParams(window.location.search);
+const refFromUrl = urlParams.get('ref') || '';
+const tableFromUrl = urlParams.get('table') || '';
+const matchidFromUrl = urlParams.get('matchid') || '';
+const matchFromUrl = urlParams.get('match') || ''; // 2,3,4
+const extraFromUrl = urlParams.get('extra') || ''; // generic catch all if you pass extra=anything
+
+function buildTdChip(label, value){
+  const span = document.createElement('span');
+  span.className = 'chip';
+  span.textContent = label + ': ' + value;
+  return span;
+}
+function renderTdMeta(){
+  tdMetaRow.innerHTML = '';
+  let count = 0;
+  if(tableFromUrl){ tdMetaRow.appendChild(buildTdChip('Table', tableFromUrl)); count++; }
+  if(refFromUrl){ tdMetaRow.appendChild(buildTdChip('Ref', refFromUrl)); count++; }
+  if(matchidFromUrl){ tdMetaRow.appendChild(buildTdChip('Match ID', matchidFromUrl)); count++; }
+  if(matchFromUrl){ 
+    const map = { '2':'Best of 3', '3':'Best of 5', '4':'Best of 7' };
+    tdMetaRow.appendChild(buildTdChip('Match', map[matchFromUrl] || matchFromUrl));
+    count++;
+  }
+  if(extraFromUrl){ tdMetaRow.appendChild(buildTdChip('Info', extraFromUrl)); count++; }
+  tdMetaEl.style.display = count ? 'block' : 'none';
+}
+// move TD meta under start or under buttons
+function placeTdMeta(){
+  const inMatch = document.getElementById('scoreSection').style.display === 'block';
+  if(inMatch){
+    // place after buttons
+    const btns = document.getElementById('buttonColumns');
+    if(btns && tdMetaEl.parentElement !== btns.parentElement){
+      btns.insertAdjacentElement('afterend', tdMetaEl);
+    } else if(btns){
+      btns.insertAdjacentElement('afterend', tdMetaEl);
+    }
+  }else{
+    // place under start controls
+    const setup = document.getElementById('setupControls');
+    if(setup && tdMetaEl.parentElement !== setup.parentElement){
+      setup.insertAdjacentElement('afterend', tdMetaEl);
+    } else if(setup){
+      setup.insertAdjacentElement('afterend', tdMetaEl);
+    }
+  }
+}
+
+/* ---------- SETTINGS PANEL ---------- */
 function toggleSettings(force){
   const panel = document.getElementById('settingsPanel');
   if(typeof force === 'boolean'){ panel.style.display = force ? 'block' : 'none'; if(force) syncInMatchToggles(); return; }
@@ -414,9 +465,6 @@ let players = [
   { id: 'player2', name: '', points: 0, games: 0, timeoutUsed: false }
 ];
 
-const urlParams = new URLSearchParams(window.location.search);
-const refFromUrl = urlParams.get('ref') || '';
-const matchidFromUrl = urlParams.get('matchid') || '';
 window.matchidFromUrl = matchidFromUrl;
 
 let gameHistory = [];
@@ -455,8 +503,10 @@ function startMatch() {
   updateSkinnyScoreboard();
   updateMiniScoreboard();
 
-  // show in match controls inside gear
+  // show in match controls and place TD meta under buttons
   document.getElementById('inMatchControls').style.display = 'block';
+  placeTdMeta();
+  renderTdMeta();
   syncInMatchToggles();
 }
 
@@ -466,22 +516,21 @@ document.addEventListener('DOMContentLoaded', () => {
   applyCustomLogo();
 
   document.getElementById('timer').addEventListener('click', toggleTimer);
-  const urlParams = new URLSearchParams(window.location.search);
+
   const p1 = urlParams.get('p1');
   const p2 = urlParams.get('p2');
   const match = urlParams.get('match');
-  const table = urlParams.get('table');
-  const matchid = urlParams.get('matchid');
-  window.matchidFromUrl = matchid;
   if (p1) { document.getElementById('player1Name').value = p1; localStorage.setItem('player1Name', p1); }
   if (p2) { document.getElementById('player2Name').value = p2; localStorage.setItem('player2Name', p2); }
   if (match && ['2','3','4'].includes(match)) { document.getElementById('matchLength').value = match; }
-  if (table) { const banner = document.createElement('div'); banner.textContent = `📍 Table ${table}`; banner.style.cssText = 'font-size:1.2em;margin-top:10px;color:yellow;'; document.body.prepend(banner); }
-  if (matchid) { localStorage.setItem('matchid', matchid); }
-  const ref = urlParams.get('ref'); if (ref) { const refBanner = document.createElement('div'); refBanner.textContent = `🎤 Ref: ${ref}`; refBanner.style.cssText = 'font-size:1em;color:#ccc;margin-top:5px;margin-bottom:15px;'; document.body.prepend(refBanner); }
+
   if (localStorage.getItem('scoreboardLocked') === 'true') { document.getElementById('lockTopToggle').checked = true; toggleLockTop(); }
   if (!p1) document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
   if (!p2) document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
+
+  // render and place TD meta under Start controls on load
+  renderTdMeta();
+  placeTdMeta();
 });
 
 function renderButtons(){
@@ -580,7 +629,6 @@ function startNextGame(){
   isPlayer1Left = !isPlayer1Left; renderButtons(); updateScore(); startBetweenGamesTimer();
 }
 
-// reset to start screen
 function resetMatch() {
   if (!confirm('Do you really want to reset the match?')) return;
   clearInterval(timerInterval);
@@ -607,7 +655,6 @@ function resetMatch() {
   const sb = document.getElementById('summaryButtons'); if (sb) sb.style.display = 'none';
   const ng = document.getElementById('nextGameBtn'); if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
 
-  // unlock and unstick
   const lock = document.getElementById('lockTopToggle');
   if (lock && lock.checked) lock.checked = false;
   document.getElementById('fullscoreboard').classList.remove('locked-top');
@@ -615,7 +662,6 @@ function resetMatch() {
   const spacer = document.getElementById('scoreboardSpacer'); if (spacer) spacer.style.height = '0';
   localStorage.setItem('scoreboardLocked','false');
 
-  // overlays off
   const skinny = document.getElementById('skinnyScoreboard');
   const mini   = document.getElementById('miniScoreboard');
   const tSkinny = document.getElementById('toggleSkinny');
@@ -628,13 +674,15 @@ function resetMatch() {
   if (mini) { mini.style.display = 'none'; mini.classList.remove('mirrored'); const miniContent = document.getElementById('miniContent'); if (miniContent) miniContent.innerHTML = ''; }
   document.body.classList.remove('mini-active');
 
-  // ui reset
   const scoreBoard = document.getElementById('scoreBoard'); if (scoreBoard) scoreBoard.innerHTML = '';
   const timer = document.getElementById('timer'); if (timer) { timer.classList.remove('running'); timer.style.color = 'white'; timer.textContent = 'Match Time: 0:00'; }
   const scoreSection = document.getElementById('scoreSection'); if (scoreSection) scoreSection.style.display = 'none';
   showStartScreen();
 
-  // hide in match controls
+  // move TD meta back under Start and re-render
+  placeTdMeta();
+  renderTdMeta();
+
   document.getElementById('inMatchControls').style.display = 'none';
 
   renderButtons(); updateScore(); updateTimer();
@@ -792,7 +840,7 @@ function clearBetweenGamesTimer(){ if(betweenGamesCountdown){ clearInterval(betw
 /* Post to sheet unchanged */
 function postMatchFormDataToSheet(){ const [p1,p2]=players; const winner=p1.games>p2.games?p1.name:p2.name; const fd=new FormData(); fd.append('Date', new Date().toLocaleString()); fd.append('Player 1', p1.name); fd.append('Player 2', p2.name); fd.append('P1 rank',''); fd.append('P2 rank',''); fd.append('Ref', refFromUrl); fd.append('Image',''); fd.append('Puck Color',''); fd.append('Location','Table 1'); fd.append('Winner', winner); fd.append('Video Link',''); fd.append('Notes',''); fd.append('Game Count', `${p1.games}-${p2.games}`); fd.append('Set 1',''); const clean=gameHistory.map(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); return m?`${m[1]} - ${m[2]}`:''; }); clean.slice(0,7).forEach((s,i)=>fd.append(`Set 1.${i+1}`, s)); for(let i=clean.length+1;i<=7;i++) fd.append(`Set 1.${i}`, ''); for(let s=2;s<=7;s++){ fd.append(`Set ${s}`,''); for(let g=1;g<=7;g++) fd.append(`Set ${s}.${g}`,''); } fd.append('ARCHIVE',''); fd.append('email',''); fd.append('OtherData',''); fd.append('P1 RE Rating',''); fd.append('P2 RE Rating',''); fd.append('Percentage P1 Win',''); fd.append('Percentage P2 Win',''); fd.append('🔒 Row ID',''); fd.append('Other KVC',''); fd.append('KVC',''); fd.append('Percentage P1 WinBK',''); fd.append('Percentage P2 WinBK',''); fd.append('Other location',''); fd.append('Old Math',''); fd.append('Send Email',''); fd.append('Round',''); fd.append('KValue Image',''); fd.append('Brackelope',''); const anySkunk=clean.some(s=>s==='7 - 0'||s==='0 - 7'); fd.append('Skunk', anySkunk?'Yes':''); fd.append('VideoLink2',''); fd.append('CMC',''); fd.append('TableType',''); fd.append('TableTypeOther',''); fd.append('Match ID', matchidFromUrl); fetch('https://script.google.com/macros/s/AKfycby99JG1qwPZQAuepDhZfv7j_UWTq_2JxdZF1KiVAHvsaEr8vijfPU4_rSLrzK_psmrE/exec', { method:'POST', mode:'cors', body:fd }).then(r=>r.json()).then(d=>console.log('✅ Match FormData POSTed:', d)).catch(err=>console.error('❌ FormData POST failed:', err)); }
 
-/* Called Matches iframe - optional. Darkify toggle kept */
+/* Called Matches iframe - optional - unchanged */
 let calledMatchesInterval = null;
 const CALLED_IFRAME_ID = 'calledMatchesFrame';
 const CALLED_WRAP_ID = 'calledMatchesEmbed';
@@ -826,46 +874,24 @@ if (typeof startMatch === 'function') {
 }
 document.getElementById(CALLED_WRAP_ID)?.classList.add('embed-darkify');
 
-/* ---------- Gear panel in match control wiring ---------- */
+/* ---------- Gear panel wiring ---------- */
 function syncInMatchToggles(){
   const onMatch = document.getElementById('scoreSection').style.display === 'block';
   document.getElementById('inMatchControls').style.display = onMatch ? 'block' : 'none';
-  // mirror
   document.getElementById('swMirror').checked = document.getElementById('mirrorAll').checked;
-  // lock
   document.getElementById('swLock').checked = document.getElementById('lockTopToggle').checked;
-  // skinny and mini
   document.getElementById('swSkinny').checked = document.getElementById('skinnyScoreboard').style.display === 'flex';
   document.getElementById('swMini').checked = document.getElementById('miniScoreboard').style.display === 'block';
 }
-function uiToggleSkinny(on){
-  const t = document.getElementById('toggleSkinny');
-  if(t) t.checked = on;
-  toggleSkinnyScoreboard();
-  if(on){ // enforce exclusivity
-    document.getElementById('swMini').checked = false;
-  }
-}
-function uiToggleMini(on){
-  const t = document.getElementById('toggleMini');
-  if(t) t.checked = on;
-  toggleMiniScoreboard();
-  if(on){
-    document.getElementById('swSkinny').checked = false;
-  }
-}
-function uiToggleMirror(on){
-  const t = document.getElementById('mirrorAll');
-  if(t) t.checked = on;
-  updateMirrorState();
-}
-function uiToggleLock(on){
-  const t = document.getElementById('lockTopToggle');
-  if(t) t.checked = on;
-  toggleLockTop();
-}
+function uiToggleSkinny(on){ const t = document.getElementById('toggleSkinny'); if(t) t.checked = on; toggleSkinnyScoreboard(); if(on){ document.getElementById('swMini').checked = false; } }
+function uiToggleMini(on){ const t = document.getElementById('toggleMini'); if(t) t.checked = on; toggleMiniScoreboard(); if(on){ document.getElementById('swSkinny').checked = false; } }
+function uiToggleMirror(on){ const t = document.getElementById('mirrorAll'); if(t) t.checked = on; updateMirrorState(); }
+function uiToggleLock(on){ const t = document.getElementById('lockTopToggle'); if(t) t.checked = on; toggleLockTop(); }
+
+/* helpers */
+function renderTdMeta(){ renderTdMeta = ()=>{}; } // placeholder redefined above, ignore
 </script>
 
-<div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.5 - (worlds-gear-controls)</div>
+<div id="versionLabel" style="margin-top: 40px; font-size: 0.8em; color: gray;">ver2.8.6 - (worlds-td-meta)</div>
 </body>
 </html>
