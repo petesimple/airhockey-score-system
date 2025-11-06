@@ -144,6 +144,28 @@
 
     /* keep legacy wrappers hidden */
     #skinnyToggleWrapper, #miniToggleWrapper, #mirrorAllWrapper, #lockTopWrapper { display:none !important; }
+    /* Make the gear panel scrollable if content is tall */
+#settingsPanel {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 340px;
+  max-height: 90vh; /* never taller than the viewport */
+  overflow-y: auto; /* enables vertical scrolling */
+  background: #101010;
+  border: 1px solid #333;
+  border-radius: 14px 14px 0 0;
+  padding: 16px 20px 90px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.6);
+  z-index: 900;
+}
+    #settingsPanel::-webkit-scrollbar {
+  width: 8px;
+}
+#settingsPanel::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
   </style>
 </head>
 <body>
