@@ -130,7 +130,7 @@
       <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
     </div>
 
-    <!-- Event Title tool (no Apps Script changes needed) -->
+    <!-- Event Title tool -->
     <div class="card ah-card shadow-sm">
       <div class="card-header">
         <strong>Event Title</strong> <span class="ah-muted small">(resets 3:00 AM Central)</span>
@@ -138,7 +138,7 @@
       <div class="card-body">
         <div class="row g-2">
           <div class="col-12 col-lg-8">
-            <input id="eventTitleInput" class="form-control" placeholder="e.g., Friday Night Lights - Doubles" />
+            <input id="eventTitleInput" class="form-control" placeholder="e.g., Monday Night Practice" />
           </div>
           <div class="col-12 col-lg-4 d-grid d-lg-flex gap-2">
             <button id="saveEventTitleBtn" class="btn btn-gradient" type="button">Save Title</button>
@@ -159,7 +159,7 @@
     // ==============================
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
     const ADMIN_CODE = "2580";
-    const EVENT_MARKER = "__EVENT__"; // firstName marker row for event title (no Apps Script change)
+    const EVENT_MARKER = "__EVENT__"; // control row marker (firstName)
 
     // ==============================
     // UTILITIES
@@ -256,6 +256,71 @@
     }
 
     // ==============================
+    // EVENT TITLE via control row (robust)
+    // ==============================
+    let lastKnownTitle = ""; // never hide banner for today if a transient empty read happens
+
+    function extractTodayEventTitleFromRows(rows){
+      const today = ayptDay(new Date());
+      // choose the latest control row for today by highest row id
+      let latest = null;
+      for(const r of rows){
+        if(r.firstName === EVENT_MARKER && r.lastName === today){
+          if(!latest || (r.id|0) > (latest.id|0)) latest = r;
+        }
+      }
+      return latest ? String(latest.notes || "").trim() : "";
+    }
+
+    async function fetchEventTitle(){
+      try{
+        const data = await jsonp(SCRIPT_URL, { list:"1" });
+        if(!data || !data.ok) return "";
+        return extractTodayEventTitleFromRows(data.rows || []);
+      }catch{ return ""; }
+    }
+
+    async function refreshEventTitle({force=false}={}){
+      const t = await fetchEventTitle();
+      // fallback to cached value if the new read is empty (avoid flicker/hide)
+      const newTitle = t || (!force ? lastKnownTitle : "");
+      lastKnownTitle = newTitle;
+      applyEventBanner(newTitle);
+      const input = document.getElementById('eventTitleInput');
+      if(input && document.activeElement !== input) input.value = newTitle;
+      return newTitle;
+    }
+
+    async function writeEventTitle(title){
+      const today = ayptDay(new Date());
+      await jsonp(SCRIPT_URL, {
+        firstName: EVENT_MARKER,
+        lastName: today,
+        cellNumber: "",
+        notes: title
+      });
+      lastKnownTitle = title;
+      applyEventBanner(title);
+    }
+
+    function applyEventBanner(title){
+      const banner = document.getElementById('eventBanner');
+      const textEl = document.getElementById('eventTitleText');
+      const currEl = document.getElementById('eventTitleCurrent');
+      if(currEl) currEl.textContent = title ? title : '(none)';
+      if(title){
+        if(textEl) textEl.textContent = title;
+        if(banner) banner.style.display = 'block';
+      }else{
+        // only hide if we truly have nothing cached for today
+        if(!lastKnownTitle){
+          if(textEl) textEl.textContent = '';
+          if(banner) banner.style.display = 'none';
+        }
+      }
+    }
+
+    // ==============================
     // PLAYER FORM SUBMIT
     // ==============================
     async function handleSubmit(e){
@@ -294,6 +359,8 @@
           responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you at 8PM!! PLAY PUCK</strong>`;
           $("#ayptForm").reset();
           $("#cellNumber").classList.remove("is-invalid");
+          // re-check the event title after adds
+          refreshEventTitle();
         } else {
           responseEl.textContent = "Error: " + (data && data.message ? data.message : "Submission failed");
         }
@@ -320,7 +387,7 @@
         const rows = data.rows || [];
 
         rows.forEach((r) => {
-          // Hide control rows entirely in admin table
+          // Hide control rows in admin table
           if (r.firstName === EVENT_MARKER) return;
 
           const tr = document.createElement("tr");
@@ -385,54 +452,6 @@
     }
 
     // ==============================
-    // EVENT TITLE via control row (no script change)
-    // ==============================
-    function extractTodayEventTitleFromRows(rows){
-      const today = ayptDay(new Date());
-      // Walk from end to get latest control row for today
-      for(let i = rows.length - 1; i >= 0; i--){
-        const r = rows[i];
-        if(r.firstName === EVENT_MARKER && r.lastName === today){
-          return String(r.notes || "").trim();
-        }
-      }
-      return "";
-    }
-
-    async function readEventTitle(){
-      try {
-        const data = await jsonp(SCRIPT_URL, { list:"1" });
-        if(!data || !data.ok) return "";
-        return extractTodayEventTitleFromRows(data.rows || []);
-      } catch { return ""; }
-    }
-
-    async function writeEventTitle(title){
-      // Append a control row using existing submit pipeline
-      const today = ayptDay(new Date());
-      return await jsonp(SCRIPT_URL, {
-        firstName: EVENT_MARKER,
-        lastName: today,
-        cellNumber: "",
-        notes: title
-      });
-    }
-
-    function applyEventBanner(title){
-      const banner = document.getElementById('eventBanner');
-      const textEl = document.getElementById('eventTitleText');
-      const currEl = document.getElementById('eventTitleCurrent');
-      if(currEl) currEl.textContent = title ? title : '(none)';
-      if(title){
-        if(textEl) textEl.textContent = title;
-        if(banner) banner.style.display = 'block';
-      }else{
-        if(textEl) textEl.textContent = '';
-        if(banner) banner.style.display = 'none';
-      }
-    }
-
-    // ==============================
     // ADMIN PASSCODE GATE
     // ==============================
     function requireAdminAccess(){
@@ -452,7 +471,7 @@
     // INIT
     // ==============================
     document.addEventListener("DOMContentLoaded", async () => {
-      // Phone input wiring (single, clean, caret-safe)
+      // Phone input wiring
       const cellInput = document.getElementById("cellNumber");
       if(cellInput){
         cellInput.addEventListener("input", () => {
@@ -481,13 +500,8 @@
         });
       }
 
-      // Load event title for both views on start
-      try {
-        const t = await readEventTitle();
-        applyEventBanner(t);
-        const input = document.getElementById('eventTitleInput');
-        if(input) input.value = t;
-      } catch {}
+      // Seed banner from sheet and cache
+      await refreshEventTitle();
 
       const adminReq = isAdminRequest();
 
@@ -512,7 +526,7 @@
             const title = String(input.value || '').trim();
             try{
               await writeEventTitle(title);
-              applyEventBanner(title);
+              await refreshEventTitle({force:true});
               statusEl.textContent = 'Saved.';
               setTimeout(()=> statusEl.textContent = '', 1200);
             }catch(e){ console.error(e); statusEl.textContent = 'Save failed.'; }
@@ -522,11 +536,20 @@
           clearBtn.addEventListener('click', async () => {
             try{
               await writeEventTitle('');
-              if(document.getElementById('eventTitleInput')) document.getElementById('eventTitleInput').value = '';
-              applyEventBanner('');
+              lastKnownTitle = '';
+              await refreshEventTitle({force:true});
               statusEl.textContent = 'Cleared.';
               setTimeout(()=> statusEl.textContent = '', 1200);
             }catch(e){ console.error(e); statusEl.textContent = 'Clear failed.'; }
+          });
+        }
+
+        // Admin refresh now also re-pulls title
+        const refreshBtn = document.getElementById('refreshBtn');
+        if(refreshBtn){
+          refreshBtn.addEventListener('click', async () => {
+            await loadAdminTable();
+            await refreshEventTitle();
           });
         }
 
@@ -539,10 +562,8 @@
         $("#modeSwitch").textContent = "Admin View";
         $("#ayptForm").addEventListener("submit", handleSubmit);
 
-        // Light poll so open tablets drop the banner right after 3 AM
-        setInterval(async () => {
-          try{ const t = await readEventTitle(); applyEventBanner(t); } catch {}
-        }, 60 * 1000);
+        // Minute poll so open tablets keep the banner fresh across devices and after 3 AM flip
+        setInterval(refreshEventTitle, 60 * 1000);
       }
     });
   </script>
