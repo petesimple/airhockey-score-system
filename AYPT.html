@@ -21,17 +21,9 @@
     .admin-note{ width:100%; min-height:2.6rem; resize:vertical; }
     .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease; }
     .saved-dot.show{ opacity:1; }
-    .aypt-logo {
-      height: 40px;
-      width: auto;
-      border-radius: 8px;
-      object-fit: contain;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
-    }
-    @media (min-width: 768px) { .aypt-logo { height: 48px; } }
-    .form-label { color: var(--ah-text) !important; font-weight: 600; }
-
-    /* Player event banner */
+    .aypt-logo{ height:40px; width:auto; border-radius:8px; object-fit:contain; box-shadow:0 0 0 1px rgba(255,255,255,0.06); }
+    @media (min-width:768px){ .aypt-logo{ height:48px; } }
+    .form-label{ color:var(--ah-text)!important; font-weight:600; }
     #eventBanner{ display:none; }
   </style>
 </head>
@@ -41,9 +33,7 @@
       <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
       <div>
         <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
-        <div class="ah-muted small" id="subtitle">
-          Fill out this form to get added to tonight's tournament list.
-        </div>
+        <div class="ah-muted small" id="subtitle">Fill out this form to get added to tonight's tournament list.</div>
       </div>
     </div>
     <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
@@ -75,7 +65,14 @@
               </div>
               <div class="col-12">
                 <label for="cellNumber" class="form-label">Cell Number</label>
-                <input type="tel" id="cellNumber" inputmode="tel" class="form-control form-control-lg" required />
+                <input
+                  type="tel"
+                  id="cellNumber"
+                  inputmode="numeric"
+                  autocomplete="tel"
+                  class="form-control form-control-lg"
+                  required
+                />
                 <div class="invalid-feedback">Enter a valid US cell number like (555) 123-4567.</div>
               </div>
               <div class="col-12">
@@ -108,9 +105,7 @@
           AYPT Signups (Admin)
         </h2>
         <div class="d-flex gap-2">
-          <button id="refreshBtn" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-          </button>
+          <button id="refreshBtn" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
         </div>
       </div>
       <div class="card-body p-0">
@@ -135,7 +130,7 @@
       <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
     </div>
 
-    <!-- Event Title tool - no Apps Script change needed -->
+    <!-- Event Title tool (no Apps Script changes needed) -->
     <div class="card ah-card shadow-sm">
       <div class="card-header">
         <strong>Event Title</strong> <span class="ah-muted small">(resets 3:00 AM Central)</span>
@@ -146,12 +141,12 @@
             <input id="eventTitleInput" class="form-control" placeholder="e.g., Friday Night Lights - Doubles" />
           </div>
           <div class="col-12 col-lg-4 d-grid d-lg-flex gap-2">
-            <button id="saveEventTitleBtn" class="btn btn-gradient">Save Title</button>
-            <button id="clearEventTitleBtn" class="btn btn-outline-light">Clear</button>
+            <button id="saveEventTitleBtn" class="btn btn-gradient" type="button">Save Title</button>
+            <button id="clearEventTitleBtn" class="btn btn-outline-light" type="button">Clear</button>
           </div>
         </div>
         <div id="eventTitleStatus" class="small ah-muted mt-2"></div>
-        <div class="small mt-1">Current: <span id="eventTitleCurrent" class="text-info"></span></div>
+        <div class="small mt-1">Current: <span id="eventTitleCurrent" class="text-info">(none)</span></div>
       </div>
     </div>
 
@@ -162,15 +157,14 @@
     // ==============================
     // CONFIG
     // ==============================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec"; // must end with /exec
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
     const ADMIN_CODE = "2580";
-    const EVENT_MARKER = "__EVENT__"; // firstName marker
-    // we store ayptDay in lastName, title in notes
+    const EVENT_MARKER = "__EVENT__"; // firstName marker row for event title (no Apps Script change)
 
     // ==============================
     // UTILITIES
     // ==============================
-    const $  = (sel, root=document) => root.querySelector(sel);
+    const $ = (sel, root=document) => root.querySelector(sel);
     function isAdminRequest(){ return new URLSearchParams(location.search).get("admin") === "1"; }
 
     function setBusy(b){
@@ -204,7 +198,7 @@
     }
 
     // ==============================
-    // PHONE MASK
+    // PHONE MASK (caret-safe, paste-safe)
     // ==============================
     function digitsOnly(str){ return String(str||"").replace(/\D+/g,""); }
     function isValidUSPhoneDigits(d){
@@ -213,31 +207,46 @@
       const area = d.slice(0,3), exch = d.slice(3,6);
       return (area[0] >= "2" && exch[0] >= "2");
     }
-    function formatUSPhone(str){
-      let d = digitsOnly(str);
+    function formatFromDigits(d){
       let lead = "";
       if(d.startsWith("1")){ lead = "1 "; d = d.slice(1); }
       if(d.length <= 3) return lead + d;
       if(d.length <= 6) return `${lead}(${d.slice(0,3)}) ${d.slice(3)}`;
       return `${lead}(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
     }
+    function setCaretByDigitIndex(input, digitIndex, formatted){
+      if(typeof input.setSelectionRange !== "function") return;
+      if(digitIndex <= 0){
+        const first = formatted.search(/\d/);
+        const pos = first === -1 ? formatted.length : first;
+        try{ input.setSelectionRange(pos, pos); }catch(_){}
+        return;
+      }
+      let count = 0, i = 0;
+      for(; i < formatted.length; i++){
+        if(/\d/.test(formatted[i])) count++;
+        if(count >= digitIndex) break;
+      }
+      const pos = Math.min(i+1, formatted.length);
+      try{ input.setSelectionRange(pos, pos); }catch(_){}
+    }
 
     // ==============================
-    // AYPT DAY - flips 3:00 AM America/Chicago
+    // AYPT DAY (flips 3:00 AM America/Chicago)
     // ==============================
     function chicagoHour(now=new Date()){
-      return parseInt(new Intl.DateTimeFormat('en-US', { timeZone:'America/Chicago', hour:'2-digit', hour12:false }).format(now), 10);
+      return parseInt(new Intl.DateTimeFormat('en-US',{ timeZone:'America/Chicago', hour:'2-digit', hour12:false }).format(now),10);
     }
     function chicagoYMD(now=new Date()){
-      return new Intl.DateTimeFormat('en-CA', { timeZone:'America/Chicago', year:'numeric', month:'2-digit', day:'2-digit' }).format(now);
+      return new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Chicago', year:'numeric', month:'2-digit', day:'2-digit' }).format(now);
     }
     function ayptDay(now=new Date()){
       let ymd = chicagoYMD(now);
       const h = chicagoHour(now);
-      if (h < 3) {
+      if(h < 3){
         const [y,m,d] = ymd.split('-').map(Number);
         const dt = new Date(Date.UTC(y, m-1, d));
-        dt.setUTCDate(dt.getUTCDate() - 1);
+        dt.setUTCDate(dt.getUTCDate()-1);
         const y2 = dt.getUTCFullYear();
         const m2 = String(dt.getUTCMonth()+1).padStart(2,'0');
         const d2 = String(dt.getUTCDate()).padStart(2,'0');
@@ -273,8 +282,8 @@
 
       const cell = (function normalizePhone(str){
         const d = digitsOnly(String(str||"").trim());
-        if (d.length === 11 && d.startsWith("1")) return "+1" + d.slice(1);
-        if (d.length === 10) return "+1" + d;
+        if(d.length === 11 && d.startsWith("1")) return "+1" + d.slice(1);
+        if(d.length === 10) return "+1" + d;
         return String(str||"").trim();
       })(cellRaw);
 
@@ -310,10 +319,8 @@
         if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
         const rows = data.rows || [];
 
-        const today = ayptDay(new Date());
-
-        rows.forEach((r, idx) => {
-          // Hide control rows in the admin table
+        rows.forEach((r) => {
+          // Hide control rows entirely in admin table
           if (r.firstName === EVENT_MARKER) return;
 
           const tr = document.createElement("tr");
@@ -335,79 +342,78 @@
           tbody.appendChild(tr);
         });
 
-        statusEl.textContent = `${rows.filter(r => r.firstName !== EVENT_MARKER).length} signups loaded`;
+        const count = rows.filter(r => r.firstName !== EVENT_MARKER).length;
+        statusEl.textContent = `${count} signups loaded`;
       } catch (e) {
         console.error(e);
         statusEl.textContent = "Failed to load signups.";
       }
     }
 
-    // Paid toggle and notes - wire once
-    function wireAdminTableEvents() {
+    // Paid toggle + notes saving
+    function wireAdminTableEvents(){
       const table = document.getElementById('signupTable');
-      if (!table || table.dataset.wired === '1') return;
+      if(!table || table.dataset.wired === '1') return;
       table.dataset.wired = '1';
 
       table.addEventListener('change', async (e) => {
         const t = e.target;
-        if (!t.matches('.paid-toggle')) return;
+        if(!t.matches('.paid-toggle')) return;
         const id = t.getAttribute('data-id');
         const paid = t.checked ? '1' : '0';
-        try { await jsonp(SCRIPT_URL, { update: '1', id, paid }); pulseSaved(id); }
-        catch (err) { console.error(err); document.getElementById('status').textContent = 'Failed to update Paid.'; }
+        try { await jsonp(SCRIPT_URL, { update:'1', id, paid }); pulseSaved(id); }
+        catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to update Paid.'; }
       });
 
       let noteTimer = null;
       table.addEventListener('input', (e) => {
         const t = e.target;
-        if (!t.matches('.admin-note')) return;
+        if(!t.matches('.admin-note')) return;
         const id = t.getAttribute('data-id');
         const v  = t.value;
         clearTimeout(noteTimer);
         noteTimer = setTimeout(async () => {
-          try { await jsonp(SCRIPT_URL, { update: '1', id, adminNote: v }); pulseSaved(id); }
-          catch (err) { console.error(err); document.getElementById('status').textContent = 'Failed to save admin notes.'; }
+          try { await jsonp(SCRIPT_URL, { update:'1', id, adminNote:v }); pulseSaved(id); }
+          catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to save admin notes.'; }
         }, 350);
       });
     }
 
     function pulseSaved(id){
       const dot = document.getElementById(`saved-${id}`);
-      if (dot) { dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
+      if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
     }
 
     // ==============================
-    // EVENT TITLE - control rows via existing submit
+    // EVENT TITLE via control row (no script change)
     // ==============================
     function extractTodayEventTitleFromRows(rows){
-      // Find the most recent control row for today's ayptDay
       const today = ayptDay(new Date());
-      for (let i = rows.length - 1; i >= 0; i--){
+      // Walk from end to get latest control row for today
+      for(let i = rows.length - 1; i >= 0; i--){
         const r = rows[i];
-        if (r.firstName === EVENT_MARKER && r.lastName === today) {
+        if(r.firstName === EVENT_MARKER && r.lastName === today){
           return String(r.notes || "").trim();
         }
       }
       return "";
     }
 
-    async function readEventTitleViaList(){
+    async function readEventTitle(){
       try {
-        const data = await jsonp(SCRIPT_URL, { list: "1" });
-        if (!data || !data.ok) return "";
+        const data = await jsonp(SCRIPT_URL, { list:"1" });
+        if(!data || !data.ok) return "";
         return extractTodayEventTitleFromRows(data.rows || []);
-      } catch {
-        return "";
-      }
+      } catch { return ""; }
     }
 
-    async function writeEventTitleViaSubmit(title){
-      // Append a control row using existing submit fields
+    async function writeEventTitle(title){
+      // Append a control row using existing submit pipeline
       const today = ayptDay(new Date());
       return await jsonp(SCRIPT_URL, {
         firstName: EVENT_MARKER,
         lastName: today,
-        cellNumber: "", // unused
+        cellNumber: "",
         notes: title
       });
     }
@@ -416,25 +422,25 @@
       const banner = document.getElementById('eventBanner');
       const textEl = document.getElementById('eventTitleText');
       const currEl = document.getElementById('eventTitleCurrent');
-      if (currEl) currEl.textContent = title ? title : '(none)';
-      if (title) {
-        if (textEl) textEl.textContent = title;
-        if (banner) banner.style.display = 'block';
-      } else {
-        if (textEl) textEl.textContent = '';
-        if (banner) banner.style.display = 'none';
+      if(currEl) currEl.textContent = title ? title : '(none)';
+      if(title){
+        if(textEl) textEl.textContent = title;
+        if(banner) banner.style.display = 'block';
+      }else{
+        if(textEl) textEl.textContent = '';
+        if(banner) banner.style.display = 'none';
       }
     }
 
     // ==============================
     // ADMIN PASSCODE GATE
     // ==============================
-    function requireAdminAccess() {
+    function requireAdminAccess(){
       const stored = sessionStorage.getItem("ayptAdminOK");
-      if (stored === "true") return true;
+      if(stored === "true") return true;
       const code = prompt("Enter admin passcode:");
-      if (code === ADMIN_CODE) {
-        sessionStorage.setItem("ayptAdminOK", "true");
+      if(code === ADMIN_CODE){
+        sessionStorage.setItem("ayptAdminOK","true");
         return true;
       }
       alert("Incorrect code. Returning to player form.");
@@ -446,38 +452,47 @@
     // INIT
     // ==============================
     document.addEventListener("DOMContentLoaded", async () => {
-      // Phone input mask
+      // Phone input wiring (single, clean, caret-safe)
       const cellInput = document.getElementById("cellNumber");
-      if (cellInput) {
+      if(cellInput){
         cellInput.addEventListener("input", () => {
-          const caret = cellInput.selectionStart;
           const before = cellInput.value;
-          cellInput.value = formatUSPhone(before);
-          try { cellInput.setSelectionRange(caret, caret); } catch (_) {}
-          const d = digitsOnly(cellInput.value);
-          const ok = isValidUSPhoneDigits(d);
-          cellInput.classList.toggle("is-invalid", !ok && d.length > 0);
+          const caret = cellInput.selectionStart ?? before.length;
+          const leftDigits = digitsOnly(before.slice(0, caret)).slice(0, 11).length;
+          const digits = digitsOnly(before).slice(0, 11);
+          const formatted = formatFromDigits(digits);
+          cellInput.value = formatted;
+          setCaretByDigitIndex(cellInput, leftDigits, formatted);
+          const ok = isValidUSPhoneDigits(digits);
+          cellInput.classList.toggle("is-invalid", !ok && digits.length > 0);
+        });
+        cellInput.addEventListener("paste", (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData || window.clipboardData).getData("text") || "";
+          const digits = digitsOnly(text).slice(0, 11);
+          const formatted = formatFromDigits(digits);
+          document.execCommand("insertText", false, formatted);
         });
         cellInput.addEventListener("blur", () => {
-          const d = digitsOnly(cellInput.value);
-          const ok = isValidUSPhoneDigits(d);
+          const digits = digitsOnly(cellInput.value).slice(0, 11);
+          const ok = isValidUSPhoneDigits(digits);
           cellInput.classList.toggle("is-invalid", !ok);
-          if (ok) cellInput.value = formatUSPhone(cellInput.value);
+          cellInput.value = formatFromDigits(digits);
         });
       }
 
-      // Load event title on both views
+      // Load event title for both views on start
       try {
-        const title = await readEventTitleViaList();
-        applyEventBanner(title);
+        const t = await readEventTitle();
+        applyEventBanner(t);
         const input = document.getElementById('eventTitleInput');
-        if (input) input.value = title;
-      } catch (_) {}
+        if(input) input.value = t;
+      } catch {}
 
       const adminReq = isAdminRequest();
 
-      if (adminReq) {
-        if (!requireAdminAccess()) return;
+      if(adminReq){
+        if(!requireAdminAccess()) return;
         $("#formView").classList.add("d-none");
         $("#adminView").classList.remove("d-none");
         $("#subtitle").textContent = "Admin view - live list from Google Sheets.";
@@ -486,42 +501,36 @@
         wireAdminTableEvents();
         loadAdminTable();
 
-        // Save and Clear event title
+        // Save/Clear event title
         const saveBtn  = document.getElementById('saveEventTitleBtn');
         const clearBtn = document.getElementById('clearEventTitleBtn');
         const input    = document.getElementById('eventTitleInput');
         const statusEl = document.getElementById('eventTitleStatus');
 
-        if (saveBtn && input) {
+        if(saveBtn && input){
           saveBtn.addEventListener('click', async () => {
             const title = String(input.value || '').trim();
-            try {
-              await writeEventTitleViaSubmit(title);
-              statusEl.textContent = 'Saved.';
+            try{
+              await writeEventTitle(title);
               applyEventBanner(title);
+              statusEl.textContent = 'Saved.';
               setTimeout(()=> statusEl.textContent = '', 1200);
-            } catch (e) {
-              console.error(e);
-              statusEl.textContent = 'Save failed.';
-            }
+            }catch(e){ console.error(e); statusEl.textContent = 'Save failed.'; }
           });
         }
-        if (clearBtn) {
+        if(clearBtn){
           clearBtn.addEventListener('click', async () => {
-            try {
-              await writeEventTitleViaSubmit('');
-              if (document.getElementById('eventTitleInput')) document.getElementById('eventTitleInput').value = '';
+            try{
+              await writeEventTitle('');
+              if(document.getElementById('eventTitleInput')) document.getElementById('eventTitleInput').value = '';
               applyEventBanner('');
               statusEl.textContent = 'Cleared.';
               setTimeout(()=> statusEl.textContent = '', 1200);
-            } catch (e) {
-              console.error(e);
-              statusEl.textContent = 'Clear failed.';
-            }
+            }catch(e){ console.error(e); statusEl.textContent = 'Clear failed.'; }
           });
         }
 
-      } else {
+      }else{
         $("#formView").classList.remove("d-none");
         $("#adminView").classList.add("d-none");
         $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
@@ -530,9 +539,9 @@
         $("#modeSwitch").textContent = "Admin View";
         $("#ayptForm").addEventListener("submit", handleSubmit);
 
-        // Light poll so 3 AM reset is noticed on idle tablets
+        // Light poll so open tablets drop the banner right after 3 AM
         setInterval(async () => {
-          try { const t = await readEventTitleViaList(); applyEventBanner(t); } catch(_) {}
+          try{ const t = await readEventTitle(); applyEventBanner(t); } catch {}
         }, 60 * 1000);
       }
     });
