@@ -154,418 +154,421 @@
   </div>
 
   <script>
-    // ==============================
-    // CONFIG
-    // ==============================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
-    const ADMIN_CODE = "2580";
-    const EVENT_MARKER = "__EVENT__"; // control row marker (firstName)
+  // ==============================
+  // CONFIG
+  // ==============================
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
+  const ADMIN_CODE = "2580";
+  const EVENT_MARKER = "__EVENT__";    // control row marker in First Name
+  const CLEAR_MARKER = "__CLEAR__";    // explicit clear so we never write blank rows
 
-    // ==============================
-    // UTILITIES
-    // ==============================
-    const $ = (sel, root=document) => root.querySelector(sel);
-    function isAdminRequest(){ return new URLSearchParams(location.search).get("admin") === "1"; }
+  // ==============================
+  // UTILITIES
+  // ==============================
+  const $ = (sel, root=document) => root.querySelector(sel);
+  function isAdminRequest(){ return new URLSearchParams(location.search).get("admin") === "1"; }
 
-    function setBusy(b){
-      const btn = $("#submitBtn"); if(!btn) return;
-      btn.disabled = b;
-      $("#btnIdle").classList.toggle("d-none", b);
-      $("#btnBusy").classList.toggle("d-none", !b);
-    }
+  function setBusy(b){
+    const btn = $("#submitBtn"); if(!btn) return;
+    btn.disabled = b;
+    $("#btnIdle").classList.toggle("d-none", b);
+    $("#btnBusy").classList.toggle("d-none", !b);
+  }
 
-    function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
-    function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+  function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
 
-    // JSONP helper
-    function jsonp(url, params = {}, timeoutMs = 12000){
-      return new Promise((resolve, reject) => {
-        const cb = "AYPT_CB_" + Math.random().toString(36).slice(2);
-        params.callback = cb;
-        const qs = new URLSearchParams(params).toString();
-        const s = document.createElement("script");
-        s.src = `${url}?${qs}`;
-        s.id  = cb;
-        const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
-        window[cb] = (data) => { cleanup(); resolve(data); };
-        function cleanup(){
-          clearTimeout(timeout);
-          const el = document.getElementById(cb); if (el) el.remove();
-          try { delete window[cb]; } catch(_) { window[cb] = undefined; }
-        }
-        document.body.appendChild(s);
-      });
-    }
-
-    // ==============================
-    // PHONE MASK (caret-safe, paste-safe)
-    // ==============================
-    function digitsOnly(str){ return String(str||"").replace(/\D+/g,""); }
-    function isValidUSPhoneDigits(d){
-      if(d.length === 11 && d.startsWith("1")) d = d.slice(1);
-      if(d.length !== 10) return false;
-      const area = d.slice(0,3), exch = d.slice(3,6);
-      return (area[0] >= "2" && exch[0] >= "2");
-    }
-    function formatFromDigits(d){
-      let lead = "";
-      if(d.startsWith("1")){ lead = "1 "; d = d.slice(1); }
-      if(d.length <= 3) return lead + d;
-      if(d.length <= 6) return `${lead}(${d.slice(0,3)}) ${d.slice(3)}`;
-      return `${lead}(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
-    }
-    function setCaretByDigitIndex(input, digitIndex, formatted){
-      if(typeof input.setSelectionRange !== "function") return;
-      if(digitIndex <= 0){
-        const first = formatted.search(/\d/);
-        const pos = first === -1 ? formatted.length : first;
-        try{ input.setSelectionRange(pos, pos); }catch(_){}
-        return;
+  // JSONP helper
+  function jsonp(url, params = {}, timeoutMs = 12000){
+    return new Promise((resolve, reject) => {
+      const cb = "AYPT_CB_" + Math.random().toString(36).slice(2);
+      params.callback = cb;
+      const qs = new URLSearchParams(params).toString();
+      const s = document.createElement("script");
+      s.src = `${url}?${qs}`;
+      s.id  = cb;
+      const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
+      window[cb] = (data) => { cleanup(); resolve(data); };
+      function cleanup(){
+        clearTimeout(timeout);
+        const el = document.getElementById(cb); if (el) el.remove();
+        try { delete window[cb]; } catch(_) { window[cb] = undefined; }
       }
-      let count = 0, i = 0;
-      for(; i < formatted.length; i++){
-        if(/\d/.test(formatted[i])) count++;
-        if(count >= digitIndex) break;
-      }
-      const pos = Math.min(i+1, formatted.length);
+      document.body.appendChild(s);
+    });
+  }
+
+  // ==============================
+  // PHONE MASK (caret-safe)
+  // ==============================
+  function digitsOnly(str){ return String(str||"").replace(/\D+/g,""); }
+  function isValidUSPhoneDigits(d){
+    if(d.length === 11 && d.startsWith("1")) d = d.slice(1);
+    if(d.length !== 10) return false;
+    const area = d.slice(0,3), exch = d.slice(3,6);
+    return (area[0] >= "2" && exch[0] >= "2");
+  }
+  function formatFromDigits(d){
+    let lead = "";
+    if(d.startsWith("1")){ lead = "1 "; d = d.slice(1); }
+    if(d.length <= 3) return lead + d;
+    if(d.length <= 6) return `${lead}(${d.slice(0,3)}) ${d.slice(3)}`;
+    return `${lead}(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
+  }
+  function setCaretByDigitIndex(input, digitIndex, formatted){
+    if(typeof input.setSelectionRange !== "function") return;
+    if(digitIndex <= 0){
+      const first = formatted.search(/\d/);
+      const pos = first === -1 ? formatted.length : first;
       try{ input.setSelectionRange(pos, pos); }catch(_){}
+      return;
     }
+    let count = 0, i = 0;
+    for(; i < formatted.length; i++){
+      if(/\d/.test(formatted[i])) count++;
+      if(count >= digitIndex) break;
+    }
+    const pos = Math.min(i+1, formatted.length);
+    try{ input.setSelectionRange(pos, pos); }catch(_){}
+  }
 
-    // ==============================
-    // AYPT DAY (flips 3:00 AM America/Chicago)
-    // ==============================
-    function chicagoHour(now=new Date()){
-      return parseInt(new Intl.DateTimeFormat('en-US',{ timeZone:'America/Chicago', hour:'2-digit', hour12:false }).format(now),10);
+  // ==============================
+  // AYPT DAY (flips 3:00 AM America/Chicago)
+  // ==============================
+  function chicagoHour(now=new Date()){
+    return parseInt(new Intl.DateTimeFormat('en-US',{ timeZone:'America/Chicago', hour:'2-digit', hour12:false }).format(now),10);
+  }
+  function chicagoYMD(now=new Date()){
+    return new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Chicago', year:'numeric', month:'2-digit', day:'2-digit' }).format(now);
+  }
+  function ayptDay(now=new Date()){
+    let ymd = chicagoYMD(now);
+    const h = chicagoHour(now);
+    if(h < 3){
+      const [y,m,d] = ymd.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m-1, d));
+      dt.setUTCDate(dt.getUTCDate()-1);
+      const y2 = dt.getUTCFullYear();
+      const m2 = String(dt.getUTCMonth()+1).padStart(2,'0');
+      const d2 = String(dt.getUTCDate()).padStart(2,'0');
+      ymd = `${y2}-${m2}-${d2}`;
     }
-    function chicagoYMD(now=new Date()){
-      return new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Chicago', year:'numeric', month:'2-digit', day:'2-digit' }).format(now);
-    }
-    function ayptDay(now=new Date()){
-      let ymd = chicagoYMD(now);
-      const h = chicagoHour(now);
-      if(h < 3){
-        const [y,m,d] = ymd.split('-').map(Number);
-        const dt = new Date(Date.UTC(y, m-1, d));
-        dt.setUTCDate(dt.getUTCDate()-1);
-        const y2 = dt.getUTCFullYear();
-        const m2 = String(dt.getUTCMonth()+1).padStart(2,'0');
-        const d2 = String(dt.getUTCDate()).padStart(2,'0');
-        ymd = `${y2}-${m2}-${d2}`;
-      }
-      return ymd;
-    }
+    return ymd;
+  }
 
-    // ==============================
-    // EVENT TITLE via control row (robust)
-    // ==============================
-    let lastKnownTitle = ""; // never hide banner for today if a transient empty read happens
+  // ==============================
+  // EVENT TITLE via control row (robust)
+  // ==============================
+  let lastKnownTitle = "";
 
-    function extractTodayEventTitleFromRows(rows){
-      const today = ayptDay(new Date());
-      // choose the latest control row for today by highest row id
-      let latest = null;
-      for(const r of rows){
-        if(r.firstName === EVENT_MARKER && r.lastName === today){
+  function extractTodayEventTitleFromRows(rows){
+    const today = ayptDay(new Date());
+    // choose the latest control row for today that has a non-empty, non-clear title
+    let latest = null;
+    for(const r of rows){
+      if(r.firstName === EVENT_MARKER && r.lastName === today){
+        const title = String(r.notes || "").trim();
+        if(title && title !== CLEAR_MARKER){
           if(!latest || (r.id|0) > (latest.id|0)) latest = r;
         }
       }
-      return latest ? String(latest.notes || "").trim() : "";
     }
+    return latest ? String(latest.notes || "").trim() : "";
+  }
 
-    async function fetchEventTitle(){
-      try{
-        const data = await jsonp(SCRIPT_URL, { list:"1" });
-        if(!data || !data.ok) return "";
-        return extractTodayEventTitleFromRows(data.rows || []);
-      }catch{ return ""; }
-    }
+  async function fetchEventTitle(){
+    try{
+      const data = await jsonp(SCRIPT_URL, { list:"1" });
+      if(!data || !data.ok) return "";
+      return extractTodayEventTitleFromRows(data.rows || []);
+    }catch{ return ""; }
+  }
 
-    async function refreshEventTitle({force=false}={}){
-      const t = await fetchEventTitle();
-      // fallback to cached value if the new read is empty (avoid flicker/hide)
-      const newTitle = t || (!force ? lastKnownTitle : "");
-      lastKnownTitle = newTitle;
-      applyEventBanner(newTitle);
-      const input = document.getElementById('eventTitleInput');
-      if(input && document.activeElement !== input) input.value = newTitle;
-      return newTitle;
-    }
+  async function refreshEventTitle(){
+    const t = await fetchEventTitle();
+    const newTitle = t || lastKnownTitle; // never flicker to empty
+    lastKnownTitle = newTitle;
+    applyEventBanner(newTitle);
+    const input = document.getElementById('eventTitleInput');
+    if(input && document.activeElement !== input) input.value = newTitle;
+    const curr = document.getElementById('eventTitleCurrent');
+    if(curr) curr.textContent = newTitle || '(none)';
+    return newTitle;
+  }
 
-    async function writeEventTitle(title){
-      const today = ayptDay(new Date());
-      await jsonp(SCRIPT_URL, {
-        firstName: EVENT_MARKER,
-        lastName: today,
-        cellNumber: "",
-        notes: title
-      });
-      lastKnownTitle = title;
-      applyEventBanner(title);
-    }
-
-    function applyEventBanner(title){
-      const banner = document.getElementById('eventBanner');
-      const textEl = document.getElementById('eventTitleText');
-      const currEl = document.getElementById('eventTitleCurrent');
-      if(currEl) currEl.textContent = title ? title : '(none)';
-      if(title){
-        if(textEl) textEl.textContent = title;
-        if(banner) banner.style.display = 'block';
-      }else{
-        // only hide if we truly have nothing cached for today
-        if(!lastKnownTitle){
-          if(textEl) textEl.textContent = '';
-          if(banner) banner.style.display = 'none';
-        }
-      }
-    }
-
-    // ==============================
-    // PLAYER FORM SUBMIT
-    // ==============================
-    async function handleSubmit(e){
-      e.preventDefault();
-      const responseEl = $("#response");
-      responseEl.textContent = "";
-
-      const firstName = $("#firstName").value.trim();
-      const lastName  = $("#lastName").value.trim();
-      const cellRaw   = $("#cellNumber").value;
-      const notes     = $("#notes").value.trim();
-
-      if(!firstName || !lastName){
-        responseEl.textContent = "Please complete First and Last.";
-        return;
-      }
-
-      const d = digitsOnly(cellRaw);
-      if(!isValidUSPhoneDigits(d)){
-        $("#cellNumber").classList.add("is-invalid");
-        responseEl.textContent = "Please enter a valid US cell number.";
-        return;
-      }
-
-      const cell = (function normalizePhone(str){
-        const d = digitsOnly(String(str||"").trim());
-        if(d.length === 11 && d.startsWith("1")) return "+1" + d.slice(1);
-        if(d.length === 10) return "+1" + d;
-        return String(str||"").trim();
-      })(cellRaw);
-
-      setBusy(true);
-      try {
-        const data = await jsonp(SCRIPT_URL, { firstName, lastName, cellNumber: cell, notes });
-        if (data && (data.ok || data.result === "success")) {
-          responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you at 8PM!! PLAY PUCK</strong>`;
-          $("#ayptForm").reset();
-          $("#cellNumber").classList.remove("is-invalid");
-          // re-check the event title after adds
-          refreshEventTitle();
-        } else {
-          responseEl.textContent = "Error: " + (data && data.message ? data.message : "Submission failed");
-        }
-      } catch (err) {
-        console.error(err);
-        responseEl.textContent = "Submission timed out. Please try again.";
-      } finally {
-        setBusy(false);
-      }
-    }
-
-    // ==============================
-    // ADMIN LIST
-    // ==============================
-    async function loadAdminTable(){
-      const statusEl = $("#status");
-      const tbody = $("#signupTable tbody");
-      statusEl.textContent = "Loading…";
-      tbody.innerHTML = "";
-
-      try {
-        const data = await jsonp(SCRIPT_URL, { list: "1" });
-        if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
-        const rows = data.rows || [];
-
-        rows.forEach((r) => {
-          // Hide control rows in admin table
-          if (r.firstName === EVENT_MARKER) return;
-
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td class="text-muted">${esc(r.id)}</td>
-            <td>${esc(r.firstName)}</td>
-            <td>${esc(r.lastName)}</td>
-            <td><a class="text-decoration-none" href="tel:${esc(r.cell)}">${esc(r.cell)}</a></td>
-            <td>${esc(r.notes)}</td>
-            <td>${fmtLocal(r.timestamp)}</td>
-            <td class="text-center">
-              <input type="checkbox" class="form-check-input paid-toggle" data-id="${esc(r.id)}" ${r.paid ? "checked" : ""}>
-            </td>
-            <td>
-              <textarea class="form-control admin-note" rows="2" data-id="${esc(r.id)}" placeholder="Private admin notes...">${esc(r.adminNotes || "")}</textarea>
-              <span class="saved-dot" id="saved-${esc(r.id)}" title="Saved"></span>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        const count = rows.filter(r => r.firstName !== EVENT_MARKER).length;
-        statusEl.textContent = `${count} signups loaded`;
-      } catch (e) {
-        console.error(e);
-        statusEl.textContent = "Failed to load signups.";
-      }
-    }
-
-    // Paid toggle + notes saving
-    function wireAdminTableEvents(){
-      const table = document.getElementById('signupTable');
-      if(!table || table.dataset.wired === '1') return;
-      table.dataset.wired = '1';
-
-      table.addEventListener('change', async (e) => {
-        const t = e.target;
-        if(!t.matches('.paid-toggle')) return;
-        const id = t.getAttribute('data-id');
-        const paid = t.checked ? '1' : '0';
-        try { await jsonp(SCRIPT_URL, { update:'1', id, paid }); pulseSaved(id); }
-        catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to update Paid.'; }
-      });
-
-      let noteTimer = null;
-      table.addEventListener('input', (e) => {
-        const t = e.target;
-        if(!t.matches('.admin-note')) return;
-        const id = t.getAttribute('data-id');
-        const v  = t.value;
-        clearTimeout(noteTimer);
-        noteTimer = setTimeout(async () => {
-          try { await jsonp(SCRIPT_URL, { update:'1', id, adminNote:v }); pulseSaved(id); }
-          catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to save admin notes.'; }
-        }, 350);
-      });
-    }
-
-    function pulseSaved(id){
-      const dot = document.getElementById(`saved-${id}`);
-      if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
-    }
-
-    // ==============================
-    // ADMIN PASSCODE GATE
-    // ==============================
-    function requireAdminAccess(){
-      const stored = sessionStorage.getItem("ayptAdminOK");
-      if(stored === "true") return true;
-      const code = prompt("Enter admin passcode:");
-      if(code === ADMIN_CODE){
-        sessionStorage.setItem("ayptAdminOK","true");
-        return true;
-      }
-      alert("Incorrect code. Returning to player form.");
-      window.location.href = location.pathname;
-      return false;
-    }
-
-    // ==============================
-    // INIT
-    // ==============================
-    document.addEventListener("DOMContentLoaded", async () => {
-      // Phone input wiring
-      const cellInput = document.getElementById("cellNumber");
-      if(cellInput){
-        cellInput.addEventListener("input", () => {
-          const before = cellInput.value;
-          const caret = cellInput.selectionStart ?? before.length;
-          const leftDigits = digitsOnly(before.slice(0, caret)).slice(0, 11).length;
-          const digits = digitsOnly(before).slice(0, 11);
-          const formatted = formatFromDigits(digits);
-          cellInput.value = formatted;
-          setCaretByDigitIndex(cellInput, leftDigits, formatted);
-          const ok = isValidUSPhoneDigits(digits);
-          cellInput.classList.toggle("is-invalid", !ok && digits.length > 0);
-        });
-        cellInput.addEventListener("paste", (e) => {
-          e.preventDefault();
-          const text = (e.clipboardData || window.clipboardData).getData("text") || "";
-          const digits = digitsOnly(text).slice(0, 11);
-          const formatted = formatFromDigits(digits);
-          document.execCommand("insertText", false, formatted);
-        });
-        cellInput.addEventListener("blur", () => {
-          const digits = digitsOnly(cellInput.value).slice(0, 11);
-          const ok = isValidUSPhoneDigits(digits);
-          cellInput.classList.toggle("is-invalid", !ok);
-          cellInput.value = formatFromDigits(digits);
-        });
-      }
-
-      // Seed banner from sheet and cache
-      await refreshEventTitle();
-
-      const adminReq = isAdminRequest();
-
-      if(adminReq){
-        if(!requireAdminAccess()) return;
-        $("#formView").classList.add("d-none");
-        $("#adminView").classList.remove("d-none");
-        $("#subtitle").textContent = "Admin view - live list from Google Sheets.";
-        $("#modeSwitch").href = location.pathname;
-        $("#modeSwitch").textContent = "Player Form";
-        wireAdminTableEvents();
-        loadAdminTable();
-
-        // Save/Clear event title
-        const saveBtn  = document.getElementById('saveEventTitleBtn');
-        const clearBtn = document.getElementById('clearEventTitleBtn');
-        const input    = document.getElementById('eventTitleInput');
-        const statusEl = document.getElementById('eventTitleStatus');
-
-        if(saveBtn && input){
-          saveBtn.addEventListener('click', async () => {
-            const title = String(input.value || '').trim();
-            try{
-              await writeEventTitle(title);
-              await refreshEventTitle({force:true});
-              statusEl.textContent = 'Saved.';
-              setTimeout(()=> statusEl.textContent = '', 1200);
-            }catch(e){ console.error(e); statusEl.textContent = 'Save failed.'; }
-          });
-        }
-        if(clearBtn){
-          clearBtn.addEventListener('click', async () => {
-            try{
-              await writeEventTitle('');
-              lastKnownTitle = '';
-              await refreshEventTitle({force:true});
-              statusEl.textContent = 'Cleared.';
-              setTimeout(()=> statusEl.textContent = '', 1200);
-            }catch(e){ console.error(e); statusEl.textContent = 'Clear failed.'; }
-          });
-        }
-
-        // Admin refresh now also re-pulls title
-        const refreshBtn = document.getElementById('refreshBtn');
-        if(refreshBtn){
-          refreshBtn.addEventListener('click', async () => {
-            await loadAdminTable();
-            await refreshEventTitle();
-          });
-        }
-
-      }else{
-        $("#formView").classList.remove("d-none");
-        $("#adminView").classList.add("d-none");
-        $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
-        const u = new URL(location.href); u.searchParams.set("admin","1");
-        $("#modeSwitch").href = u.toString();
-        $("#modeSwitch").textContent = "Admin View";
-        $("#ayptForm").addEventListener("submit", handleSubmit);
-
-        // Minute poll so open tablets keep the banner fresh across devices and after 3 AM flip
-        setInterval(refreshEventTitle, 60 * 1000);
-      }
+  async function writeEventTitle(title){
+    const today = ayptDay(new Date());
+    const payloadTitle = String(title || "").trim() || CLEAR_MARKER;
+    await jsonp(SCRIPT_URL, {
+      firstName: EVENT_MARKER,
+      lastName: today,
+      cellNumber: "",
+      notes: payloadTitle
     });
-  </script>
+    if(payloadTitle === CLEAR_MARKER){
+      lastKnownTitle = "";
+      applyEventBanner("");
+    }else{
+      lastKnownTitle = payloadTitle;
+      applyEventBanner(payloadTitle);
+    }
+  }
+
+  function applyEventBanner(title){
+    const banner = document.getElementById('eventBanner');
+    const textEl = document.getElementById('eventTitleText');
+    if(title){
+      if(textEl) textEl.textContent = title;
+      if(banner) banner.style.display = 'block';
+    }else{
+      if(textEl) textEl.textContent = '';
+      if(banner) banner.style.display = 'none';
+    }
+  }
+
+  // ==============================
+  // PLAYER FORM SUBMIT
+  // ==============================
+  async function handleSubmit(e){
+    e.preventDefault();
+    const responseEl = $("#response");
+    responseEl.textContent = "";
+
+    const firstName = $("#firstName").value.trim();
+    const lastName  = $("#lastName").value.trim();
+    const cellRaw   = $("#cellNumber").value;
+    const notes     = $("#notes").value.trim();
+
+    if(!firstName || !lastName){
+      responseEl.textContent = "Please complete First and Last.";
+      return;
+    }
+
+    const d = digitsOnly(cellRaw).slice(0, 11);
+    if(!isValidUSPhoneDigits(d)){
+      $("#cellNumber").classList.add("is-invalid");
+      responseEl.textContent = "Please enter a valid US cell number.";
+      return;
+    }
+
+    const cell = (function normalizePhone(str){
+      const dd = digitsOnly(String(str||"").trim());
+      if(dd.length === 11 && dd.startsWith("1")) return "+1" + dd.slice(1);
+      if(dd.length === 10) return "+1" + dd;
+      return String(str||"").trim();
+    })(cellRaw);
+
+    setBusy(true);
+    try {
+      const data = await jsonp(SCRIPT_URL, { firstName, lastName, cellNumber: cell, notes });
+      if (data && (data.ok || data.result === "success")) {
+        responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you at 8PM!! PLAY PUCK</strong>`;
+        $("#ayptForm").reset();
+        $("#cellNumber").classList.remove("is-invalid");
+        // keep banner stable
+        refreshEventTitle();
+      } else {
+        responseEl.textContent = "Error: " + (data && data.message ? data.message : "Submission failed");
+      }
+    } catch (err) {
+      console.error(err);
+      responseEl.textContent = "Submission timed out. Please try again.";
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ==============================
+  // ADMIN LIST
+  // ==============================
+  async function loadAdminTable(){
+    const statusEl = $("#status");
+    const tbody = $("#signupTable tbody");
+    statusEl.textContent = "Loading…";
+    tbody.innerHTML = "";
+
+    try {
+      const data = await jsonp(SCRIPT_URL, { list: "1" });
+      if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
+      const rows = data.rows || [];
+
+      rows.forEach((r) => {
+        // Hide control rows in admin table
+        if (r.firstName === EVENT_MARKER) return;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="text-muted">${esc(r.id)}</td>
+          <td>${esc(r.firstName)}</td>
+          <td>${esc(r.lastName)}</td>
+          <td><a class="text-decoration-none" href="tel:${esc(r.cell)}">${esc(r.cell)}</a></td>
+          <td>${esc(r.notes)}</td>
+          <td>${fmtLocal(r.timestamp)}</td>
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input paid-toggle" data-id="${esc(r.id)}" ${r.paid ? "checked" : ""}>
+          </td>
+          <td>
+            <textarea class="form-control admin-note" rows="2" data-id="${esc(r.id)}" placeholder="Private admin notes...">${esc(r.adminNotes || "")}</textarea>
+            <span class="saved-dot" id="saved-${esc(r.id)}" title="Saved"></span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const count = rows.filter(r => r.firstName !== EVENT_MARKER).length;
+      statusEl.textContent = `${count} signups loaded`;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "Failed to load signups.";
+    }
+  }
+
+  function wireAdminTableEvents(){
+    const table = document.getElementById('signupTable');
+    if(!table || table.dataset.wired === '1') return;
+    table.dataset.wired = '1';
+
+    table.addEventListener('change', async (e) => {
+      const t = e.target;
+      if(!t.matches('.paid-toggle')) return;
+      const id = t.getAttribute('data-id');
+      const paid = t.checked ? '1' : '0';
+      try { await jsonp(SCRIPT_URL, { update:'1', id, paid }); pulseSaved(id); }
+      catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to update Paid.'; }
+    });
+
+    let noteTimer = null;
+    table.addEventListener('input', (e) => {
+      const t = e.target;
+      if(!t.matches('.admin-note')) return;
+      const id = t.getAttribute('data-id');
+      const v  = t.value;
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(async () => {
+        try { await jsonp(SCRIPT_URL, { update:'1', id, adminNote:v }); pulseSaved(id); }
+        catch (err){ console.error(err); document.getElementById('status').textContent = 'Failed to save admin notes.'; }
+      }, 350);
+    });
+  }
+
+  function pulseSaved(id){
+    const dot = document.getElementById(`saved-${id}`);
+    if(dot){ dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
+  }
+
+  // ==============================
+  // ADMIN PASSCODE GATE
+  // ==============================
+  function requireAdminAccess(){
+    const stored = sessionStorage.getItem("ayptAdminOK");
+    if(stored === "true") return true;
+    const code = prompt("Enter admin passcode:");
+    if(code === ADMIN_CODE){
+      sessionStorage.setItem("ayptAdminOK","true");
+      return true;
+    }
+    alert("Incorrect code. Returning to player form.");
+    window.location.href = location.pathname;
+    return false;
+  }
+
+  // ==============================
+  // INIT
+  // ==============================
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Phone input wiring
+    const cellInput = document.getElementById("cellNumber");
+    if(cellInput){
+      cellInput.addEventListener("input", () => {
+        const before = cellInput.value;
+        const caret = cellInput.selectionStart ?? before.length;
+        const leftDigits = digitsOnly(before.slice(0, caret)).slice(0, 11).length;
+        const digits = digitsOnly(before).slice(0, 11);
+        const formatted = formatFromDigits(digits);
+        cellInput.value = formatted;
+        setCaretByDigitIndex(cellInput, leftDigits, formatted);
+        const ok = isValidUSPhoneDigits(digits);
+        cellInput.classList.toggle("is-invalid", !ok && digits.length > 0);
+      });
+      cellInput.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData("text") || "";
+        const digits = digitsOnly(text).slice(0, 11);
+        const formatted = formatFromDigits(digits);
+        document.execCommand("insertText", false, formatted);
+      });
+      cellInput.addEventListener("blur", () => {
+        const digits = digitsOnly(cellInput.value).slice(0, 11);
+        const ok = isValidUSPhoneDigits(digits);
+        cellInput.classList.toggle("is-invalid", !ok);
+        cellInput.value = formatFromDigits(digits);
+      });
+    }
+
+    // Seed banner
+    await refreshEventTitle();
+
+    const adminReq = isAdminRequest();
+
+    if(adminReq){
+      if(!requireAdminAccess()) return;
+      $("#formView").classList.add("d-none");
+      $("#adminView").classList.remove("d-none");
+      $("#subtitle").textContent = "Admin view - live list from Google Sheets.";
+      $("#modeSwitch").href = location.pathname;
+      $("#modeSwitch").textContent = "Player Form";
+      wireAdminTableEvents();
+      loadAdminTable();
+
+      // Event Title tool
+      const saveBtn  = document.getElementById('saveEventTitleBtn');
+      const clearBtn = document.getElementById('clearEventTitleBtn');
+      const input    = document.getElementById('eventTitleInput');
+      const statusEl = document.getElementById('eventTitleStatus');
+
+      if(saveBtn && input){
+        saveBtn.addEventListener('click', async () => {
+          const title = String(input.value || '').trim();
+          try{
+            await writeEventTitle(title);
+            await refreshEventTitle();
+            statusEl.textContent = 'Saved.';
+            setTimeout(()=> statusEl.textContent = '', 1200);
+          }catch(e){ console.error(e); statusEl.textContent = 'Save failed.'; }
+        });
+      }
+      if(clearBtn){
+        clearBtn.addEventListener('click', async () => {
+          try{
+            await writeEventTitle(''); // writes CLEAR_MARKER
+            await refreshEventTitle();
+            statusEl.textContent = 'Cleared.';
+            setTimeout(()=> statusEl.textContent = '', 1200);
+          }catch(e){ console.error(e); statusEl.textContent = 'Clear failed.'; }
+        });
+      }
+
+      const refreshBtn = document.getElementById('refreshBtn');
+      if(refreshBtn){
+        refreshBtn.addEventListener('click', async () => {
+          await loadAdminTable();
+          await refreshEventTitle();
+        });
+      }
+
+    }else{
+      $("#formView").classList.remove("d-none");
+      $("#adminView").classList.add("d-none");
+      $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
+      const u = new URL(location.href); u.searchParams.set("admin","1");
+      $("#modeSwitch").href = u.toString();
+      $("#modeSwitch").textContent = "Admin View";
+      $("#ayptForm").addEventListener("submit", handleSubmit);
+
+      // keep all tablets synced and handle 3 AM flip
+      setInterval(refreshEventTitle, 60 * 1000);
+    }
+  });
+</script>
 </body>
 </html>
