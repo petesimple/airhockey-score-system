@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Are You Playing Tonight?</title>
-  <!-- prevent favicon 404s -->
   <link rel="icon" type="image/png" href="AYPTlogo.png">
 
   <!-- Bootstrap 5 CSS + Icons -->
@@ -12,16 +11,37 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
-    :root{ --ah-bg:#000; --ah-panel:#0f0f10; --ah-border:#2d2f33; --ah-text:#f5f7fa; --ah-muted:#9aa1a9; }
+    :root{
+      --ah-bg:#000;
+      --ah-panel:#0f0f10;
+      --ah-border:#2d2f33;
+      --ah-text:#f5f7fa;
+      --ah-muted:#9aa1a9;
+
+      /* themeable vars - updated by scheduler */
+      --aypt-accent:#3ddc84;
+      --aypt-grad-a:#e53935;
+      --aypt-grad-b:#ffffff;
+      --aypt-grad-c:#1e88e5;
+      --aypt-hero-url: url('');
+    }
+
     body{ background:var(--ah-bg); color:var(--ah-text); }
     .ah-card{ background:var(--ah-panel); border:1px solid var(--ah-border); }
     .ah-muted{ color:var(--ah-muted); }
-    .btn-gradient{ background: linear-gradient(90deg, #e53935, #ffffff, #1e88e5); color:#000; font-weight:700; border:none; }
+
+    .btn-gradient{
+      background: linear-gradient(90deg, var(--aypt-grad-a), var(--aypt-grad-b), var(--aypt-grad-c));
+      color:#000; font-weight:700; border:none;
+    }
     .btn-gradient:hover{ opacity:.9; color:#000; }
+
     .table thead th{ position:sticky; top:0; z-index:1; background:#141519; }
+
     .admin-note{ width:100%; min-height:2.6rem; resize:vertical; }
     .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:#3ddc84; opacity:0; transition:opacity .2s ease; }
     .saved-dot.show{ opacity:1; }
+
     .aypt-logo {
       height: 40px;
       width: auto;
@@ -32,24 +52,57 @@
     @media (min-width: 768px) {
       .aypt-logo { height: 48px; }
     }
-    .form-label {
-      color: var(--ah-text) !important;
-      font-weight: 600;
+    .form-label { color: var(--ah-text) !important; font-weight: 600; }
+
+    /* hero band for themed image */
+    .aypt-hero{
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border:1px solid var(--ah-border);
+      background: #111;
+      min-height: 96px;
     }
+    .aypt-hero::before{
+      content:"";
+      position:absolute; inset:0;
+      background-image: var(--aypt-hero-url);
+      background-size: cover; background-position:center;
+      opacity:.22; filter: saturate(1.1);
+    }
+    .aypt-hero .inner{
+      position:relative; z-index:2;
+      padding:16px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .tag-accent{
+      display:inline-block; padding:4px 10px; border-radius:999px;
+      font-size:.8rem; font-weight:700; letter-spacing:.3px;
+      color:#000; background: var(--aypt-accent);
+    }
+    .sm-input{ font-size:.9rem; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
   </style>
 </head>
 <body>
   <div class="container py-4">
-    <div class="d-flex align-items-center gap-3">
-      <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
-      <div>
-        <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
-        <div class="ah-muted small" id="subtitle">
-          Fill out this form to get added to tonight's tournament list.
+    <div class="aypt-hero mb-3">
+      <div class="inner">
+        <img id="logoImg" src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
+        <div>
+          <h1 id="pageTitle" class="h4 fw-bold mb-1">Are You Playing Tonight?</h1>
+          <div class="d-flex align-items-center gap-2">
+            <span class="tag-accent">AYPT</span>
+            <div class="ah-muted small" id="subtitle">
+              Fill out this form to get added to tonight's tournament list.
+            </div>
+          </div>
+        </div>
+        <div class="ms-auto">
+          <a id="modeSwitch" class="btn btn-outline-light btn-sm" href="#">Switch View</a>
         </div>
       </div>
     </div>
-    <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
   </div>
 
   <!-- Player Form View -->
@@ -101,12 +154,13 @@
   </div>
 
   <!-- Admin View -->
-  <div id="adminView" class="d-none">
-    <div class="card ah-card shadow-sm">
+  <div id="adminView" class="d-none container">
+    <!-- Signups card -->
+    <div class="card ah-card shadow-sm mb-3">
       <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
         <h2 class="h5 mb-0 d-flex align-items-center gap-2">
           <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" style="height:28px;border-radius:6px" />
-          AYPT Signups (Admin)
+          AYPT Signups - Admin
         </h2>
         <div class="d-flex gap-2">
           <button id="refreshBtn" class="btn btn-outline-light btn-sm">
@@ -133,9 +187,87 @@
           </table>
         </div>
       </div>
-      <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
+      <div class="card-footer small ah-muted">Tip: tap a phone number to dial on mobile.</div>
     </div>
-    <div id="status" class="small ah-muted mt-2"></div>
+
+    <!-- THEME SCHEDULER -->
+    <div class="card ah-card shadow-sm">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h3 class="h5 mb-0"><i class="bi bi-calendar3 me-2"></i>Theme Schedule - Weekly plus Date Overrides</h3>
+        <div class="d-flex gap-2">
+          <button id="syncNow" class="btn btn-outline-light btn-sm"><i class="bi bi-cloud-arrow-down me-1"></i>Sync Now</button>
+          <button id="applyNow" class="btn btn-gradient btn-sm">Preview & Apply</button>
+          <button id="saveTheme" class="btn btn-outline-light btn-sm"><i class="bi bi-check2-circle me-1"></i>Save</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="small ah-muted mb-3">
+          Configure how the signup looks on weekly patterns or exact dates. Public view auto-applies the matching theme for today. Export or import JSON to share.
+        </p>
+
+        <!-- Weekly grid -->
+        <div class="table-responsive mb-3">
+          <table class="table table-dark align-middle">
+            <thead>
+              <tr>
+                <th style="min-width:110px;">Day</th>
+                <th>Title</th>
+                <th>Subtitle</th>
+                <th>Logo URL</th>
+                <th>Hero Image URL</th>
+                <th>Button Gradient (A,B,C)</th>
+                <th>Accent</th>
+              </tr>
+            </thead>
+            <tbody id="weekTbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Overrides -->
+        <div class="mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h4 class="h6 mb-0">Date Overrides</h4>
+            <button id="addOverride" class="btn btn-outline-light btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Override</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-dark align-middle">
+              <thead>
+                <tr>
+                  <th style="min-width:120px;">Date (YYYY-MM-DD)</th>
+                  <th>Title</th>
+                  <th>Subtitle</th>
+                  <th>Logo URL</th>
+                  <th>Hero Image URL</th>
+                  <th>Button Gradient (A,B,C)</th>
+                  <th>Accent</th>
+                  <th class="text-center">Remove</th>
+                </tr>
+              </thead>
+              <tbody id="overrideTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Export / Import -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Export JSON</label>
+            <textarea id="exportJson" class="form-control mono sm-input" rows="6" readonly></textarea>
+            <div class="small ah-muted mt-1">Copy to back it up or share.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Import JSON</label>
+            <textarea id="importJson" class="form-control mono sm-input" rows="6" placeholder='Paste a previously exported JSON here'></textarea>
+            <div class="mt-2 d-flex gap-2">
+              <button id="importBtn" class="btn btn-outline-light btn-sm">Import</button>
+              <button id="resetBtn" class="btn btn-outline-danger btn-sm">Reset to Defaults</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="small ah-muted mt-3" id="themeStatus"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -150,13 +282,8 @@
     // ==============================
     const $  = (sel, root=document) => root.querySelector(sel);
     function isAdminRequest(){ return new URLSearchParams(location.search).get("admin") === "1"; }
-
-    function setBusy(b){
-      const btn = $("#submitBtn"); if(!btn) return;
-      btn.disabled = b;
-      $("#btnIdle").classList.toggle("d-none", b);
-      $("#btnBusy").classList.toggle("d-none", !b);
-    }
+    const pad = (n)=> String(n).padStart(2,"0");
+    const WEEK = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
     function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
     function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
@@ -189,7 +316,7 @@
     // ==============================
     function digitsOnly(str){ return String(str||"").replace(/\D+/g,""); }
 
-    // NANP validity: allow 1 prefix, require 10 digits, area and exchange cannot start with 0 or 1
+    // NANP validity
     function isValidUSPhoneDigits(d){
       if(d.length === 11 && d.startsWith("1")) d = d.slice(1);
       if(d.length !== 10) return false;
@@ -207,7 +334,6 @@
       return `${lead}(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
     }
 
-    // Normalize to +1XXXXXXXXXX when possible
     function normalizePhone(str){
       const d = digitsOnly(String(str||"").trim());
       if (d.length === 11 && d.startsWith("1")) return "+1" + d.slice(1);
@@ -215,7 +341,6 @@
       return String(str||"").trim();
     }
 
-    // Restore caret by digit index after reformat
     function setCaretByDigitIndex(input, digitIndex, formatted){
       if(typeof input.setSelectionRange !== "function") return;
       if(digitIndex <= 0){
@@ -231,6 +356,268 @@
       }
       const pos = Math.min(i + 1, formatted.length);
       try{ input.setSelectionRange(pos, pos); } catch(_){}
+    }
+
+    // Busy state for submit button
+    function setBusy(b){
+      const btn = $("#submitBtn"); if(!btn) return;
+      btn.disabled = b;
+      $("#btnIdle").classList.toggle("d-none", b);
+      $("#btnBusy").classList.toggle("d-none", !b);
+    }
+
+    // ==============================
+    // THEME SCHEDULER - cloud sync via Apps Script + local cache
+    // ==============================
+    const THEME_KEY = "ayptThemeSchedule_v1";      // local cache key
+    const SETTINGS_KEY = "themeSchedule";          // remote key
+
+    const defaultTheme = {
+      title: "Are You Playing Tonight?",
+      subtitle: "Fill out this form to get added to tonight's tournament list.",
+      logo: "AYPTlogo.png",
+      hero: "",
+      grad: ["#e53935","#ffffff","#1e88e5"],
+      accent: "#3ddc84"
+    };
+    const defaultSchedule = {
+      weekly: {
+        Sun: {...defaultTheme, title:"Sunday Funday Doubles", grad:["#ff6a00","#ffd200","#00d2ff"], accent:"#ffd200"},
+        Mon: {...defaultTheme, title:"Monday League Night",   grad:["#7b4397","#dc2430","#ffb347"], accent:"#ffb347"},
+        Tue: {...defaultTheme, title:"Tuesday Training Lab",  grad:["#36d1dc","#5b86e5","#a1ffce"], accent:"#a1ffce"},
+        Wed: {...defaultTheme, title:"Wildcard Wednesday",    grad:["#ff512f","#dd2476","#24c6dc"], accent:"#24c6dc"},
+        Thu: {...defaultTheme, title:"Thirsty Thursday",      grad:["#00c6ff","#0072ff","#9be15d"], accent:"#9be15d"},
+        Fri: {...defaultTheme, title:"Friday Night Lights",   grad:["#f7971e","#ffd200","#ff512f"], accent:"#ffd200"},
+        Sat: {...defaultTheme, title:"Saturday Showdown",     grad:["#834d9b","#d04ed6","#ffe000"], accent:"#ffe000"},
+      },
+      overrides: []
+    };
+
+    function setThemeStatus(msg){
+      const el = $("#themeStatus"); if(el) el.textContent = msg;
+    }
+    function updateExportBox(){
+      const out = $("#exportJson");
+      if(out) out.value = localStorage.getItem(THEME_KEY) || "";
+    }
+    function normalizeSchedule(s) {
+      const sched = s || {};
+      if (!sched.weekly) sched.weekly = {};
+      if (!Array.isArray(sched.overrides)) sched.overrides = [];
+      for (const d of WEEK) {
+        if (!sched.weekly[d]) sched.weekly[d] = structuredClone(defaultTheme);
+      }
+      return sched;
+    }
+    function cacheGet(){
+      try { const raw = localStorage.getItem(THEME_KEY); if (!raw) return null; return JSON.parse(raw); }
+      catch{ return null; }
+    }
+    function cacheSet(sched){
+      localStorage.setItem(THEME_KEY, JSON.stringify(sched));
+      updateExportBox();
+    }
+
+    async function remoteGetSchedule(){
+      try{
+        const res = await jsonp(SCRIPT_URL, { settings:"1", key: SETTINGS_KEY });
+        if (res && res.ok && res.value) {
+          const sched = normalizeSchedule(res.value);
+          cacheSet(sched);
+          setThemeStatus("Fetched theme schedule from cloud.");
+          return sched;
+        }
+      } catch(e){
+        console.warn("remoteGetSchedule failed", e);
+      }
+      const cached = cacheGet();
+      if (cached) return normalizeSchedule(cached);
+      return structuredClone(defaultSchedule);
+    }
+    async function remoteSaveSchedule(sched){
+      try{
+        const res = await jsonp(SCRIPT_URL, {
+          saveSettings:"1",
+          key: SETTINGS_KEY,
+          value: JSON.stringify(sched)
+        });
+        if (res && res.ok) {
+          setThemeStatus("Saved theme schedule to cloud.");
+          return true;
+        }
+      } catch(e){
+        console.warn("remoteSaveSchedule failed", e);
+      }
+      setThemeStatus("Cloud save failed. Using local cache only.");
+      return false;
+    }
+
+    let _activeSchedule = null;
+
+    async function loadSchedule(){
+      const sched = await remoteGetSchedule();
+      _activeSchedule = sched;
+      return sched;
+    }
+    function saveSchedule(sched){
+      const s = normalizeSchedule(sched || _activeSchedule || defaultSchedule);
+      _activeSchedule = s;
+      cacheSet(s);
+      remoteSaveSchedule(s);
+    }
+
+    function applyTheme(theme){
+      document.documentElement.style.setProperty("--aypt-accent", theme.accent || defaultTheme.accent);
+      const [a,b,c] = Array.isArray(theme.grad) && theme.grad.length===3 ? theme.grad : defaultTheme.grad;
+      document.documentElement.style.setProperty("--aypt-grad-a", a);
+      document.documentElement.style.setProperty("--aypt-grad-b", b);
+      document.documentElement.style.setProperty("--aypt-grad-c", c);
+      const heroUrl = theme.hero ? `url('${theme.hero}')` : "url('')";
+      document.documentElement.style.setProperty("--aypt-hero-url", heroUrl);
+
+      $("#pageTitle").textContent = theme.title || defaultTheme.title;
+      $("#subtitle").textContent  = theme.subtitle || defaultTheme.subtitle;
+      $("#logoImg").src = theme.logo || defaultTheme.logo;
+    }
+
+    function resolveThemeFor(date=new Date()){
+      const sp = new URLSearchParams(location.search);
+      const force = sp.get("theme");
+      const weekday = WEEK[date.getDay()];
+      const key = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+      const sched = _activeSchedule || cacheGet() || defaultSchedule;
+
+      if(force){
+        const byDow = WEEK.includes(force) ? sched.weekly[force] : null;
+        const byDate = (sched.overrides||[]).find(o=>o.date===force);
+        return structuredClone(byDate || byDow || defaultTheme);
+      }
+      const exact = (sched.overrides||[]).find(o=>o.date===key);
+      if(exact) return structuredClone(exact);
+      return structuredClone(sched.weekly[weekday] || defaultTheme);
+    }
+
+    // Build admin tables
+    function renderWeekTable(){
+      const tb = $("#weekTbody");
+      tb.innerHTML = "";
+      const sched = _activeSchedule || cacheGet() || defaultSchedule;
+      for(const d of WEEK){
+        const t = sched.weekly[d] || defaultTheme;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="fw-semibold">${d}</td>
+          <td><input class="form-control form-control-sm sm-input wk-title" data-d="${d}" value="${esc(t.title)}"></td>
+          <td><input class="form-control form-control-sm sm-input wk-sub" data-d="${d}" value="${esc(t.subtitle)}"></td>
+          <td><input class="form-control form-control-sm sm-input wk-logo" data-d="${d}" value="${esc(t.logo||"")}"></td>
+          <td><input class="form-control form-control-sm sm-input wk-hero" data-d="${d}" value="${esc(t.hero||"")}"></td>
+          <td>
+            <div class="input-group input-group-sm">
+              <input class="form-control sm-input wk-ga" data-d="${d}" value="${esc(t.grad?.[0]||"")}">
+              <input class="form-control sm-input wk-gb" data-d="${d}" value="${esc(t.grad?.[1]||"")}">
+              <input class="form-control sm-input wk-gc" data-d="${d}" value="${esc(t.grad?.[2]||"")}">
+            </div>
+          </td>
+          <td><input class="form-control form-control-sm sm-input wk-acc" data-d="${d}" value="${esc(t.accent||"")}"></td>
+        `;
+        tb.appendChild(tr);
+      }
+      tb.addEventListener("input", onWeekChange);
+    }
+    function onWeekChange(e){
+      const el = e.target; const d = el.getAttribute("data-d"); if(!d) return;
+      const sched = _activeSchedule || cacheGet() || structuredClone(defaultSchedule);
+      const obj = sched.weekly[d] || (sched.weekly[d]={...defaultTheme});
+      if(el.classList.contains("wk-title")) obj.title = el.value;
+      if(el.classList.contains("wk-sub"))   obj.subtitle = el.value;
+      if(el.classList.contains("wk-logo"))  obj.logo = el.value;
+      if(el.classList.contains("wk-hero"))  obj.hero = el.value;
+      if(el.classList.contains("wk-ga") || el.classList.contains("wk-gb") || el.classList.contains("wk-gc")){
+        const row = el.closest("tr");
+        obj.grad = [
+          row.querySelector(".wk-ga").value || "",
+          row.querySelector(".wk-gb").value || "",
+          row.querySelector(".wk-gc").value || ""
+        ];
+      }
+      if(el.classList.contains("wk-acc"))   obj.accent = el.value;
+      saveSchedule(sched);
+      _activeSchedule = sched;
+    }
+
+    function renderOverrides(){
+      const tb = $("#overrideTbody");
+      tb.innerHTML = "";
+      const sched = _activeSchedule || cacheGet() || defaultSchedule;
+      for(const o of sched.overrides){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input class="form-control form-control-sm sm-input ov-date" value="${esc(o.date||"")}" placeholder="YYYY-MM-DD"></td>
+          <td><input class="form-control form-control-sm sm-input ov-title" value="${esc(o.title||"")}"></td>
+          <td><input class="form-control form-control-sm sm-input ov-sub" value="${esc(o.subtitle||"")}"></td>
+          <td><input class="form-control form-control-sm sm-input ov-logo" value="${esc(o.logo||"")}"></td>
+          <td><input class="form-control form-control-sm sm-input ov-hero" value="${esc(o.hero||"")}"></td>
+          <td>
+            <div class="input-group input-group-sm">
+              <input class="form-control sm-input ov-ga" value="${esc(o.grad?.[0]||"")}">
+              <input class="form-control sm-input ov-gb" value="${esc(o.grad?.[1]||"")}">
+              <input class="form-control sm-input ov-gc" value="${esc(o.grad?.[2]||"")}">
+            </div>
+          </td>
+          <td><input class="form-control form-control-sm sm-input ov-acc" value="${esc(o.accent||"")}"></td>
+          <td class="text-center">
+            <button class="btn btn-outline-danger btn-sm ov-del"><i class="bi bi-trash"></i></button>
+          </td>
+        `;
+        tb.appendChild(tr);
+      }
+      tb.addEventListener("click", (e)=>{
+        if(e.target.closest(".ov-del")){
+          const idx = [...tb.children].indexOf(e.target.closest("tr"));
+          const sched = _activeSchedule || cacheGet() || defaultSchedule;
+          sched.overrides.splice(idx,1);
+          saveSchedule(sched);
+          _activeSchedule = sched;
+          renderOverrides();
+        }
+      });
+      tb.addEventListener("input", (e)=>{
+        const tr = e.target.closest("tr");
+        const idx = [...tb.children].indexOf(tr);
+        const sched = _activeSchedule || cacheGet() || defaultSchedule;
+        const o = sched.overrides[idx];
+        o.date = tr.querySelector(".ov-date").value.trim();
+        o.title = tr.querySelector(".ov-title").value;
+        o.subtitle = tr.querySelector(".ov-sub").value;
+        o.logo = tr.querySelector(".ov-logo").value;
+        o.hero = tr.querySelector(".ov-hero").value;
+        o.grad = [
+          tr.querySelector(".ov-ga").value,
+          tr.querySelector(".ov-gb").value,
+          tr.querySelector(".ov-gc").value
+        ];
+        o.accent = tr.querySelector(".ov-acc").value;
+        saveSchedule(sched);
+        _activeSchedule = sched;
+      });
+    }
+
+    function addOverrideRow(){
+      const now = new Date();
+      const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      const sched = _activeSchedule || cacheGet() || defaultSchedule;
+      sched.overrides.push({
+        date: key,
+        title: "Special Event Night",
+        subtitle: "Signup unlocked til 7:45",
+        logo: "",
+        hero: "",
+        grad: ["#ff6a00","#ffd200","#00d2ff"],
+        accent:"#ffd200"
+      });
+      saveSchedule(sched);
+      _activeSchedule = sched;
+      renderOverrides();
     }
 
     // ==============================
@@ -282,9 +669,9 @@
     // ADMIN (LIST & UPDATE via JSONP)
     // ==============================
     async function loadAdminTable(){
-      const statusEl = $("#status");
+      const statusEl = $("#themeStatus");
       const tbody = $("#signupTable tbody");
-      statusEl.textContent = "Loading…";
+      if(statusEl) statusEl.textContent = "Loading signups…";
       tbody.innerHTML = "";
 
       try {
@@ -317,7 +704,7 @@
             const id = e.target.getAttribute("data-id");
             const paid = e.target.checked ? "1" : "0";
             try { await jsonp(SCRIPT_URL, { update: "1", id, paid }); pulseSaved(id); }
-            catch (err) { console.error(err); statusEl.textContent = "Failed to update Paid."; }
+            catch (err) { console.error(err); if(statusEl) statusEl.textContent = "Failed to update Paid."; }
           }
         });
 
@@ -329,15 +716,15 @@
             clearTimeout(noteTimer);
             noteTimer = setTimeout(async () => {
               try { await jsonp(SCRIPT_URL, { update: "1", id, adminNote: v }); pulseSaved(id); }
-              catch (err) { console.error(err); statusEl.textContent = "Failed to save admin notes."; }
+              catch (err) { console.error(err); if(statusEl) statusEl.textContent = "Failed to save admin notes."; }
             }, 350);
           }
         });
 
-        statusEl.textContent = `${rows.length} signups loaded`;
+        if(statusEl) statusEl.textContent = `${rows.length} signups loaded`;
       } catch (e) {
         console.error(e);
-        statusEl.textContent = "Failed to load signups.";
+        if(statusEl) statusEl.textContent = "Failed to load signups.";
       }
     }
 
@@ -365,7 +752,11 @@
     // ==============================
     // INIT
     // ==============================
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Load theme schedule from cloud or cache, then apply
+      await loadSchedule();
+      applyTheme(resolveThemeFor(new Date()));
+
       const adminReq = isAdminRequest();
 
       // Phone input caret-safe masking
@@ -374,34 +765,21 @@
 
       if (cellInput) {
         cellInput.addEventListener("compositionstart", () => { composing = true; });
-        cellInput.addEventListener("compositionend", () => {
-          composing = false;
-          remask();
-        });
+        cellInput.addEventListener("compositionend", () => { composing = false; remask(); });
 
         function remask(){
           if (composing) return;
           const before = cellInput.value;
           const caret = cellInput.selectionStart ?? before.length;
-
-          // number of digits to the left of the caret before reformat
           const digitIndexLeft = digitsOnly(before.slice(0, caret)).length;
-
-          // cap at 11 digits to allow optional leading 1
           const d = digitsOnly(before).slice(0, 11);
           const formatted = formatUSPhoneFromDigits(d);
-
-          // apply and restore caret by digit index
           cellInput.value = formatted;
           setCaretByDigitIndex(cellInput, digitIndexLeft, formatted);
-
-          // live validity cue
           const ok = isValidUSPhoneDigits(d);
           cellInput.classList.toggle("is-invalid", !ok && d.length > 0);
         }
-
         cellInput.addEventListener("input", remask);
-
         cellInput.addEventListener("paste", (e) => {
           e.preventDefault();
           const text = (e.clipboardData || window.clipboardData).getData("text") || "";
@@ -409,7 +787,6 @@
           const formatted = formatUSPhoneFromDigits(d);
           document.execCommand("insertText", false, formatted);
         });
-
         cellInput.addEventListener("blur", () => {
           const d = digitsOnly(cellInput.value);
           const ok = isValidUSPhoneDigits(d);
@@ -422,15 +799,53 @@
         if (!requireAdminAccess()) return;
         $("#formView").classList.add("d-none");
         $("#adminView").classList.remove("d-none");
-        $("#subtitle").textContent = "Admin view: live list from Google Sheets.";
+        $("#subtitle").textContent = "Admin view - live list from Google Sheets.";
         $("#modeSwitch").href = location.pathname;
         $("#modeSwitch").textContent = "Player Form";
+
+        // scheduler UI
+        renderWeekTable();
+        renderOverrides();
+        updateExportBox();
+
+        $("#addOverride").addEventListener("click", addOverrideRow);
+        $("#saveTheme").addEventListener("click", ()=> saveSchedule(_activeSchedule));
+        $("#applyNow").addEventListener("click", ()=>{
+          applyTheme(resolveThemeFor(new Date()));
+          setThemeStatus("Applied today's resolved theme to preview.");
+        });
+        $("#syncNow").addEventListener("click", async ()=>{
+          await loadSchedule();
+          renderWeekTable(); renderOverrides(); updateExportBox();
+          applyTheme(resolveThemeFor(new Date()));
+          setThemeStatus("Synced latest from cloud.");
+        });
+        $("#importBtn").addEventListener("click", ()=>{
+          try{
+            const val = $("#importJson").value.trim();
+            if(!val) return;
+            const parsed = JSON.parse(val);
+            cacheSet(parsed);
+            saveSchedule(parsed);
+            renderWeekTable(); renderOverrides(); updateExportBox();
+            applyTheme(resolveThemeFor(new Date()));
+            setThemeStatus("Import successful and synced.");
+          }catch{ setThemeStatus("Import failed. Check JSON."); }
+        });
+        $("#resetBtn").addEventListener("click", ()=>{
+          cacheSet(defaultSchedule);
+          saveSchedule(defaultSchedule);
+          renderWeekTable(); renderOverrides(); updateExportBox();
+          applyTheme(resolveThemeFor(new Date()));
+          setThemeStatus("Reset to defaults and synced.");
+        });
+
         loadAdminTable();
         $("#refreshBtn").addEventListener("click", loadAdminTable);
       } else {
         $("#formView").classList.remove("d-none");
         $("#adminView").classList.add("d-none");
-        $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
+        $("#subtitle").textContent = resolveThemeFor(new Date()).subtitle || "Fill out this form to get added to tonight's tournament list.";
         const u = new URL(location.href); u.searchParams.set("admin","1");
         $("#modeSwitch").href = u.toString();
         $("#modeSwitch").textContent = "Admin View";
