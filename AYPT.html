@@ -44,14 +44,10 @@
       <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
       <div>
         <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
-        <div id="today"></div>
-
-<script>
-  document.getElementById('today').textContent = showToday();
-</script>
-        <div class="ah-muted small" id="subtitle">
-          Fill out this form to get added to tonight's tournament list.
-        </div>
+<div id="today" class="ah-muted small"></div>
+<div class="ah-muted small" id="subtitle">
+  Fill out this form to get added to tonight's tournament list.
+</div>
       </div>
     </div>
     <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
@@ -357,6 +353,12 @@
     document.addEventListener("DOMContentLoaded", () => {
       const adminReq = isAdminRequest();
 
+
+      // set today label
+  const todayEl = document.getElementById("today");
+  if (todayEl) {
+    todayEl.textContent = "Tonight is " + showToday();
+  }
       // Wire up phone input live behavior if present
       const cellInput = document.getElementById("cellNumber");
       if (cellInput) {
