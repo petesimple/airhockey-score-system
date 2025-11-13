@@ -245,7 +245,7 @@
       try {
         const data = await jsonp(SCRIPT_URL, { firstName, lastName, cellNumber: cell, notes });
         if (data && (data.ok || data.result === "success")) {
-          responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you at 8PM!! PLAY PUCK</strong>`;
+          responseEl.innerHTML = `<strong>Thanks ${esc(firstName)}, you’re signed up ✅. See you tonight!! PLAY PUCK</strong>`;
           $("#ayptForm").reset();
           $("#cellNumber").classList.remove("is-invalid");
         } else {
