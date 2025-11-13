@@ -394,7 +394,7 @@
       } else {
         $("#formView").classList.remove("d-none");
         $("#adminView").classList.add("d-none");
-        $("#subtitle").textContent = "Fill out this form to get added to tonight's tournament list.";
+        $("#subtitle").textContent = "Fill out this form to get added to tonight's list.";
         const u = new URL(location.href); u.searchParams.set("admin","1");
         $("#modeSwitch").href = u.toString();
         $("#modeSwitch").textContent = "Admin View";
