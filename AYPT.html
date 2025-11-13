@@ -44,15 +44,14 @@
       <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
       <div>
         <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
-<div id="today" class="ah-muted small"></div>
-<div class="ah-muted small" id="subtitle">
-  Fill out this form to get added to tonight's list.
-</div>
+        <div id="today" class="ah-muted small"></div>
+        <div class="ah-muted small" id="subtitle">
+          Fill out this form to get added to tonight's list.
+        </div>
       </div>
     </div>
     <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
   </div>
-
 
   <!-- Player Form View -->
   <div id="formView" class="row justify-content-center">
@@ -68,8 +67,6 @@
               <div class="col-12 col-md-6">
                 <label for="lastName" class="form-label">Last Name</label>
                 <input type="text" id="lastName" class="form-control form-control-lg" required />
-
-
               </div>
               <div class="col-12">
                 <label for="cellNumber" class="form-label">Cell Number</label>
@@ -92,7 +89,6 @@
             </div>
           </form>
         </div>
-
       </div>
       <p class="text-center mt-3 small ah-muted">Admin view: append <code>?admin=1</code> to the URL.</p>
     </div>
@@ -110,7 +106,6 @@
           <button id="refreshBtn" class="btn btn-outline-light btn-sm">
             <i class="bi bi-arrow-clockwise me-1"></i> Refresh
           </button>
-
         </div>
       </div>
       <div class="card-body p-0">
@@ -131,10 +126,9 @@
             <tbody><!-- rows injected --></tbody>
           </table>
         </div>
-
       </div>
       <div class="card-footer small ah-muted">Tip: tap the phone number to dial on mobile.</div>
-      <div class="card-footer small ah-muted">(AYPT version 67)</div>
+      <div class="card-footer small ah-muted">(AYPT ver 67.1)</div>
     </div>
     <div id="status" class="small ah-muted mt-2"></div>
   </div>
@@ -189,8 +183,20 @@
       return String(str||"").trim();
     }
 
-    function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
-    function fmtLocal(iso){ if(!iso) return ""; try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+    function esc(s){ 
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
+    function fmtLocal(iso){ 
+      if(!iso) return ""; 
+      try { return new Date(iso).toLocaleString(); } 
+      catch { return iso; } 
+    }
 
     // JSONP helper (avoids CORS)
     function jsonp(url, params = {}, timeoutMs = 12000){
@@ -208,7 +214,8 @@
 
         function cleanup(){
           clearTimeout(timeout);
-          const el = document.getElementById(cb); if (el) el.remove();
+          const el = document.getElementById(cb); 
+          if (el) el.remove();
           try { delete window[cb]; } catch(_) { window[cb] = undefined; }
         }
         document.body.appendChild(s);
@@ -270,7 +277,6 @@
       tbody.innerHTML = "";
 
       try {
-
         const data = await jsonp(SCRIPT_URL, { list: "1" });
         if (!data || !data.ok) throw new Error(data && data.message || "Load failed");
         const rows = data.rows || [];
@@ -296,16 +302,20 @@
           tbody.appendChild(tr);
         });
 
-
         tbody.addEventListener("change", async (e) => {
           if (e.target.classList.contains("paid-toggle")) {
             const id = e.target.getAttribute("data-id");
             const paid = e.target.checked ? "1" : "0";
-            try { await jsonp(SCRIPT_URL, { update: "1", id, paid }); pulseSaved(id); }
-            catch (err) { console.error(err); statusEl.textContent = "Failed to update Paid."; }
+            try { 
+              await jsonp(SCRIPT_URL, { update: "1", id, paid }); 
+              pulseSaved(id); 
+            }
+            catch (err) { 
+              console.error(err); 
+              statusEl.textContent = "Failed to update Paid."; 
+            }
           }
         });
-
 
         let noteTimer = null;
         tbody.addEventListener("input", (e) => {
@@ -314,8 +324,14 @@
             const v = e.target.value;
             clearTimeout(noteTimer);
             noteTimer = setTimeout(async () => {
-              try { await jsonp(SCRIPT_URL, { update: "1", id, adminNote: v }); pulseSaved(id); }
-              catch (err) { console.error(err); statusEl.textContent = "Failed to save admin notes."; }
+              try { 
+                await jsonp(SCRIPT_URL, { update: "1", id, adminNote: v }); 
+                pulseSaved(id); 
+              }
+              catch (err) { 
+                console.error(err); 
+                statusEl.textContent = "Failed to save admin notes."; 
+              }
             }, 350);
           }
         });
@@ -329,7 +345,10 @@
 
     function pulseSaved(id){
       const dot = document.getElementById(`saved-${id}`);
-      if (dot) { dot.classList.add("show"); setTimeout(()=>dot.classList.remove("show"), 800); }
+      if (dot) { 
+        dot.classList.add("show"); 
+        setTimeout(()=>dot.classList.remove("show"), 800); 
+      }
     }
 
     // ==============================
@@ -354,20 +373,22 @@
     document.addEventListener("DOMContentLoaded", () => {
       const adminReq = isAdminRequest();
 
-
       // set today label
-  const todayEl = document.getElementById("today");
-  if (todayEl) {
-    todayEl.textContent = "Tonight is " + showToday();
-  }
+      const todayEl = document.getElementById("today");
+      if (todayEl) {
+        todayEl.textContent = "Tonight is " + showToday();
+      }
+
       // Wire up phone input live behavior if present
       const cellInput = document.getElementById("cellNumber");
       if (cellInput) {
         cellInput.addEventListener("input", () => {
-          const caret = cellInput.selectionStart;
           const before = cellInput.value;
           cellInput.value = formatUSPhone(before);
-          try { cellInput.setSelectionRange(caret, caret); } catch (_) {}
+          try {
+            const end = cellInput.value.length;
+            cellInput.setSelectionRange(end, end);
+          } catch (_) {}
 
           const d = digitsOnly(cellInput.value);
           const ok = isValidUSPhoneDigits(d);
@@ -395,17 +416,19 @@
         $("#formView").classList.remove("d-none");
         $("#adminView").classList.add("d-none");
         $("#subtitle").textContent = "Fill out this form to get added to tonight's list.";
-        const u = new URL(location.href); u.searchParams.set("admin","1");
+        const u = new URL(location.href); 
+        u.searchParams.set("admin","1");
         $("#modeSwitch").href = u.toString();
         $("#modeSwitch").textContent = "Admin View";
         $("#ayptForm").addEventListener("submit", handleSubmit);
       }
     });
+
     function showToday() {
-  const d = new Date();
-  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
-  return d.toLocaleDateString(undefined, opts);
-}
+      const d = new Date();
+      const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+      return d.toLocaleDateString(undefined, opts);
+    }
   </script>
 </body>
 </html>
