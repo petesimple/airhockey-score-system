@@ -44,6 +44,11 @@
       <img src="AYPTlogo.png" alt="AYPT" class="aypt-logo" />
       <div>
         <h1 class="h4 fw-bold mb-0">Are You Playing Tonight?</h1>
+        <div id="today"></div>
+
+<script>
+  document.getElementById('today').textContent = showToday();
+</script>
         <div class="ah-muted small" id="subtitle">
           Fill out this form to get added to tonight's tournament list.
         </div>
@@ -51,8 +56,6 @@
     </div>
     <a id="modeSwitch" class="btn btn-outline-light btn-sm mt-3" href="#">Switch View</a>
   </div>
-
-
 
 
   <!-- Player Form View -->
@@ -69,22 +72,6 @@
               <div class="col-12 col-md-6">
                 <label for="lastName" class="form-label">Last Name</label>
                 <input type="text" id="lastName" class="form-control form-control-lg" required />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
               </div>
@@ -411,6 +398,11 @@
         $("#ayptForm").addEventListener("submit", handleSubmit);
       }
     });
+    function showToday() {
+  const d = new Date();
+  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+  return d.toLocaleDateString(undefined, opts);
+}
   </script>
 </body>
 </html>
