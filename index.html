@@ -144,28 +144,48 @@
 
     /* keep legacy wrappers hidden */
     #skinnyToggleWrapper, #miniToggleWrapper, #mirrorAllWrapper, #lockTopWrapper { display:none !important; }
+
     /* Make the gear panel scrollable if content is tall */
-#settingsPanel {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 340px;
-  max-height: 90vh; /* never taller than the viewport */
-  overflow-y: auto; /* enables vertical scrolling */
-  background: #101010;
-  border: 1px solid #333;
-  border-radius: 14px 14px 0 0;
-  padding: 16px 20px 90px;
-  box-shadow: 0 0 12px rgba(0,0,0,0.6);
-  z-index: 900;
-}
-    #settingsPanel::-webkit-scrollbar {
-  width: 8px;
-}
-#settingsPanel::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
-}
+    #settingsPanel {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 340px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #101010;
+      border: 1px solid #333;
+      border-radius: 14px 14px 0 0;
+      padding: 16px 20px 90px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.6);
+      z-index: 900;
+    }
+    #settingsPanel::-webkit-scrollbar { width: 8px; }
+    #settingsPanel::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    /* Custom CSS textarea */
+    #customCssBox{
+      width:100%;
+      min-height:160px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid #333;
+      background:#0b0b0c;
+      color:#fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      line-height:1.35;
+      box-sizing:border-box;
+    }
+    #customCssExample{
+      white-space:pre-wrap;
+      background:#0b0b0c;
+      border:1px solid #2a2a2a;
+      padding:10px;
+      border-radius:10px;
+      margin-top:8px;
+      color:#e9eefb;
+    }
   </style>
 </head>
 <body>
@@ -246,6 +266,7 @@
       <div id="settingsTitle">Scoreboard Settings</div>
       <button onclick="toggleSettings(false)" title="Close" aria-label="Close">✕</button>
     </div>
+
     <div id="settingsBody">
       <!-- Custom logo -->
       <div class="set-row">
@@ -277,6 +298,48 @@
         <div class="set-actions" style="margin-top:8px;">
           <button onclick="resetThemeColors()">Reset Colors</button>
         </div>
+      </div>
+
+      <!-- Custom CSS -->
+      <div class="set-row">
+        <label>Custom CSS (advanced)</label>
+
+        <textarea id="customCssBox" placeholder="Paste CSS overrides here..."></textarea>
+
+        <div class="set-actions" style="margin-top:8px;">
+          <button onclick="saveCustomCssFromBox()">Apply + Save CSS</button>
+          <button onclick="previewCustomCss()">Preview Only</button>
+          <button onclick="clearCustomCss()">Clear CSS</button>
+        </div>
+
+        <small style="display:block; margin-top:8px; color:#bbb;">
+          Saves on this device only. If it looks weird, hit Clear CSS and you are back.
+        </small>
+
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer; color:#ddd;">Example: reskin Skinny + Mini</summary>
+          <pre id="customCssExample">/* Skinny container */
+#skinnyScoreboard{
+  border-radius:16px;
+  border:2px solid #2a2a2a;
+}
+
+/* Skinny player cards */
+.skinny-player{
+  border-radius:12px;
+}
+
+/* Mini container */
+#miniScoreboard{
+  border-radius:18px;
+  border:2px solid #2a2a2a;
+}
+
+/* Winner highlight tone-down */
+.winner{
+  box-shadow:none !important;
+}</pre>
+        </details>
       </div>
 
       <!-- In match controls -->
@@ -315,6 +378,7 @@
         <div class="row" id="tdMetaRow"></div>
       </div>
     </div>
+
     <div id="settingsFooter" style="padding:10px 12px; border-top:1px solid #222;">
       <button onclick="toggleSettings(false)">Done</button>
     </div>
@@ -325,7 +389,12 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script>
     /* THEME AND LOGO HELPERS */
-    const THEME_KEYS = { A:'ahss_theme_teamA', B:'ahss_theme_teamB', LOGO:'ahss_custom_logo_data' };
+    const THEME_KEYS = {
+      A:'ahss_theme_teamA',
+      B:'ahss_theme_teamB',
+      LOGO:'ahss_custom_logo_data',
+      CSS:'ahss_custom_css'
+    };
 
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
@@ -355,7 +424,7 @@
       if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return v;
       const m = v.match(/rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)/i);
       if(!m) return def;
-      const [r,g,b] = [parseInt(m[1]),parseInt(m[2]),parseInt(m[3])];
+      const r = parseInt(m[1],10), g = parseInt(m[2],10), b = parseInt(m[3],10);
       return "#" + [r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('');
     }
 
@@ -380,10 +449,52 @@
       const stored = localStorage.getItem(THEME_KEYS.LOGO);
       const img = document.getElementById('appLogo');
       const prev = document.getElementById('logoPreview');
-      if(stored){ img.src = stored; if(prev){ prev.src = stored; prev.style.display = 'inline-block'; } }
-      else { img.src = 'logo.png'; if(prev){ prev.src = ''; prev.style.display = 'none'; } }
+      if(stored){
+        img.src = stored;
+        if(prev){ prev.src = stored; prev.style.display = 'inline-block'; }
+      } else {
+        img.src = 'logo.png';
+        if(prev){ prev.src = ''; prev.style.display = 'none'; }
+      }
     }
     function clearCustomLogo(){ localStorage.removeItem(THEME_KEYS.LOGO); applyCustomLogo(); }
+
+    /* CUSTOM CSS TOOL */
+    function ensureCustomCssStyleTag(){
+      let tag = document.getElementById('customCssOverrides');
+      if(!tag){
+        tag = document.createElement('style');
+        tag.id = 'customCssOverrides';
+        document.head.appendChild(tag);
+      }
+      return tag;
+    }
+    function applyCustomCss(cssText){
+      const tag = ensureCustomCssStyleTag();
+      tag.textContent = cssText || '';
+    }
+    function loadCustomCss(){
+      const css = localStorage.getItem(THEME_KEYS.CSS) || '';
+      applyCustomCss(css);
+      const box = document.getElementById('customCssBox');
+      if(box) box.value = css;
+    }
+    function saveCustomCssFromBox(){
+      const box = document.getElementById('customCssBox');
+      const css = (box?.value || '').trim();
+      localStorage.setItem(THEME_KEYS.CSS, css);
+      applyCustomCss(css);
+    }
+    function previewCustomCss(){
+      const box = document.getElementById('customCssBox');
+      applyCustomCss(box?.value || '');
+    }
+    function clearCustomCss(){
+      localStorage.removeItem(THEME_KEYS.CSS);
+      applyCustomCss('');
+      const box = document.getElementById('customCssBox');
+      if(box) box.value = '';
+    }
 
     /* TD META HELPERS */
     const tdMetaPanel = document.getElementById('tdMetaPanel');
@@ -453,7 +564,7 @@
       localStorage.setItem('player2Name', document.getElementById('player2Name').value);
       players[0].name = document.getElementById('player1Name').value || 'Player 1';
       players[1].name = document.getElementById('player2Name').value || 'Player 2';
-      winGames = parseInt(document.getElementById('matchLength').value);
+      winGames = parseInt(document.getElementById('matchLength').value, 10);
       players.forEach(p => { p.points = 0; p.games = 0; p.timeoutUsed = false; });
       gameHistory = [];
       timeElapsed = 0;
@@ -484,6 +595,7 @@
       applySavedTheme();
       syncColorPickers();
       applyCustomLogo();
+      loadCustomCss();
 
       document.getElementById('timer').addEventListener('click', toggleTimer);
 
@@ -521,6 +633,7 @@
 
     function scorePoint(id) {
       const player = players.find(p => p.id === id);
+      if (!player) return;
       if (player.points >= 7) return;
       player.points++; updateScore(); clearBetweenGamesTimer();
       if (player.points === 7) {
@@ -530,10 +643,16 @@
       }
       updateSkinnyScoreboard(); updateMiniScoreboard();
     }
-    function removePoint(id) { const p = players.find(x => x.id === id); if (p.points > 0) p.points--; updateScore(); }
+    function removePoint(id) {
+      const p = players.find(x => x.id === id);
+      if (!p) return;
+      if (p.points > 0) p.points--;
+      updateScore();
+    }
 
     function updateScore() {
-      const [a,b] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+      const a = isPlayer1Left ? players[0] : players[1];
+      const b = isPlayer1Left ? players[1] : players[0];
       const left = isMirrored() ? b : a;
       const right = isMirrored() ? a : b;
       document.getElementById('scoreBoard').innerHTML = `
@@ -544,7 +663,9 @@
       updateSkinnyScoreboard(); updateMiniScoreboard();
     }
     function formatPlayerScore(player) {
-      const [first, last] = player.name.split(' ');
+      const parts = (player.name || '').split(' ');
+      const first = parts[0] || '';
+      const last = parts.slice(1).join(' ');
       const nameHTML = last ? `<div>${first}<br><small style="font-size:.7em;">${last}</small></div>` : `<div>${first}</div>`;
       const color = getTeamColor(player.id);
       return `<div style="text-align:center;">
@@ -555,46 +676,131 @@
     }
 
     function updateTimer() {
-      const min = Math.floor(timeElapsed / 60); const sec = timeElapsed % 60;
+      const min = Math.floor(timeElapsed / 60);
+      const sec = timeElapsed % 60;
       const timer = document.getElementById('timer');
       timer.textContent = `${min}:${sec.toString().padStart(2,'0')}` + (timerRunning ? '' : ' (Paused)');
       updateSkinnyScoreboard(); updateMiniScoreboard();
     }
-    function toggleTimer() { const t = document.getElementById('timer'); if (timerRunning) { clearInterval(timerInterval); timerRunning=false; t.style.color='red'; t.classList.remove('running'); } else { startTimer(); } updateTimer(); }
-    function startTimer(){ timerInterval = setInterval(()=>{ timeElapsed++; updateTimer(); },1000); timerRunning=true; const t=document.getElementById('timer'); t.style.color='white'; t.classList.add('running'); updateTimer(); }
+    function toggleTimer() {
+      const t = document.getElementById('timer');
+      if (timerRunning) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        t.style.color = 'red';
+        t.classList.remove('running');
+      } else {
+        startTimer();
+      }
+      updateTimer();
+    }
+    function startTimer(){
+      timerInterval = setInterval(()=>{ timeElapsed++; updateTimer(); },1000);
+      timerRunning = true;
+      const t = document.getElementById('timer');
+      t.style.color = 'white';
+      t.classList.add('running');
+      updateTimer();
+    }
 
-    function callTimeout(id){ const p=players.find(x=>x.id===id); const num=id==='player1'?'1':'2'; if(!p.timeoutUsed){ p.timeoutUsed=true; const btn=document.getElementById(`timeoutBtn${num}`); if(btn){ btn.disabled=true; btn.classList.add('disabled-btn'); } document.getElementById(`timeoutLabel${num}`).textContent='Timeout Used'; startTimeoutTimer(); } }
-    function undoTimeout(id){ const p=players.find(x=>x.id===id); const num=id==='player1'?'1':'2'; p.timeoutUsed=false; const btn=document.getElementById(`timeoutBtn${num}`); if(btn){ btn.disabled=false; btn.classList.remove('disabled-btn'); } document.getElementById(`timeoutLabel${num}`).textContent=''; clearTimeoutTimer(); }
+    function callTimeout(id){
+      const p = players.find(x=>x.id===id);
+      const num = id==='player1' ? '1' : '2';
+      if(!p) return;
+      if(!p.timeoutUsed){
+        p.timeoutUsed = true;
+        const btn = document.getElementById(`timeoutBtn${num}`);
+        if(btn){ btn.disabled = true; btn.classList.add('disabled-btn'); }
+        document.getElementById(`timeoutLabel${num}`).textContent = 'Timeout Used';
+        startTimeoutTimer();
+      }
+    }
+    function undoTimeout(id){
+      const p = players.find(x=>x.id===id);
+      const num = id==='player1' ? '1' : '2';
+      if(!p) return;
+      p.timeoutUsed = false;
+      const btn = document.getElementById(`timeoutBtn${num}`);
+      if(btn){ btn.disabled = false; btn.classList.remove('disabled-btn'); }
+      document.getElementById(`timeoutLabel${num}`).textContent = '';
+      clearTimeoutTimer();
+    }
 
-    function updateHistory(){ const html=gameHistory.map((g,i)=>`<li>Game ${i+1}: ${g}</li>`).join(''); document.getElementById('history').innerHTML=`<h3>Previous Games:</h3><ul>${html}</ul>`; }
+    function updateHistory(){
+      const html = gameHistory.map((g,i)=>`<li>Game ${i+1}: ${g}</li>`).join('');
+      document.getElementById('history').innerHTML = `<h3>Previous Games:</h3><ul>${html}</ul>`;
+    }
 
     function startNextGame(){
-      const p1=players[0], p2=players[1];
-      const winner = p1.points===7? p1 : (p2.points===7? p2 : null);
+      const p1 = players[0], p2 = players[1];
+      const winner = p1.points===7 ? p1 : (p2.points===7 ? p2 : null);
+
       if(winner){
-        winner.games++; document.getElementById('gameWinner').textContent = `${winner.name} wins this game!`;
-        gameHistory.push(`${p1.name} ${p1.points} - ${p2.points} ${p2.name}`); updateHistory();
+        winner.games++;
+        document.getElementById('gameWinner').textContent = `${winner.name} wins this game!`;
+        gameHistory.push(`${p1.name} ${p1.points} - ${p2.points} ${p2.name}`);
+        updateHistory();
+
         if(winner.games===winGames){
           document.getElementById('matchWinner').textContent = `${winner.name} wins the match!`;
-          clearInterval(timerInterval); clearBetweenGamesTimer(); document.getElementById('summaryButtons').style.display='block';
+          clearInterval(timerInterval);
+          clearBetweenGamesTimer();
+          document.getElementById('summaryButtons').style.display='block';
+
           if (matchidFromUrl && document.getElementById('postMatchNotice')){
             document.getElementById('postMatchNotice').style.display='block';
-            const p1S=[], p2S=[]; gameHistory.forEach(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); if(m){ p1S.push(m[1]); p2S.push(m[2]); }});
+            const p1S=[], p2S=[];
+            gameHistory.forEach(g=>{
+              const m=g.match(/(\d+)\s*-\s*(\d+)/);
+              if(m){ p1S.push(m[1]); p2S.push(m[2]); }
+            });
             document.getElementById('matchCardScores').textContent = `${players[0].name} - ${p1S.join(', ')} | ${players[1].name} - ${p2S.join(', ')}`;
           }
-          confetti({ particleCount:200, spread:70, origin:{ y:.6 } }); postMatchFormDataToSheet();
-          const compact=getCompactMatchSummary(); const sc=document.getElementById('compactSummary'); if(sc) sc.textContent=compact; document.getElementById('startAnotherMatchBtn').style.display='inline-block';
-          updateSkinnyScoreboard(winner.id); updateMiniScoreboard(winner.id);
-          setTimeout(()=>{ document.querySelectorAll('.skinny-player').forEach(e=>e.classList.remove('pulse')); document.querySelectorAll('.mini-player').forEach(e=>e.classList.remove('pulse')); const sw=document.querySelector('.skinny-player.winner'); const mw=document.querySelector('.mini-player.winner'); if(sw) sw.classList.add('pulse'); if(mw) mw.classList.add('pulse'); },50);
-          setTimeout(()=>{ const sw=document.querySelector('.skinny-player.winner'); const mw=document.querySelector('.mini-player.winner'); if(sw) sw.classList.remove('pulse'); if(mw) mw.classList.remove('pulse'); updateSkinnyScoreboard(); updateMiniScoreboard(); },4000);
+
+          confetti({ particleCount:200, spread:70, origin:{ y:.6 } });
+          postMatchFormDataToSheet();
+
+          const compact=getCompactMatchSummary();
+          const sc=document.getElementById('compactSummary');
+          if(sc) sc.textContent=compact;
+          document.getElementById('startAnotherMatchBtn').style.display='inline-block';
+
+          updateSkinnyScoreboard(winner.id);
+          updateMiniScoreboard(winner.id);
+
+          setTimeout(()=>{
+            document.querySelectorAll('.skinny-player').forEach(e=>e.classList.remove('pulse'));
+            document.querySelectorAll('.mini-player').forEach(e=>e.classList.remove('pulse'));
+            const sw=document.querySelector('.skinny-player.winner');
+            const mw=document.querySelector('.mini-player.winner');
+            if(sw) sw.classList.add('pulse');
+            if(mw) mw.classList.add('pulse');
+          },50);
+
+          setTimeout(()=>{
+            const sw=document.querySelector('.skinny-player.winner');
+            const mw=document.querySelector('.mini-player.winner');
+            if(sw) sw.classList.remove('pulse');
+            if(mw) mw.classList.remove('pulse');
+            updateSkinnyScoreboard();
+            updateMiniScoreboard();
+          },4000);
+
         } else {
           document.getElementById('nextGameBtn').textContent='Start Next Game';
-          updateSkinnyScoreboard(winner.id); updateMiniScoreboard(winner.id); setTimeout(()=>{ updateSkinnyScoreboard(); updateMiniScoreboard(); },1500);
+          updateSkinnyScoreboard(winner.id);
+          updateMiniScoreboard(winner.id);
+          setTimeout(()=>{ updateSkinnyScoreboard(); updateMiniScoreboard(); },1500);
         }
       }
+
       players.forEach(p=>{ p.points=0; p.timeoutUsed=false; });
-      document.getElementById('nextGameBtn').style.display='none'; document.getElementById('gameWinner').textContent='';
-      isPlayer1Left = !isPlayer1Left; renderButtons(); updateScore(); startBetweenGamesTimer();
+      document.getElementById('nextGameBtn').style.display='none';
+      document.getElementById('gameWinner').textContent='';
+      isPlayer1Left = !isPlayer1Left;
+      renderButtons();
+      updateScore();
+      startBetweenGamesTimer();
     }
 
     function resetMatch() {
@@ -605,6 +811,7 @@
       timerInterval = null;
       timerRunning = false;
       timeElapsed = 0;
+
       players = [
         { id:'player1', name:'', points:0, games:0, timeoutUsed:false },
         { id:'player2', name:'', points:0, games:0, timeoutUsed:false }
@@ -616,18 +823,33 @@
       document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
       document.getElementById('matchLength').value = '4';
 
-      ['matchWinner','gameWinner','compactSummary','miniCompactSummary'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
-      const history = document.getElementById('history'); if (history) history.innerHTML = '';
-      const postCard = document.getElementById('postMatchNotice'); if (postCard) postCard.style.display = 'none';
-      const matchCardScores = document.getElementById('matchCardScores'); if (matchCardScores) matchCardScores.textContent = '';
-      const sb = document.getElementById('summaryButtons'); if (sb) sb.style.display = 'none';
-      const ng = document.getElementById('nextGameBtn'); if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
+      ['matchWinner','gameWinner','compactSummary','miniCompactSummary'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+      });
+
+      const history = document.getElementById('history');
+      if (history) history.innerHTML = '';
+
+      const postCard = document.getElementById('postMatchNotice');
+      if (postCard) postCard.style.display = 'none';
+
+      const matchCardScores = document.getElementById('matchCardScores');
+      if (matchCardScores) matchCardScores.textContent = '';
+
+      const sb = document.getElementById('summaryButtons');
+      if (sb) sb.style.display = 'none';
+
+      const ng = document.getElementById('nextGameBtn');
+      if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
 
       const lock = document.getElementById('lockTopToggle');
       if (lock && lock.checked) lock.checked = false;
+
       document.getElementById('fullscoreboard').classList.remove('locked-top');
       document.body.classList.remove('locked-body');
-      const spacer = document.getElementById('scoreboardSpacer'); if (spacer) spacer.style.height = '0';
+      const spacer = document.getElementById('scoreboardSpacer');
+      if (spacer) spacer.style.height = '0';
       localStorage.setItem('scoreboardLocked','false');
 
       const skinny = document.getElementById('skinnyScoreboard');
@@ -638,31 +860,68 @@
       if (tSkinny) tSkinny.checked = false;
       if (tMini)   tMini.checked   = false;
       if (tMirror) tMirror.checked = false;
-      if (skinny) { skinny.style.display = 'none'; skinny.classList.remove('locked','mirrored'); const skinnyContent = document.getElementById('skinnyContent'); if (skinnyContent) skinnyContent.innerHTML = ''; const compact = document.getElementById('compactSummary'); if (compact) compact.innerHTML = ''; }
-      if (mini) { mini.style.display = 'none'; mini.classList.remove('mirrored'); const miniContent = document.getElementById('miniContent'); if (miniContent) miniContent.innerHTML = ''; }
+
+      if (skinny) {
+        skinny.style.display = 'none';
+        skinny.classList.remove('locked','mirrored');
+        const skinnyContent = document.getElementById('skinnyContent');
+        if (skinnyContent) skinnyContent.innerHTML = '';
+        const compact = document.getElementById('compactSummary');
+        if (compact) compact.innerHTML = '';
+      }
+
+      if (mini) {
+        mini.style.display = 'none';
+        mini.classList.remove('mirrored');
+        const miniContent = document.getElementById('miniContent');
+        if (miniContent) miniContent.innerHTML = '';
+      }
       document.body.classList.remove('mini-active');
 
-      const scoreBoard = document.getElementById('scoreBoard'); if (scoreBoard) scoreBoard.innerHTML = '';
-      const timer = document.getElementById('timer'); if (timer) { timer.classList.remove('running'); timer.style.color = 'white'; timer.textContent = 'Match Time: 0:00'; }
-      const scoreSection = document.getElementById('scoreSection'); if (scoreSection) scoreSection.style.display = 'none';
-      showStartScreen();
+      const scoreBoard = document.getElementById('scoreBoard');
+      if (scoreBoard) scoreBoard.innerHTML = '';
 
+      const timer = document.getElementById('timer');
+      if (timer) {
+        timer.classList.remove('running');
+        timer.style.color = 'white';
+        timer.textContent = 'Match Time: 0:00';
+      }
+
+      const scoreSection = document.getElementById('scoreSection');
+      if (scoreSection) scoreSection.style.display = 'none';
+
+      showStartScreen();
       document.getElementById('inMatchControls').style.display = 'none';
 
-      renderButtons(); updateScore(); updateTimer();
+      renderButtons();
+      updateScore();
+      updateTimer();
     }
+
     function showStartScreen() {
-      const logo = document.getElementById('appLogo'); if (logo) { logo.classList.remove('fade-out'); logo.style.display = ''; }
-      const nameEntry = document.querySelector('.name-entry'); if (nameEntry) { nameEntry.classList.remove('fade-out'); nameEntry.style.display = ''; }
-      const setup = document.getElementById('setupControls'); if (setup) { setup.classList.remove('fade-out'); setup.style.display = ''; }
-      const ver = document.getElementById('versionLabel'); if (ver && ver.style) ver.style.display = '';
-      const tt = document.getElementById('timeoutTimer'); if (tt) tt.style.display = 'none';
-      const bgt = document.getElementById('betweenGamesTimer'); if (bgt) bgt.style.display = 'none';
+      const logo = document.getElementById('appLogo');
+      if (logo) { logo.classList.remove('fade-out'); logo.style.display = ''; }
+
+      const nameEntry = document.querySelector('.name-entry');
+      if (nameEntry) { nameEntry.classList.remove('fade-out'); nameEntry.style.display = ''; }
+
+      const setup = document.getElementById('setupControls');
+      if (setup) { setup.classList.remove('fade-out'); setup.style.display = ''; }
+
+      const ver = document.getElementById('versionLabel');
+      if (ver && ver.style) ver.style.display = '';
+
+      const tt = document.getElementById('timeoutTimer');
+      if (tt) tt.style.display = 'none';
+
+      const bgt = document.getElementById('betweenGamesTimer');
+      if (bgt) bgt.style.display = 'none';
     }
 
     function getMatchSummary(){
-      const [p1,p2]=players;
-      const lines=[
+      const p1 = players[0], p2 = players[1];
+      const lines = [
         `Match between ${p1.name} and ${p2.name}`,
         `Final Score: ${p1.name} ${p1.games} - ${p2.games} ${p2.name}`,
         '',
@@ -686,31 +945,43 @@
         else { el.textContent=`Timeout: ${timeoutTimeLeft}`; }
       },1000);
     }
-    function clearTimeoutTimer(){ if(timeoutCountdown){ clearInterval(timeoutCountdown); timeoutCountdown=null; } document.getElementById('timeoutTimer').style.display='none'; }
+    function clearTimeoutTimer(){
+      if(timeoutCountdown){ clearInterval(timeoutCountdown); timeoutCountdown=null; }
+      document.getElementById('timeoutTimer').style.display='none';
+    }
     document.getElementById('timeoutTimer').addEventListener('click', clearTimeoutTimer);
 
     function exportSummary(){
       const blob=new Blob([getMatchSummary()],{type:'text/plain'});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download='AirHockeyMatchSummary.txt';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='AirHockeyMatchSummary.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
     function shareSummary(){
       const s=getMatchSummary();
       if(navigator.share){
-        navigator.share({title:'Air Hockey Match Summary',text:s}).catch(()=>alert('Could not share automatically. Please screenshot your match summary instead.'));
+        navigator.share({title:'Air Hockey Match Summary',text:s})
+          .catch(()=>alert('Could not share automatically. Please screenshot your match summary instead.'));
       } else if(navigator.clipboard){
-        navigator.clipboard.writeText(s).then(()=>alert('Summary copied to clipboard!')).catch(()=>alert('Copy failed. Please screenshot instead.'));
-      } else { alert('Sharing not supported. Please screenshot.'); }
+        navigator.clipboard.writeText(s)
+          .then(()=>alert('Summary copied to clipboard!'))
+          .catch(()=>alert('Copy failed. Please screenshot instead.'));
+      } else {
+        alert('Sharing not supported. Please screenshot.');
+      }
     }
 
     document.addEventListener('keydown', (event) => {
       const t=event.target;
       if(t.tagName==='INPUT'||t.tagName==='TEXTAREA') return;
       if(!document.getElementById('scoreSection').style.display.includes('block')) return;
-      const leftId=isPlayer1Left? 'player1':'player2';
-      const rightId=isPlayer1Left? 'player2':'player1';
+      const leftId=isPlayer1Left ? 'player1' : 'player2';
+      const rightId=isPlayer1Left ? 'player2' : 'player1';
       if(event.key==='ArrowLeft') scorePoint(leftId);
       if(event.key==='ArrowRight') scorePoint(rightId);
       if(event.key.toLowerCase()==='a') callTimeout(leftId);
@@ -718,20 +989,30 @@
       if(event.key==='Enter' && document.getElementById('nextGameBtn').style.display!=='none') startNextGame();
     });
 
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js').then(()=>console.log('Service Worker Registered')); }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js').then(()=>console.log('Service Worker Registered'));
+    }
 
     function generateCSV(){
-      const [p1,p2]=players; const winner=p1.games>p2.games?p1.name:p2.name; const today=new Date().toISOString().split('T')[0];
-      const location=prompt('Enter match location:','')||'';
-      const referee=refFromUrl||prompt('Enter referee name (if any):','')||'';
-      const notes=prompt('Additional notes:','')||'';
-      const gameResults=gameHistory.map(g=>g).slice(0,7); while(gameResults.length<7) gameResults.push('');
+      const p1 = players[0], p2 = players[1];
+      const winner = p1.games>p2.games ? p1.name : p2.name;
+      const today = new Date().toISOString().split('T')[0];
+      const location = prompt('Enter match location:','') || '';
+      const referee = refFromUrl || prompt('Enter referee name (if any):','') || '';
+      const notes = prompt('Additional notes:','') || '';
+      const gameResults = gameHistory.map(g=>g).slice(0,7);
+      while(gameResults.length<7) gameResults.push('');
       const headers=['Date','Player 1','Player 2','','','Referee','','','Location','Winner','','Notes','Player 1 Game Count','Player 2 Game Count','Game 1','Game 2','Game 3','Game 4','Game 5','Game 6','Game 7'];
       const row=[today,p1.name,p2.name,'','',referee,'','',location,winner,'',notes,p1.games,p2.games,...gameResults];
       const csv=[headers,row].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-      const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download=`AirHockeyMatch_${today}.csv`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=`AirHockeyMatch_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
@@ -740,35 +1021,54 @@
       const board=document.getElementById('fullscoreboard');
       const spacer=document.getElementById('scoreboardSpacer');
       if(c.checked){
-        board.classList.add('locked-top'); document.body.classList.add('locked-body');
-        spacer.style.height = board.offsetHeight + 'px'; localStorage.setItem('scoreboardLocked','true');
+        board.classList.add('locked-top');
+        document.body.classList.add('locked-body');
+        spacer.style.height = board.offsetHeight + 'px';
+        localStorage.setItem('scoreboardLocked','true');
       } else {
-        board.classList.remove('locked-top'); document.body.classList.remove('locked-body');
-        spacer.style.height='0'; localStorage.setItem('scoreboardLocked','false');
+        board.classList.remove('locked-top');
+        document.body.classList.remove('locked-body');
+        spacer.style.height='0';
+        localStorage.setItem('scoreboardLocked','false');
       }
       updateScore();
     }
+
     function toggleSkinnyScoreboard(){
       const skinny=document.getElementById('skinnyScoreboard');
       const on=document.getElementById('toggleSkinny').checked;
       skinny.style.display = on ? 'flex' : 'none';
       skinny.classList.toggle('locked', on);
       document.body.style.paddingTop = on ? '80px' : '';
-      if(on && document.getElementById('toggleMini').checked){ document.getElementById('toggleMini').checked=false; toggleMiniScoreboard(); }
-      if(on && document.getElementById('lockTopToggle').checked){ document.getElementById('lockTopToggle').checked=false; toggleLockTop(); }
+      if(on && document.getElementById('toggleMini').checked){
+        document.getElementById('toggleMini').checked=false;
+        toggleMiniScoreboard();
+      }
+      if(on && document.getElementById('lockTopToggle').checked){
+        document.getElementById('lockTopToggle').checked=false;
+        toggleLockTop();
+      }
       updateSkinnyScoreboard();
     }
+
     function toggleMiniScoreboard(){
       const mini=document.getElementById('miniScoreboard');
       const on=document.getElementById('toggleMini').checked;
       mini.style.display = on ? 'block' : 'none';
       document.body.classList.toggle('mini-active', on);
       if(on){
-        if(document.getElementById('toggleSkinny').checked){ document.getElementById('toggleSkinny').checked=false; toggleSkinnyScoreboard(); }
-        if(document.getElementById('lockTopToggle').checked){ document.getElementById('lockTopToggle').checked=false; toggleLockTop(); }
+        if(document.getElementById('toggleSkinny').checked){
+          document.getElementById('toggleSkinny').checked=false;
+          toggleSkinnyScoreboard();
+        }
+        if(document.getElementById('lockTopToggle').checked){
+          document.getElementById('lockTopToggle').checked=false;
+          toggleLockTop();
+        }
       }
       updateMiniScoreboard();
     }
+
     function updateMirrorState(){
       const mirror = isMirrored();
       document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
@@ -778,9 +1078,14 @@
 
     function updateSkinnyScoreboard(winnerId=null){
       const skinny=document.getElementById('skinnyScoreboard');
-      const mirror = isMirrored(); skinny.classList.toggle('mirrored', mirror);
-      let [L,R] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
-      const left = mirror ? R : L; const right = mirror ? L : R;
+      const mirror = isMirrored();
+      skinny.classList.toggle('mirrored', mirror);
+
+      let L = isPlayer1Left ? players[0] : players[1];
+      let R = isPlayer1Left ? players[1] : players[0];
+      const left = mirror ? R : L;
+      const right = mirror ? L : R;
+
       const timerText = document.getElementById('timer').textContent.replace('Match Time: ','').replace(' (Paused)','') || '0:00';
       const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
       const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
@@ -788,30 +1093,38 @@
       const bgActive = document.getElementById('betweenGamesTimer').style.display==='block';
       const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
       const bgHTML = bgActive ? `<div style="color:${betweenGamesTimeLeft<=60?'red':'yellow'};font-size:.9em;margin-top:2px;">Next Game: ${bgText}</div>` : '';
+
       const winId = winnerId?.trim?.() || null;
+
       function getPipLine(forId){
         return gameHistory.map(g=>{
           const m=g.match(/(\d+)\s*-\s*(\d+)/);
           if(!m) return '–';
-          const s1=parseInt(m[1]), s2=parseInt(m[2]);
+          const s1=parseInt(m[1],10), s2=parseInt(m[2],10);
           const p1win=s1>s2;
           const sk=(s1===7&&s2===0)||(s2===7&&s1===0);
           const w=(forId==='player1'&&p1win)||(forId==='player2'&&!p1win);
-          if(w) return '●'; if(sk) return '🦨'; return '○';
+          if(w) return '●';
+          if(sk) return '🦨';
+          return '○';
         }).join(' ');
       }
+
       const leftColor = getTeamColor(left.id);
       const rightColor = getTeamColor(right.id);
+
       const leftHTML = `<div class="skinny-player ${winId===left.id?'winner':''}">
         <div>${left.name}</div>
         <div class="score-value" style="color:${leftColor};">${left.points}</div>
         <div style="font-size:1.2em;color:${leftColor};">${getPipLine(left.id)}</div>
       </div>`;
+
       const rightHTML = `<div class="skinny-player ${winId===right.id?'winner':''}" style="text-align:right;">
         <div>${right.name}</div>
         <div class="score-value" style="color:${rightColor};">${right.points}</div>
         <div style="font-size:1.2em;color:${rightColor};">${getPipLine(right.id)}</div>
       </div>`;
+
       document.getElementById('skinnyContent').innerHTML =
         `<div style="display:flex;justify-content:space-between;width:100%;padding:0 5px;font-family:'Arial Black';font-size:1.2em;">
            ${leftHTML}
@@ -820,18 +1133,28 @@
            </div>
            ${rightHTML}
          </div>`;
+
       const summaryEl=document.getElementById('compactSummary');
       if(summaryEl && gameHistory.length>0){
-        const c=getCompactMatchSummary(); const seg=c.split(', '); const lines=[];
+        const c=getCompactMatchSummary();
+        const seg=c.split(', ');
+        const lines=[];
         for(let i=0;i<seg.length;i+=4) lines.push(seg.slice(i,i+4).join(', '));
         summaryEl.innerHTML = lines.map(l=>`<div>${l}</div>`).join('');
-      } else if(summaryEl) summaryEl.innerHTML='';
+      } else if(summaryEl) {
+        summaryEl.innerHTML='';
+      }
     }
 
     function updateMiniScoreboard(winnerId=null){
-      const mini=document.getElementById('miniScoreboard'); if(!mini || mini.style.display==='none') return;
-      const mirror = isMirrored(); mini.classList.toggle('mirrored', mirror);
-      let [left, right] = isPlayer1Left ? [players[0], players[1]] : [players[1], players[0]];
+      const mini=document.getElementById('miniScoreboard');
+      if(!mini || mini.style.display==='none') return;
+      const mirror = isMirrored();
+      mini.classList.toggle('mirrored', mirror);
+
+      let left = isPlayer1Left ? players[0] : players[1];
+      let right = isPlayer1Left ? players[1] : players[0];
+
       const timerText = document.getElementById('timer').textContent.replace('Match Time: ','').replace(' (Paused)','') || '0:00';
       const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
       const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
@@ -839,94 +1162,178 @@
       const bgActive = document.getElementById('betweenGamesTimer').style.display==='block';
       const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
       const betweenHTML = bgActive ? `Next: ${bgText}` : '';
+
       const winId = winnerId?.trim?.() || null;
+
       function getPipLine(forId){
         return gameHistory.map(g=>{
           const m=g.match(/(\d+)\s*-\s*(\d+)/);
           if(!m) return '–';
-          const s1=parseInt(m[1]), s2=parseInt(m[2]);
+          const s1=parseInt(m[1],10), s2=parseInt(m[2],10);
           const p1win=s1>s2;
           const sk=(s1===7&&s2===0)||(s2===7&&s1===0);
           const w=(forId==='player1'&&p1win)||(forId==='player2'&&!p1win);
-          if(w) return '●'; if(sk) return '🦨'; return '○';
+          if(w) return '●';
+          if(sk) return '🦨';
+          return '○';
         }).join(' ');
       }
+
       const leftColor = getTeamColor(left.id);
       const rightColor = getTeamColor(right.id);
+
       const leftHTML = `<div class="mini-player mini-left ${winId===left.id?'winner':''}">
         <div class="mini-name">${left.name}</div>
         <div class="mini-score" style="color:${leftColor};">${left.points}</div>
       </div>`;
+
       const rightHTML = `<div class="mini-player mini-right ${winId===right.id?'winner':''}">
         <div class="mini-name">${right.name}</div>
         <div class="mini-score" style="color:${rightColor};">${right.points}</div>
       </div>`;
+
       document.getElementById('miniContent').innerHTML =
         `<div class="mini-top">${leftHTML}${rightHTML}</div>
-         <div class="mini-center"><div class="mini-timer">${timerText}</div><div class="mini-status">${timeoutHTML || betweenHTML || ''}</div></div>
-         <div class="mini-bottom"><div class="mini-pips" style="color:${leftColor};">${getPipLine(left.id)}</div><div class="mini-pips" style="color:${rightColor};">${getPipLine(right.id)}</div></div>`;
+         <div class="mini-center">
+           <div class="mini-timer">${timerText}</div>
+           <div class="mini-status">${timeoutHTML || betweenHTML || ''}</div>
+         </div>
+         <div class="mini-bottom">
+           <div class="mini-pips" style="color:${leftColor};">${getPipLine(left.id)}</div>
+           <div class="mini-pips" style="color:${rightColor};">${getPipLine(right.id)}</div>
+         </div>`;
+
       const summaryEl=document.getElementById('miniCompactSummary');
       if(summaryEl && gameHistory.length>0){
-        const c=getCompactMatchSummary(); const seg=c.split(', '); const lines=[];
+        const c=getCompactMatchSummary();
+        const seg=c.split(', ');
+        const lines=[];
         for(let i=0;i<seg.length;i+=3) lines.push(seg.slice(i,i+3).join(', '));
         summaryEl.innerHTML = lines.map(l=>`<div>${l}</div>`).join('');
-      } else if(summaryEl) summaryEl.innerHTML='';
+      } else if(summaryEl) {
+        summaryEl.innerHTML='';
+      }
     }
 
     function getCompactMatchSummary(){
-      const [p1,p2]=players;
-      const i1=p1.name.charAt(0).toUpperCase()||'P1';
-      const i2=p2.name.charAt(0).toUpperCase()||'P2';
+      const p1 = players[0], p2 = players[1];
+      const i1 = (p1.name.charAt(0).toUpperCase() || 'P');
+      const i2 = (p2.name.charAt(0).toUpperCase() || 'P');
       return gameHistory.map((g,i)=>{
         const m=g.match(/(\d+)\s*-\s*(\d+)/);
         if(!m) return `G${i+1} ?`;
         const s1=parseInt(m[1],10), s2=parseInt(m[2],10);
-        const wI=s1>s2?i1:i2, lI=s1>s2?i2:i1;
-        const wS=Math.max(s1,s2), lS=Math.min(s1,s2);
+        const wI=s1>s2 ? i1 : i2;
+        const lI=s1>s2 ? i2 : i1;
+        const wS=Math.max(s1,s2);
+        const lS=Math.min(s1,s2);
         return `G${i+1} ${wI}${wS}-${lS}${lI}`;
       }).join(', ');
     }
 
-    function flipSides(){ if(!confirm('Oh sure, just flip everything mid-match. You sure about that?')) return; isPlayer1Left=!isPlayer1Left; renderButtons(); updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard(); }
+    function flipSides(){
+      if(!confirm('Oh sure, just flip everything mid-match. You sure about that?')) return;
+      isPlayer1Left = !isPlayer1Left;
+      renderButtons();
+      updateScore();
+      updateSkinnyScoreboard();
+      updateMiniScoreboard();
+    }
 
     function startBetweenGamesTimer(){
-      const [p1,p2]=players; if(p1.games===winGames||p2.games===winGames){ clearBetweenGamesTimer(); return; }
-      if(betweenGamesCountdown) return; betweenGamesTimeLeft=120;
-      const el=document.getElementById('betweenGamesTimer'); el.style.display='block'; el.style.color='yellow'; el.textContent=`Next Game: ${betweenGamesTimeLeft}s`;
+      const p1 = players[0], p2 = players[1];
+      if(p1.games===winGames || p2.games===winGames){ clearBetweenGamesTimer(); return; }
+      if(betweenGamesCountdown) return;
+      betweenGamesTimeLeft=120;
+
+      const el=document.getElementById('betweenGamesTimer');
+      el.style.display='block';
+      el.style.color='yellow';
+      el.textContent=`Next Game: ${betweenGamesTimeLeft}s`;
+
       betweenGamesCountdown=setInterval(()=>{
         betweenGamesTimeLeft--;
-        if(betweenGamesTimeLeft<=0){ clearBetweenGamesTimer(); }
-        else { el.textContent=`Next Game: ${betweenGamesTimeLeft}s`; el.style.color = betweenGamesTimeLeft<=60 ? 'red' : 'yellow'; }
+        if(betweenGamesTimeLeft<=0){
+          clearBetweenGamesTimer();
+        } else {
+          el.textContent=`Next Game: ${betweenGamesTimeLeft}s`;
+          el.style.color = betweenGamesTimeLeft<=60 ? 'red' : 'yellow';
+        }
       },1000);
     }
-    function clearBetweenGamesTimer(){ if(betweenGamesCountdown){ clearInterval(betweenGamesCountdown); betweenGamesCountdown=null; } betweenGamesTimeLeft=0; const el=document.getElementById('betweenGamesTimer'); el.style.display='none'; }
+
+    function clearBetweenGamesTimer(){
+      if(betweenGamesCountdown){ clearInterval(betweenGamesCountdown); betweenGamesCountdown=null; }
+      betweenGamesTimeLeft=0;
+      const el=document.getElementById('betweenGamesTimer');
+      el.style.display='none';
+    }
 
     function postMatchFormDataToSheet(){
-      const [p1,p2]=players; const winner=p1.games>p2.games?p1.name:p2.name;
+      const p1 = players[0], p2 = players[1];
+      const winner = p1.games>p2.games ? p1.name : p2.name;
+
       const fd=new FormData();
       fd.append('Date', new Date().toLocaleString());
       fd.append('Player 1', p1.name);
       fd.append('Player 2', p2.name);
-      fd.append('P1 rank',''); fd.append('P2 rank',''); fd.append('Ref', refFromUrl);
-      fd.append('Image',''); fd.append('Puck Color',''); fd.append('Location','Table 1');
-      fd.append('Winner', winner); fd.append('Video Link',''); fd.append('Notes','');
+      fd.append('P1 rank','');
+      fd.append('P2 rank','');
+      fd.append('Ref', refFromUrl);
+      fd.append('Image','');
+      fd.append('Puck Color','');
+      fd.append('Location','Table 1');
+      fd.append('Winner', winner);
+      fd.append('Video Link','');
+      fd.append('Notes','');
       fd.append('Game Count', `${p1.games}-${p2.games}`);
       fd.append('Set 1','');
-      const clean=gameHistory.map(g=>{ const m=g.match(/(\d+)\s*-\s*(\d+)/); return m?`${m[1]} - ${m[2]}`:''; });
+
+      const clean=gameHistory.map(g=>{
+        const m=g.match(/(\d+)\s*-\s*(\d+)/);
+        return m ? `${m[1]} - ${m[2]}` : '';
+      });
+
       clean.slice(0,7).forEach((s,i)=>fd.append(`Set 1.${i+1}`, s));
       for(let i=clean.length+1;i<=7;i++) fd.append(`Set 1.${i}`, '');
-      for(let s=2;s<=7;s++){ fd.append(`Set ${s}`,''); for(let g=1;g<=7;g++) fd.append(`Set ${s}.${g}`,''); }
-      fd.append('ARCHIVE',''); fd.append('email',''); fd.append('OtherData','');
-      fd.append('P1 RE Rating',''); fd.append('P2 RE Rating',''); fd.append('Percentage P1 Win',''); fd.append('Percentage P2 Win','');
-      fd.append('🔒 Row ID',''); fd.append('Other KVC',''); fd.append('KVC','');
-      fd.append('Percentage P1 WinBK',''); fd.append('Percentage P2 WinBK',''); fd.append('Other location',''); fd.append('Old Math','');
-      fd.append('Send Email',''); fd.append('Round',''); fd.append('KValue Image',''); fd.append('Brackelope','');
-      const anySkunk=clean.some(s=>s==='7 - 0'||s==='0 - 7'); fd.append('Skunk', anySkunk?'Yes':'');
-      fd.append('VideoLink2',''); fd.append('CMC',''); fd.append('TableType',''); fd.append('TableTypeOther','');
+
+      for(let s=2;s<=7;s++){
+        fd.append(`Set ${s}`,'');
+        for(let g=1;g<=7;g++) fd.append(`Set ${s}.${g}`,'');
+      }
+
+      fd.append('ARCHIVE','');
+      fd.append('email','');
+      fd.append('OtherData','');
+      fd.append('P1 RE Rating','');
+      fd.append('P2 RE Rating','');
+      fd.append('Percentage P1 Win','');
+      fd.append('Percentage P2 Win','');
+      fd.append('🔒 Row ID','');
+      fd.append('Other KVC','');
+      fd.append('KVC','');
+      fd.append('Percentage P1 WinBK','');
+      fd.append('Percentage P2 WinBK','');
+      fd.append('Other location','');
+      fd.append('Old Math','');
+      fd.append('Send Email','');
+      fd.append('Round','');
+      fd.append('KValue Image','');
+      fd.append('Brackelope','');
+
+      const anySkunk = clean.some(s=>s==='7 - 0'||s==='0 - 7');
+      fd.append('Skunk', anySkunk ? 'Yes' : '');
+      fd.append('VideoLink2','');
+      fd.append('CMC','');
+      fd.append('TableType','');
+      fd.append('TableTypeOther','');
       fd.append('Match ID', matchidFromUrl);
-      fetch('https://script.google.com/macros/s/AKfycby99JG1qwPZQAuepDhZfv7j_UWTq_2JxdZF1KiVAHvsaEr8vijfPU4_rSLrzK_psmrE/exec', { method:'POST', mode:'cors', body:fd })
-        .then(r=>r.json()).then(d=>console.log('Match FormData POSTed:', d))
-        .catch(err=>console.error('FormData POST failed:', err));
+
+      fetch('https://script.google.com/macros/s/AKfycby99JG1qwPZQAuepDhZfv7j_UWTq_2JxdZF1KiVAHvsaEr8vijfPU4_rSLrzK_psmrE/exec', {
+        method:'POST', mode:'cors', body:fd
+      })
+      .then(r=>r.json()).then(d=>console.log('Match FormData POSTed:', d))
+      .catch(err=>console.error('FormData POST failed:', err));
     }
 
     function syncInMatchToggles(){
@@ -937,12 +1344,30 @@
       document.getElementById('swSkinny').checked = document.getElementById('skinnyScoreboard').style.display === 'flex';
       document.getElementById('swMini').checked = document.getElementById('miniScoreboard').style.display === 'block';
     }
-    function uiToggleSkinny(on){ const t = document.getElementById('toggleSkinny'); if(t) t.checked = on; toggleSkinnyScoreboard(); if(on){ document.getElementById('swMini').checked = false; } }
-    function uiToggleMini(on){ const t = document.getElementById('toggleMini'); if(t) t.checked = on; toggleMiniScoreboard(); if(on){ document.getElementById('swSkinny').checked = false; } }
-    function uiToggleMirror(on){ const t = document.getElementById('mirrorAll'); if(t) t.checked = on; updateMirrorState(); }
-    function uiToggleLock(on){ const t = document.getElementById('lockTopToggle'); if(t) t.checked = on; toggleLockTop(); }
+    function uiToggleSkinny(on){
+      const t = document.getElementById('toggleSkinny');
+      if(t) t.checked = on;
+      toggleSkinnyScoreboard();
+      if(on){ document.getElementById('swMini').checked = false; }
+    }
+    function uiToggleMini(on){
+      const t = document.getElementById('toggleMini');
+      if(t) t.checked = on;
+      toggleMiniScoreboard();
+      if(on){ document.getElementById('swSkinny').checked = false; }
+    }
+    function uiToggleMirror(on){
+      const t = document.getElementById('mirrorAll');
+      if(t) t.checked = on;
+      updateMirrorState();
+    }
+    function uiToggleLock(on){
+      const t = document.getElementById('lockTopToggle');
+      if(t) t.checked = on;
+      toggleLockTop();
+    }
   </script>
 
-  <div id="versionLabel" style="margin-top:40px; font-size:0.8em; color:gray;">v2.8.8 (Tools & Scroll)</div>
+  <div id="versionLabel" style="margin-top:40px; font-size:0.8em; color:gray;">v2.8.9 (Custom CSS Tool)</div>
 </body>
 </html>
