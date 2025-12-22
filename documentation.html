@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AHSS - Theme + CSS Customization Guide</title>
+  <style>
+    :root{
+      --bg:#0b0d12;
+      --panel:#121826;
+      --line:#26324a;
+      --text:#e9eefb;
+      --muted:#a9b4cc;
+      --accent:#4aa3ff;
+      --ok:#40d98a;
+      --warn:#ffcc66;
+      --danger:#ff5a6a;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; padding:24px;
+      background: radial-gradient(1200px 700px at 20% -10%, rgba(74,163,255,.22), transparent 60%),
+                  radial-gradient(900px 600px at 90% 0%, rgba(64,217,138,.14), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height:1.35;
+    }
+    .wrap{ max-width:980px; margin:0 auto; }
+    h1{ margin:0 0 10px; font-size:28px; }
+    h2{ margin:28px 0 10px; font-size:20px; }
+    h3{ margin:18px 0 8px; font-size:16px; color:var(--muted); }
+    p{ margin:10px 0; color:#d8e0f5; }
+    .card{
+      background: rgba(18,24,38,.72);
+      border:1px solid rgba(38,50,74,.9);
+      border-radius:14px;
+      padding:16px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      margin:14px 0;
+    }
+    code, pre{ font-family: var(--mono); }
+    pre{
+      margin:10px 0 0;
+      padding:12px;
+      background:#0a0f1a;
+      border:1px solid rgba(38,50,74,.85);
+      border-radius:12px;
+      overflow:auto;
+      color:#dfe7ff;
+    }
+    .pill{
+      display:inline-block;
+      padding:3px 9px;
+      border:1px solid rgba(38,50,74,.85);
+      border-radius:999px;
+      margin:0 6px 6px 0;
+      color:#cfe0ff;
+      background: rgba(10,15,26,.6);
+      font-family: var(--mono);
+      font-size:12px;
+    }
+    .grid{ display:grid; gap:12px; grid-template-columns: 1fr; }
+    @media(min-width:860px){ .grid{ grid-template-columns: 1fr 1fr; } }
+    .warn{
+      border-left:4px solid var(--warn);
+      padding-left:12px;
+    }
+    .ok{
+      border-left:4px solid var(--ok);
+      padding-left:12px;
+    }
+    a{ color:#93c7ff; }
+    .small{ font-size:13px; color:var(--muted); }
+    .hr{ height:1px; background:rgba(38,50,74,.85); margin:16px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>AHSS - Theme + CSS Customization Guide</h1>
+    <p class="small">
+      This guide lists the CSS fields that are safe to update in the current <code>index.html</code>,
+      plus a “future-proof” set of CSS variables you can add so stream skins are easy to maintain.
+    </p>
+
+    <div class="card warn">
+      <h3>Quick warning (in plain English)</h3>
+      <p>
+        You can absolutely reskin this app, but avoid editing inline styles inside the JavaScript templates unless you enjoy “why is nothing centered anymore” at 1:00am.
+        The goal is: override CSS + variables, not rewrite the HTML strings.
+      </p>
+    </div>
+
+    <h2>1) The easiest customization: the built-in theme vars</h2>
+    <div class="card ok">
+      <p>
+        The app already uses two CSS variables for team colors:
+      </p>
+      <div>
+        <span class="pill">--teamA</span>
+        <span class="pill">--teamB</span>
+      </div>
+      <pre><code>:root{ --teamA:#d32f2f; --teamB:#1976d2; }</code></pre>
+      <p class="small">
+        These are used by buttons and score text via <code>getTeamColor()</code>.
+        They are also saved to <code>localStorage</code> through the settings panel.
+      </p>
+    </div>
+
+    <h2>2) “Safe knobs” you can edit today (current CSS selectors)</h2>
+    <div class="card">
+      <p>These selectors exist in the current index and are safe to customize:</p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Global</h3>
+          <div class="pill">html, body</div>
+          <div class="pill">canvas</div>
+          <pre><code>html, body {
+  background-color: #121212;
+  color: #f0f0f0;
+  padding: 30px;
+}</code></pre>
+          <p class="small">Change background, default text color, and overall padding.</p>
+        </div>
+
+        <div class="card">
+          <h3>Main scoreboard container</h3>
+          <div class="pill">#fullscoreboard</div>
+          <div class="pill">#fullscoreboard.locked-top</div>
+          <pre><code>#fullscoreboard{
+  border:2px solid #888;
+  border-radius:10px;
+  padding:20px;
+  margin-top:100px;
+  background-color:#000;
+}</code></pre>
+          <p class="small">This is the “big” scoreboard block in match mode.</p>
+        </div>
+
+        <div class="card">
+          <h3>Primary score row</h3>
+          <div class="pill">.scoreboard</div>
+          <div class="pill">#scoreBoard</div>
+          <pre><code>.scoreboard{
+  background:#000;
+  border:2px solid #444;
+  border-radius:8px;
+}</code></pre>
+          <p class="small">This controls the large score display area.</p>
+        </div>
+
+        <div class="card">
+          <h3>Timer block</h3>
+          <div class="pill">#timer</div>
+          <div class="pill">#timer.running</div>
+          <div class="pill">.pulse</div>
+          <pre><code>#timer{
+  font-size:3em;
+  border:2px solid #444;
+  border-radius:8px;
+}</code></pre>
+          <p class="small">Change timer sizing and the pulse effect.</p>
+        </div>
+
+        <div class="card">
+          <h3>Buttons</h3>
+          <div class="pill">.score-btn</div>
+          <div class="pill">.large-tap</div>
+          <div class="pill">.disabled-btn</div>
+          <pre><code>.score-btn{
+  width:160px; height:50px;
+  border-radius:6px;
+}</code></pre>
+          <p class="small">Best place to make stream-friendly large buttons.</p>
+        </div>
+
+        <div class="card">
+          <h3>Settings UI</h3>
+          <div class="pill">#gearButton</div>
+          <div class="pill">#settingsPanel</div>
+          <div class="pill">#settingsHeader</div>
+          <div class="pill">.set-row</div>
+          <div class="pill">.switch</div>
+          <pre><code>#settingsPanel{
+  width:340px;
+  max-height:90vh;
+  overflow-y:auto;
+}</code></pre>
+          <p class="small">You can safely reskin the panel without touching app logic.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2>3) Streaming scoreboards (these are the big ones)</h2>
+    <div class="card">
+      <p>
+        There are two streaming views: <strong>Skinny</strong> and <strong>Mini</strong>. These classes are the safest targets:
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Skinny streaming scoreboard</h3>
+          <div class="pill">#skinnyScoreboard</div>
+          <div class="pill">#skinnyScoreboard.locked</div>
+          <div class="pill">#skinnyScoreboard.mirrored</div>
+          <div class="pill">.skinny-player</div>
+          <div class="pill">.skinny-player .score-value</div>
+          <div class="pill">#compactSummary</div>
+          <pre><code>#skinnyScoreboard{
+  height:180px;
+  border:2px solid #555;
+  border-radius:8px;
+  background:#000;
+}</code></pre>
+          <p class="small">This view is used for wide stream overlays.</p>
+        </div>
+
+        <div class="card">
+          <h3>Mini square scoreboard</h3>
+          <div class="pill">#miniScoreboard</div>
+          <div class="pill">#miniScoreboard.mirrored</div>
+          <div class="pill">#miniContent</div>
+          <div class="pill">.mini-top</div>
+          <div class="pill">.mini-left</div>
+          <div class="pill">.mini-right</div>
+          <div class="pill">.mini-center</div>
+          <div class="pill">.mini-timer</div>
+          <div class="pill">.mini-status</div>
+          <div class="pill">.mini-pips</div>
+          <div class="pill">#miniCompactSummary</div>
+          <pre><code>#miniScoreboard{
+  width:320px; height:320px;
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+}</code></pre>
+          <p class="small">This view is used for “camera-in-corner” layouts.</p>
+        </div>
+      </div>
+
+      <div class="card warn">
+        <h3>Note about “overhauling the look”</h3>
+        <p>
+          Right now, the streaming HTML includes a bunch of inline styles inside <code>updateSkinnyScoreboard()</code> and <code>updateMiniScoreboard()</code>.
+          You can still reskin it, but you’ll get the best results by adding CSS classes and moving styles out of those template strings over time.
+          Future-you will thank you. Present-you might still be mad. 😄
+        </p>
+      </div>
+    </div>
+
+    <h2>4) Recommended “future-proof” CSS variables (add these later)</h2>
+    <div class="card">
+      <p>
+        If you want stream skins to be easy and stable across updates, add these variables to <code>:root</code>,
+        then update existing selectors to use them. That way a custom theme only edits variables.
+      </p>
+
+      <pre><code>:root{
+  /* existing */
+  --teamA:#d32f2f;
+  --teamB:#1976d2;
+
+  /* new theme system (suggested) */
+  --ahss-bg:#121212;
+  --ahss-panel:#000;
+  --ahss-text:#f0f0f0;
+  --ahss-muted:#cccccc;
+  --ahss-border:#444;
+
+  /* streaming */
+  --ahss-stream-bg:#000;
+  --ahss-stream-border:#555;
+  --ahss-stream-radius:12px;
+  --ahss-stream-shadow:0 8px 24px rgba(0,0,0,.5);
+
+  /* typography */
+  --ahss-font-ui: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --ahss-font-score: "Arial Black", Arial, sans-serif;
+
+  /* sizing */
+  --ahss-timer-size:3em;
+  --ahss-skinny-height:180px;
+  --ahss-mini-size:320px;
+
+  /* winner highlight */
+  --ahss-winner-bg:#ff0;
+  --ahss-winner-text:#000;
+  --ahss-winner-glow:0 0 12px 4px #ff0;
+}</code></pre>
+
+      <p class="small">
+        Once these are in place, docs can say: “Want a new look? Override variables only.”
+      </p>
+    </div>
+
+    <h2>5) Suggested “Theme Override” pattern (no code edits, just CSS)</h2>
+    <div class="card">
+      <p>Option A - add a new stylesheet file like <code>theme.css</code> and load it after the main styles:</p>
+      <pre><code>&lt;link rel="stylesheet" href="theme.css"&gt;</code></pre>
+
+      <p>Example <code>theme.css</code> override:</p>
+      <pre><code>:root{
+  --teamA:#ff3b30;
+  --teamB:#34c759;
+
+  --ahss-bg:#0a0a0a;
+  --ahss-panel:#050505;
+  --ahss-border:#2b2b2b;
+  --ahss-timer-size:3.4em;
+  --ahss-skinny-height:150px;
+}</code></pre>
+
+      <p class="small">
+        This is the cleanest way to let stream teams reskin without risking logic changes.
+      </p>
+    </div>
+
+    <h2>6) Logo / branding notes</h2>
+    <div class="card">
+      <p>
+        The app supports custom logos via the settings panel (stored in <code>localStorage</code>).
+        For streaming overlays, transparent PNG works best.
+      </p>
+      <div class="pill">localStorage key: ahss_custom_logo_data</div>
+      <div class="pill">default: logo.png</div>
+    </div>
+
+    <h2>7) “If you want it REALLY different” - recommended next refactor</h2>
+    <div class="card">
+      <p>
+        If Peter (or anyone) wants full broadcast skins, the next step is simple:
+        move inline styles inside streaming templates into named CSS classes, like:
+      </p>
+      <pre><code>/* add classes */
+.skinny-wrap{}
+.skinny-center{}
+.skinny-timer{}
+.skinny-status{}
+
+/* then in JS templates, remove style="" and use class names */</code></pre>
+      <p class="small">
+        That turns “2 hours of poking” into “10 minutes of CSS”. Which is the dream.
+      </p>
+    </div>
+
+    <div class="hr"></div>
+    <p class="small">
+      Maintainers: if you add or rename any selectors above, update this page so custom themes don’t break.
+      If you don’t, future Pete will leave present Pete on read. 😄
+    </p>
+  </div>
+</body>
+</html>
