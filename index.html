@@ -1017,6 +1017,74 @@
       URL.revokeObjectURL(url);
     }
 
+    function generateIdahoCSV(){
+  const p1 = players[0];
+  const p2 = players[1];
+
+  // Extract per-game scores from gameHistory (which is stored in players[0]/players[1] order)
+  const p1GameScores = [];
+  const p2GameScores = [];
+
+  gameHistory.forEach(g => {
+    // gameHistory looks like: "Name1 7 - 5 Name2"
+    const m = g.match(/(\d+)\s*-\s*(\d+)/);
+    if(m){
+      p1GameScores.push(parseInt(m[1], 10));
+      p2GameScores.push(parseInt(m[2], 10));
+    }
+  });
+
+  // Pad out to 7 games for Idaho format
+  while(p1GameScores.length < 7) p1GameScores.push('');
+  while(p2GameScores.length < 7) p2GameScores.push('');
+
+  // Totals
+  const p1PointsTotal = p1GameScores.reduce((sum,v)=>sum + (typeof v === 'number' ? v : 0), 0);
+  const p2PointsTotal = p2GameScores.reduce((sum,v)=>sum + (typeof v === 'number' ? v : 0), 0);
+
+  const p1GamesWon = p1.games || 0;
+  const p2GamesWon = p2.games || 0;
+
+  const p1Sets = (p1GamesWon > p2GamesWon) ? 1 : 0;
+  const p2Sets = (p2GamesWon > p1GamesWon) ? 1 : 0;
+
+  // Idaho header format
+  const headers = [
+    'NAMES','GAME 1','GAME 2','GAME 3','GAME 4','GAME 5','GAME 6','GAME 7','POINTS','GAMES','SETS'
+  ];
+
+  const row1 = [
+    p1.name,
+    ...p1GameScores,
+    p1PointsTotal,
+    p1GamesWon,
+    p1Sets
+  ];
+
+  const row2 = [
+    p2.name,
+    ...p2GameScores,
+    p2PointsTotal,
+    p2GamesWon,
+    p2Sets
+  ];
+
+  const csvEscape = (v) => `"${String(v ?? '').replace(/"/g,'""')}"`;
+  const csv = [headers, row1, row2].map(r => r.map(csvEscape).join(',')).join('\n');
+
+  const today = new Date().toISOString().split('T')[0];
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Idaho_Scorekeeper_${p1.name}_vs_${p2.name}_${today}.csv`.replace(/\s+/g,'_');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
     function toggleLockTop(){
       const c=document.getElementById('lockTopToggle');
       const board=document.getElementById('fullscoreboard');
