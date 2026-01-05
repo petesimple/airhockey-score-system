@@ -1,71 +1,148 @@
-# Air Hockey Score System (AHSS)
+Air Hockey Score System (AHSS)
 
-Welcome to the **Air Hockey Score System**, a fully-featured web app for tracking competitive air hockey matches—used in tournaments, casual games, and stream overlays. 🏒💥
+Welcome to the Air Hockey Score System (AHSS) - a powerful, flexible web app for running competitive air hockey matches at tournaments, weekly clubs, casual play, and live streams. 🏒
 
-## 🚀 Features
+AHSS is designed to be fast, reliable, offline-capable, and customizable, with a clean separation between match logic, data, and visual presentation.
 
-- 🎮 Scorekeeping for best-of-3, 5, or 7 sets
-- 🧠 Player name memory (via localStorage)
-- ⏱️ Animated match timer with pulse
-- ⏸️ Clickable timer for pause/resume
-- 🕹️ Arrow key & keyboard control support
-- ⏳ 10-second timeout system (one per player)
-- 🔁 Flip sides button for fair gameplay
-- 📺 "Skinny" scoreboard view for stream overlays
-- 📌 Optional "lock-to-top" scoreboard
-- 🔔 Confetti animation and sound on match win
-- 📋 Compact game summary in initials (e.g., `G1 A7-5B`)
-- 🦨 Skunk detection (7-0) with emoji in scoreboard
-- 🔘 Winner and loser pips in skinny scoreboard (● and ○)
-- 📦 Export match results as:
-  - Text summary
-  - Clipboard share
-  - Tournament-ready CSV file
+⸻
 
-### 🧑‍⚖️ Tournament Director (TD) Page
+🚀 Core Features
 
-The **TD.html** page lets you:
-- Generate match links with player names and match length
-- Create a scannable QR code for each match
-- Copy the match URL to clipboard
-- Access a built-in collapsible help guide
-- Use as a standalone PWA for tournaments
+🎮 Match & Scorekeeping
+	•	Supports best-of 3, 5, or 7 games
+	•	First to 7 goals wins a game
+	•	Sudden death support
+	•	Flip sides at any point for fair play
+	•	Undo scoring support
+	•	Visual winner / loser indicators
 
-## 📦 Setup
+🧠 Player & Match Memory
+	•	Player names persist via localStorage
+	•	Match state survives accidental refreshes
+	•	Clean reset between matches
 
-No installation required—just open `index.html` or `TD.html` in your browser.
+⏱️ Timer & Timeout System
+	•	Match timer with visual pulse
+	•	Tap/click to pause or resume
+	•	One 10-second timeout per player
+	•	Timeout countdown displayed independently
+	•	Timeout cancellation supported
 
-To use as a PWA (Progressive Web App):
-- Add to Home Screen on iOS or Android
-- Works offline with service worker included
+⸻
 
-## 🧪 Keyboard Shortcuts
+📺 Streaming & Display Tools
 
-| Key        | Action                        |
-|------------|-------------------------------|
-| ←          | Score for left player         |
-| →          | Score for right player        |
-| A / D      | Call timeout (left/right)     |
-| Enter      | Trigger "Next Game" button    |
+Skinny Scoreboard (Stream View)
+	•	Compact overlay-friendly scoreboard
+	•	Winner and loser pips (● / ○)
+	•	Skunk detection (7-0) with visual marker 🦨
+	•	Compact match summary (e.g. G1 A7-5B)
+	•	Optional mirrored view for opposite-side refs
+	•	Lock-to-top option for clean OBS framing
 
-## 📜 Version
+Broadcast-Ready Design
+	•	Optimized for OBS and screen capture
+	•	Stable layout that survives side swaps
+	•	Minimal ref UI for stream-only use
 
-**v1.6 – (skunk)**  
-Now includes skunk pips in the skinny scoreboard 🦨 and polish to match end behavior!
+⸻
 
-## 📁 Files
+🎨 Custom CSS Tool (v2.8.9)
 
-- `index.html` – Main app
-- `TD.html` – Tournament Director match tool
-- `manifest.json` / `manifestTD.json` – PWA manifests
-- `service-worker.js` / `service-worker-td.js` – Offline support
-- `icon-192.png`, `iconTD-192.png`, `logo.png` – App assets
+AHSS now includes a Custom CSS Tool, allowing full visual customization without touching core logic.
 
-## ❤️ Credit
+With Custom CSS you can:
+	•	Change fonts, colors, and spacing
+	•	Resize and reposition names and scores
+	•	Customize the stream view independently
+	•	Apply league or event branding
+	•	Create reusable “skins” for broadcasts
 
-Created by [Pete Lippincott](https://github.com/petesimple) with help from ChatGPT.  
-Built for the air hockey community. Feedback welcome!
+Custom styles override defaults safely and are fully optional.
 
----
+📘 Documentation:
+https://petesimple.github.io/airhockey-score-system/documentation.html
+
+⸻
+
+⌨️ Input & Controls
+
+Keyboard & Controller Support
+	•	Keyboard scoring and match control
+	•	Customizable hotkey mappings
+	•	Controller-friendly input handling
+	•	Designed for referee tablets and kiosks
+
+Key	Action
+←	Score left player
+→	Score right player
+A / D	Timeout (left / right)
+Enter	Next Game
+
+
+⸻
+
+📋 Match Data & Export
+	•	Automatic match summaries
+	•	Export results as:
+	•	Plain text
+	•	Clipboard share
+	•	Tournament-ready CSV
+	•	Designed to integrate with external rating systems
+	•	Raw match data provided - ratings are calculated externally
+
+⸻
+
+🧑‍⚖️ Tournament Director (TD) Tool
+
+The included TD.html page is built for tournament operators:
+	•	Generate match links with player names and match length
+	•	Create scannable QR codes for quick access
+	•	Copy match URLs instantly
+	•	Built-in collapsible help guide
+	•	Can run as a standalone PWA
+	•	Ideal for multi-table tournaments
+
+⸻
+
+📦 Progressive Web App (PWA)
+	•	No install required - runs in any modern browser
+	•	Installable on iOS, Android, tablets, and desktops
+	•	Fully offline-capable via service workers
+	•	Stable for live events and venues
+
+⸻
+
+📁 Project Files
+	•	index.html - Main scoreboard app
+	•	TD.html - Tournament Director tool
+	•	manifest.json / manifestTD.json - PWA manifests
+	•	service-worker.js / service-worker-td.js - Offline support
+	•	Icons, logos, and assets for installs and branding
+
+⸻
+
+🧠 Design Philosophy
+
+AHSS intentionally separates:
+	•	Scoring logic
+	•	Match data
+	•	Visual presentation
+
+This makes it easy to:
+	•	Customize appearance without breaking rules
+	•	Integrate with automation or rating pipelines
+	•	Support different leagues with different needs
+
+⸻
+
+❤️ Credit
+
+Created by Pete Lippincott
+Built for the air hockey community, by the air hockey community.
+
+Feedback, testing, and contributions are always welcome.
+
+⸻
 
 🏓 May the best mallet win.
