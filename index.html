@@ -895,6 +895,21 @@ function getCenterLogoHTML(opts={}){
       updateScore(); updateLowerThirdScoreboard();
     }
 
+    function renderPips(player){
+  let html = '';
+  for(let i=0; i < matchLength; i++){
+    html += `<span style="
+      display:inline-block;
+      width:10px;
+      height:10px;
+      margin:0 3px;
+      border-radius:50%;
+      background:${i < player.gamesWon ? getTeamColor(player.id) : 'rgba(255,255,255,.15)'};
+    "></span>`;
+  }
+  return html;
+}
+
     function updateScore() {
       const a = isPlayer1Left ? players[0] : players[1];
       const b = isPlayer1Left ? players[1] : players[0];
