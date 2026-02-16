@@ -433,11 +433,14 @@ function getCenterLogoHTML(opts={}){
   if(!isCenterLogoEnabled()) return '';
   const src = getCenterLogoSrc();
   return `
-    <img
-      src="${src}"
-      alt="Center logo"
-      style="height:${size}px; max-width:${size*2}px; width:auto; display:block; margin:0 auto ${marginBottom}px; object-fit:contain;"
-    />
+    <div class="ahss-center-logo-wrap" style="margin:0 auto ${marginBottom}px; display:flex; justify-content:center;">
+      <img
+        class="ahss-center-logo"
+        src="${src}"
+        alt="Center logo"
+        style="height:${size}px; max-width:${size*2}px; width:auto; display:block; object-fit:contain;"
+      />
+    </div>
   `;
 }
 
