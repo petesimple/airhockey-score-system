@@ -1327,9 +1327,10 @@ function getCenterLogoHTML(opts={}){
       document.getElementById('miniContent').innerHTML =
         `<div class="mini-top">${leftHTML}${rightHTML}</div>
          <div class="mini-center">
-           <div class="mini-timer">${timerText}</div>
-           <div class="mini-status">${timeoutHTML || betweenHTML || ''}</div>
-         </div>
+  ${getCenterLogoHTML({ size: 40, marginBottom: 6 })}
+  <div class="mini-timer">${timerText}</div>
+  <div class="mini-status">${timeoutHTML || betweenHTML || ''}</div>
+</div>
          <div class="mini-bottom">
            <div class="mini-pips" style="color:${leftColor};">${getPipLine(left.id)}</div>
            <div class="mini-pips" style="color:${rightColor};">${getPipLine(right.id)}</div>
