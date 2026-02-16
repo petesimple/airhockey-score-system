@@ -402,7 +402,9 @@
     font-size:56px;
   }
 }
-    
+#hideLTToggleWrapper{
+  display:none !important;
+}   
   </style>
 </head>
 <body>
@@ -474,6 +476,7 @@
     <div id="miniToggleWrapper"><label><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard()"> Mini (Square) Streaming Scoreboard</label></div>
     <div id="mirrorAllWrapper"><label><input type="checkbox" id="mirrorAll" onchange="updateMirrorState()"> Mirror Scoreboard View</label></div>
     <div id="lowerThirdToggleWrapper"><label><input type="checkbox" id="toggleLowerThird" onchange="toggleLowerThirdScoreboard()"> Lower 3rd</label></div>
+    <div id="hideLTToggleWrapper"><label><input type="checkbox" id="toggleHideLTTimer" onchange="toggleHideLTTimer()">Hide Lower 3rd Timer</label></div>
     <div id="lockTopWrapper"><label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()"> Lock Scoreboard to Top</label></div>
 
     <div id="gameWinner"></div>
@@ -605,6 +608,11 @@
         <div class="switch" style="margin-top:8px;">
         <label for="swLowerThird">Lower 3rd (TSO)</label>
         <input id="swLowerThird" type="checkbox" onchange="uiToggleLowerThird(this.checked)">
+        </div>
+
+        <div class="switch" style="margin-top:8px;">
+        <label for="swHideLTTimer">Hide Timer (Lower 3rd)</label>
+        <input id="swHideLTTimer" type="checkbox" onchange="uiToggleHideLTTimer(this.checked)">
         </div>
 
         <div class="switch" style="margin-top:8px;">
@@ -1538,13 +1546,25 @@ function uiToggleLowerThird(on){
 </div>
   `;
 
-  document.getElementById('lowerThirdCenter').innerHTML = `
-    ${getCenterLogoHTML({ size: 48, marginBottom: 8 })}
-    <div class="lt-timer">${timerText}</div>
-    <div class="lt-sub">${subLine}</div>
-  `;
+  function toggleHideLTTimer(){
+  updateLowerThirdScoreboard();
 }
-    
+
+function uiToggleHideLTTimer(on){
+  const t = document.getElementById('toggleHideLTTimer');
+  if(t) t.checked = on;
+  toggleHideLTTimer();
+}
+
+    function toggleHideLTTimer(){
+  updateLowerThirdScoreboard();
+}
+
+function uiToggleHideLTTimer(on){
+  const t = document.getElementById('toggleHideLTTimer');
+  if(t) t.checked = on;
+  toggleHideLTTimer();
+}
     function updateMirrorState(){
   const mirror = isMirrored();
   document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
