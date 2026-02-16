@@ -1456,11 +1456,12 @@ function uiToggleLowerThird(on){
 }
     
     function updateMirrorState(){
-      const mirror = isMirrored();
-      document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
-      document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
-      updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard();
-    }
+  const mirror = isMirrored();
+  document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
+  document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
+  document.getElementById('lowerThirdScoreboard').classList.toggle('mirrored', mirror);
+  updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard(); updateLowerThirdScoreboard();
+}
 
     function updateSkinnyScoreboard(winnerId=null){
       const skinny=document.getElementById('skinnyScoreboard');
