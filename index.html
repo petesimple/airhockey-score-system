@@ -872,7 +872,7 @@ function getCenterLogoHTML(opts={}){
         nextBtn.style.display = 'inline-block';
         nextBtn.textContent = (player.games + 1) === winGames ? 'Declare Winner' : 'Start Next Game';
       }
-      updateSkinnyScoreboard(); updateMiniScoreboard();
+      updateSkinnyScoreboard(); updateMiniScoreboard(); updateLowerThirdScoreboard();
     }
     function removePoint(id) {
       const p = players.find(x => x.id === id);
