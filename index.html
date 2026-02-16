@@ -902,21 +902,26 @@ function getCenterLogoHTML(opts={}){
     }
 
     function renderPips(player){
-  const total = Number.isFinite(winGames) ? winGames : 4;     // pips = games needed to win match
-  const filled = Number.isFinite(player?.games) ? player.games : 0;
+  if(!Array.isArray(gameHistory) || gameHistory.length === 0) return '';
 
-  let html = '';
-  for(let i = 0; i < total; i++){
-    html += `<span style="
-      display:inline-block;
-      width:10px;
-      height:10px;
-      margin:0 3px;
-      border-radius:50%;
-      background:${i < filled ? getTeamColor(player.id) : 'rgba(255,255,255,.15)'};
-    "></span>`;
-  }
-  return html;
+  return gameHistory.map(g=>{
+    const m = g.match(/(\d+)\s*-\s*(\d+)/);
+    if(!m) return '–';
+
+    const s1 = parseInt(m[1],10);
+    const s2 = parseInt(m[2],10);
+
+    const playerIsP1 = player.id === 'player1';
+    const playerScore = playerIsP1 ? s1 : s2;
+    const oppScore    = playerIsP1 ? s2 : s1;
+
+    const win = playerScore > oppScore;
+    const skunk = (playerScore === 7 && oppScore === 0);
+
+    if(skunk) return '🦨';
+    if(win)   return '●';
+    return '○';
+  }).join(' ');
 }
 
     function updateScore() {
