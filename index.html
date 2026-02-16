@@ -878,7 +878,7 @@ function getCenterLogoHTML(opts={}){
       const p = players.find(x => x.id === id);
       if (!p) return;
       if (p.points > 0) p.points--;
-      updateScore();
+      updateScore(); updateLowerThirdScoreboard();
     }
 
     function updateScore() {
