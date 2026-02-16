@@ -1248,9 +1248,12 @@ function getCenterLogoHTML(opts={}){
       document.getElementById('skinnyContent').innerHTML =
         `<div style="display:flex;justify-content:space-between;width:100%;padding:0 5px;font-family:'Arial Black';font-size:1.2em;">
            ${leftHTML}
-           <div style="text-align:center;min-width:100px;font-size:1.4em;">
-             <div style="font-weight:bold;">${timerText}</div>${timeoutHTML}${bgHTML}
-           </div>
+           <div style="text-align:center;min-width:110px;font-size:1.4em;">
+  ${getCenterLogoHTML({ size: 42, marginBottom: 6 })}
+  <div style="font-weight:bold;">${timerText}</div>
+  ${timeoutHTML}
+  ${bgHTML}
+</div>
            ${rightHTML}
          </div>`;
 
