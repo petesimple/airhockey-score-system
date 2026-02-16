@@ -484,17 +484,23 @@ function getCenterLogoHTML(opts={}){
       reader.readAsDataURL(file);
     }
     function applyCustomLogo(){
-      const stored = localStorage.getItem(THEME_KEYS.LOGO);
-      const img = document.getElementById('appLogo');
-      const prev = document.getElementById('logoPreview');
-      if(stored){
-        img.src = stored;
-        if(prev){ prev.src = stored; prev.style.display = 'inline-block'; }
-      } else {
-        img.src = 'logo.png';
-        if(prev){ prev.src = ''; prev.style.display = 'none'; }
-      }
-    }
+  const stored = localStorage.getItem(THEME_KEYS.LOGO);
+  const img = document.getElementById('appLogo');
+  const prev = document.getElementById('logoPreview');
+
+  if(stored){
+    img.src = stored;
+    if(prev){ prev.src = stored; prev.style.display = 'inline-block'; }
+  } else {
+    img.src = 'logo.png';
+    if(prev){ prev.src = ''; prev.style.display = 'none'; }
+  }
+
+  // Refresh center logo areas too
+  updateScore();
+  updateSkinnyScoreboard();
+  updateMiniScoreboard();
+}
     function clearCustomLogo(){ localStorage.removeItem(THEME_KEYS.LOGO); applyCustomLogo(); }
 
     /* CUSTOM CSS TOOL */
