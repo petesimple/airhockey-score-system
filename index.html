@@ -635,6 +635,9 @@ function getCenterLogoHTML(opts={}){
       applyCustomLogo();
       loadCustomCss();
 
+      const swCenter = document.getElementById('swCenterLogo');
+      if(swCenter) swCenter.checked = isCenterLogoEnabled();
+
       document.getElementById('timer').addEventListener('click', toggleTimer);
 
       const p1 = urlParams.get('p1');
