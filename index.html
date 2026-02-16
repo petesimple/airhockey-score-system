@@ -312,6 +312,10 @@
           <button onclick="previewCustomCss()">Preview Only</button>
           <button onclick="clearCustomCss()">Clear CSS</button>
         </div>
+        <div class="switch" style="margin-top:10px;">
+  <label for="swCenterLogo">Show logo in center of scoreboards</label>
+  <input id="swCenterLogo" type="checkbox" onchange="setCenterLogoEnabled(this.checked)">
+</div>
 
         <small style="display:block; margin-top:8px; color:#bbb;">
           Saves on this device only. If it looks weird, hit Clear CSS and you are back.
@@ -391,11 +395,44 @@
   <script>
     /* THEME AND LOGO HELPERS */
     const THEME_KEYS = {
-      A:'ahss_theme_teamA',
-      B:'ahss_theme_teamB',
-      LOGO:'ahss_custom_logo_data',
-      CSS:'ahss_custom_css'
-    };
+  A:'ahss_theme_teamA',
+  B:'ahss_theme_teamB',
+  LOGO:'ahss_custom_logo_data',
+  CSS:'ahss_custom_css',
+  CENTER_LOGO:'ahss_center_logo_enabled'
+};
+
+function isCenterLogoEnabled(){
+  const v = localStorage.getItem(THEME_KEYS.CENTER_LOGO);
+  // default ON (change to 'false' here if you want default off)
+  return v === null ? true : (v === 'true');
+}
+function setCenterLogoEnabled(on){
+  localStorage.setItem(THEME_KEYS.CENTER_LOGO, on ? 'true' : 'false');
+  // Re-render everything that draws the center column
+  updateScore();
+  updateSkinnyScoreboard();
+  updateMiniScoreboard();
+  syncInMatchToggles();
+}
+
+function getCenterLogoSrc(){
+  // Use saved custom logo if present; fall back to your default logo.png
+  return localStorage.getItem(THEME_KEYS.LOGO) || 'logo.png';
+}
+
+function getCenterLogoHTML(opts={}){
+  const { size=44, marginBottom=6 } = opts;
+  if(!isCenterLogoEnabled()) return '';
+  const src = getCenterLogoSrc();
+  return `
+    <img
+      src="${src}"
+      alt="Center logo"
+      style="height:${size}px; max-width:${size*2}px; width:auto; display:block; margin:0 auto ${marginBottom}px; object-fit:contain;"
+    />
+  `;
+}
 
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
