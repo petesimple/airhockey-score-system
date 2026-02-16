@@ -703,10 +703,15 @@ function getCenterLogoHTML(opts={}){
       const left = isMirrored() ? b : a;
       const right = isMirrored() ? a : b;
       document.getElementById('scoreBoard').innerHTML = `
-        <div style="display:flex; justify-content:space-around; gap:40px;">
-          ${formatPlayerScore(left)}
-          ${formatPlayerScore(right)}
-        </div>`;
+  <div style="display:flex; justify-content:space-around; gap:22px; align-items:center;">
+    ${formatPlayerScore(left)}
+
+    <div style="text-align:center; min-width:90px;">
+      ${getCenterLogoHTML({ size: 46, marginBottom: 0 })}
+    </div>
+
+    ${formatPlayerScore(right)}
+  </div>`;
       updateSkinnyScoreboard(); updateMiniScoreboard();
     }
     function formatPlayerScore(player) {
