@@ -100,6 +100,158 @@
     .mini-player { border-radius:8px; margin:6px; }
     .mini-player.winner { background:#ff0; color:#000; box-shadow:0 0 12px 4px #ff0; }
 
+    /* =========================================================
+   LOWER THIRD (Sammy Sketch)
+   ========================================================= */
+#lowerThirdScoreboard{
+  display:none;
+  position:fixed;
+  left:50%;
+  bottom:20px;
+  transform:translateX(-50%);
+  width:calc(100% - 40px);
+  max-width:1200px;
+  height:150px;
+  z-index:1200;
+  pointer-events:none;
+}
+
+#lowerThirdScoreboard.mirrored{
+  transform:translateX(-50%) scaleX(-1);
+}
+#lowerThirdScoreboard.mirrored *{
+  transform:scaleX(-1);
+}
+
+/* Outer long bar (wings) */
+.lt-wrap{
+  position:relative;
+  width:100%;
+  height:100%;
+  border-radius:22px;
+  overflow:hidden;
+  box-shadow:0 18px 50px rgba(0,0,0,.65);
+}
+
+/* Team blend background longways */
+.lt-bg{
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--teamA) 70%, #000) 0%,
+      rgba(0,0,0,.80) 45%,
+      rgba(0,0,0,.92) 50%,
+      rgba(0,0,0,.80) 55%,
+      color-mix(in srgb, var(--teamB) 70%, #000) 100%
+    );
+  filter:saturate(1.15);
+}
+
+/* Cut the wing silhouette (angled ends) */
+.lt-wings{
+  position:absolute;
+  inset:0;
+  clip-path: polygon(
+    2% 30%, 98% 30%, 95% 70%, 5% 70%
+  );
+  border:2px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.6);
+}
+
+/* Center bucket (trapezoid) */
+.lt-center{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:310px;
+  height:140px;
+  clip-path: polygon(12% 0%, 88% 0%, 96% 100%, 4% 100%);
+  background: rgba(0,0,0,.78);
+  border:2px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  box-shadow:0 12px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.6);
+}
+
+/* Centerline behind logo (matches your sketch) */
+.lt-centerline{
+  position:absolute;
+  left:50%;
+  top:10px;
+  bottom:10px;
+  width:2px;
+  transform:translateX(-50%);
+  background: rgba(255,255,255,.18);
+  box-shadow: 0 0 12px rgba(255,255,255,.08);
+  border-radius:2px;
+}
+
+/* Content layout */
+.lt-content{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 54px;
+  font-family:'Arial Black', sans-serif;
+}
+
+/* Player blocks */
+.lt-player{
+  width:42%;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.lt-player.right{ align-items:flex-end; text-align:right; }
+
+.lt-name{
+  font-size:44px;
+  line-height:1;
+  color:#fff;
+  text-shadow:0 10px 30px rgba(0,0,0,.8);
+}
+
+.lt-score{
+  font-size:84px;
+  line-height:1;
+  font-weight:900;
+  text-shadow:0 10px 30px rgba(0,0,0,.9);
+}
+
+/* Center content inside bucket */
+.lt-centerContent{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:310px;
+  height:140px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  text-align:center;
+}
+
+.lt-timer{
+  font-size:64px;
+  line-height:1;
+  color:#fff;
+  text-shadow:0 10px 30px rgba(0,0,0,.9);
+}
+.lt-sub{
+  font-size:18px;
+  color:rgba(255,255,255,.75);
+  min-height:22px;
+}
+    
     /* Buttons */
     .score-btn { width:160px; height:50px; font-size:1em; margin:5px; border:none; border-radius:6px; cursor:pointer; }
     .large-tap { font-size:1.2em; height:60px; font-weight:bold; }
@@ -143,7 +295,7 @@
     }
 
     /* keep legacy wrappers hidden */
-    #skinnyToggleWrapper, #miniToggleWrapper, #mirrorAllWrapper, #lockTopWrapper { display:none !important; }
+    #skinnyToggleWrapper, #miniToggleWrapper, #mirrorAllWrapper, #lockTopWrapper, #lowerThirdToggleWrapper { display:none !important; }
 
     /* Make the gear panel scrollable if content is tall */
     #settingsPanel {
@@ -219,6 +371,22 @@
     <button onclick="startMatch()">Start Match</button>
   </div>
 
+<!-- Lower 3rd scoreboard (Sammy Sketch) -->
+<div id="lowerThirdScoreboard">
+  <div class="lt-wrap">
+    <div class="lt-bg"></div>
+    <div class="lt-wings"></div>
+
+    <div class="lt-center">
+      <div class="lt-centerline"></div>
+    </div>
+
+    <div class="lt-content" id="lowerThirdContent"></div>
+
+    <div class="lt-centerContent" id="lowerThirdCenter"></div>
+  </div>
+</div>
+  
   <!-- Score section -->
   <div id="scoreSection" style="display:none">
     <div id="fullscoreboard">
@@ -240,6 +408,7 @@
     <div id="skinnyToggleWrapper"><label><input type="checkbox" id="toggleSkinny" onchange="toggleSkinnyScoreboard()"> Streaming Scoreboard</label></div>
     <div id="miniToggleWrapper"><label><input type="checkbox" id="toggleMini" onchange="toggleMiniScoreboard()"> Mini (Square) Streaming Scoreboard</label></div>
     <div id="mirrorAllWrapper"><label><input type="checkbox" id="mirrorAll" onchange="updateMirrorState()"> Mirror Scoreboard View</label></div>
+    <div id="lowerThirdToggleWrapper"><label><input type="checkbox" id="toggleLowerThird" onchange="toggleLowerThirdScoreboard()"> Lower 3rd</label></div>
     <div id="lockTopWrapper"><label><input type="checkbox" id="lockTopToggle" onchange="toggleLockTop()"> Lock Scoreboard to Top</label></div>
 
     <div id="gameWinner"></div>
@@ -366,6 +535,11 @@
         <div class="switch" style="margin-top:8px;">
           <label for="swMini">Mini (Square) Streaming Scoreboard</label>
           <input id="swMini" type="checkbox" onchange="uiToggleMini(this.checked)">
+        </div>
+
+        <div class="switch" style="margin-top:8px;">
+        <label for="swLowerThird">Lower 3rd (Sammy)</label>
+        <input id="swLowerThird" type="checkbox" onchange="uiToggleLowerThird(this.checked)">
         </div>
 
         <div class="switch" style="margin-top:8px;">
@@ -1199,6 +1373,87 @@ function getCenterLogoHTML(opts={}){
       updateMiniScoreboard();
     }
 
+function toggleLowerThirdScoreboard(){
+  const lt = document.getElementById('lowerThirdScoreboard');
+  const on = document.getElementById('toggleLowerThird').checked;
+
+  lt.style.display = on ? 'block' : 'none';
+
+  // Force exclusivity - only one streaming view at a time
+  if(on){
+    if(document.getElementById('toggleSkinny').checked){
+      document.getElementById('toggleSkinny').checked = false;
+      toggleSkinnyScoreboard();
+    }
+    if(document.getElementById('toggleMini').checked){
+      document.getElementById('toggleMini').checked = false;
+      toggleMiniScoreboard();
+    }
+    if(document.getElementById('lockTopToggle').checked){
+      document.getElementById('lockTopToggle').checked = false;
+      toggleLockTop();
+    }
+  }
+
+  updateLowerThirdScoreboard();
+}
+
+function uiToggleLowerThird(on){
+  const t = document.getElementById('toggleLowerThird');
+  if(t) t.checked = on;
+  toggleLowerThirdScoreboard();
+  if(on){
+    const sm = document.getElementById('swMini');
+    const ss = document.getElementById('swSkinny');
+    if(sm) sm.checked = false;
+    if(ss) ss.checked = false;
+  }
+}
+
+    function updateLowerThirdScoreboard(winnerId=null){
+  const lt = document.getElementById('lowerThirdScoreboard');
+  if(!lt || lt.style.display==='none') return;
+
+  const mirror = isMirrored();
+  lt.classList.toggle('mirrored', mirror);
+
+  let L = isPlayer1Left ? players[0] : players[1];
+  let R = isPlayer1Left ? players[1] : players[0];
+  const left  = mirror ? R : L;
+  const right = mirror ? L : R;
+
+  const leftColor  = getTeamColor(left.id);
+  const rightColor = getTeamColor(right.id);
+
+  const timerText = (document.getElementById('timer').textContent || '')
+    .replace('Match Time: ','')
+    .replace(' (Paused)','') || '0:00';
+
+  const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
+  const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
+  const bgActive = document.getElementById('betweenGamesTimer').style.display==='block';
+  const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
+  const subLine = timeoutActive ? `Timeout: ${timeoutText}` : (bgActive ? `Next Game: ${bgText}` : '');
+
+  document.getElementById('lowerThirdContent').innerHTML = `
+    <div class="lt-player left">
+      <div class="lt-name">${left.name}</div>
+      <div class="lt-score" style="color:${leftColor};">${left.points}</div>
+    </div>
+
+    <div class="lt-player right">
+      <div class="lt-name">${right.name}</div>
+      <div class="lt-score" style="color:${rightColor};">${right.points}</div>
+    </div>
+  `;
+
+  document.getElementById('lowerThirdCenter').innerHTML = `
+    ${getCenterLogoHTML({ size: 48, marginBottom: 8 })}
+    <div class="lt-timer">${timerText}</div>
+    <div class="lt-sub">${subLine}</div>
+  `;
+}
+    
     function updateMirrorState(){
       const mirror = isMirrored();
       document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
