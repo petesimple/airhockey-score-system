@@ -338,6 +338,19 @@
       margin-top:8px;
       color:#e9eefb;
     }
+    .lt-pips{
+  margin-top:8px;
+  display:flex;
+  gap:6px;
+}
+
+.lt-player.right .lt-pips{
+  justify-content:flex-end;
+}
+
+.lt-player.left .lt-pips{
+  justify-content:flex-start;
+}
   </style>
 </head>
 <body>
@@ -1438,14 +1451,16 @@ function uiToggleLowerThird(on){
 
   document.getElementById('lowerThirdContent').innerHTML = `
     <div class="lt-player left">
-      <div class="lt-name">${left.name}</div>
-      <div class="lt-score" style="color:${leftColor};">${left.points}</div>
-    </div>
+  <div class="lt-name">${left.name}</div>
+  <div class="lt-score" style="color:${leftColor};">${left.points}</div>
+  <div class="lt-pips">${renderPips(left)}</div>
+</div>
 
     <div class="lt-player right">
-      <div class="lt-name">${right.name}</div>
-      <div class="lt-score" style="color:${rightColor};">${right.points}</div>
-    </div>
+  <div class="lt-name">${right.name}</div>
+  <div class="lt-score" style="color:${rightColor};">${right.points}</div>
+  <div class="lt-pips">${renderPips(right)}</div>
+</div>
   `;
 
   document.getElementById('lowerThirdCenter').innerHTML = `
