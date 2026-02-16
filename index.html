@@ -350,6 +350,13 @@
       <!-- In match controls -->
       <div class="set-row" id="inMatchControls" style="display:none;">
         <label>In match controls</label>
+        <div class="switch" style="margin-top:8px;">
+  <label for="swCenterLogoInMatch">Center logo on scoreboards</label>
+  <input id="swCenterLogoInMatch" type="checkbox" onchange="
+    setCenterLogoEnabled(this.checked);
+    document.getElementById('swCenterLogo').checked = this.checked;
+  ">
+</div>
 
         <div class="switch">
           <label for="swSkinny">Streaming Scoreboard</label>
