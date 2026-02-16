@@ -896,7 +896,7 @@ function getCenterLogoHTML(opts={}){
 
     ${formatPlayerScore(right)}
   </div>`;
-      updateSkinnyScoreboard(); updateMiniScoreboard();
+      updateSkinnyScoreboard(); updateMiniScoreboard(); updateLowerThirdScoreboard();
     }
     function formatPlayerScore(player) {
       const parts = (player.name || '').split(' ');
