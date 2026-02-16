@@ -1213,6 +1213,15 @@
       } else if(summaryEl) {
         summaryEl.innerHTML='';
       }
+      function ensureSammyBadge(){
+  const host = document.getElementById("skinnyScoreboard");
+  if(!host) return;
+  if(host.querySelector(".sammy-center-badge")) return;
+
+  const badge = document.createElement("div");
+  badge.className = "sammy-center-badge";
+  host.appendChild(badge);
+}
     }
 
     function updateMiniScoreboard(winnerId=null){
