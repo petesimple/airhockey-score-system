@@ -217,7 +217,7 @@
 }
 
 .lt-name{
-  font-size:44px;
+  font-size: clamp(18px, 4vw, 44px);
   line-height:1;
   color:#fff;
   text-shadow:0 10px 30px rgba(0,0,0,.8);
@@ -358,6 +358,38 @@
 .lt-player.left .lt-pips{
   justify-content:flex-start;
 }
+
+    /* =========================================
+   LOWER THIRD - Responsive Name Scaling
+   ========================================= */
+
+/* Tablet */
+@media (max-width: 1024px){
+  .lt-name{
+    font-size:34px;
+  }
+}
+
+/* Large phones */
+@media (max-width: 768px){
+  .lt-name{
+    font-size:26px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px){
+  .lt-name{
+    font-size:20px;
+  }
+}
+
+    @media (max-width: 480px){
+  .lt-score{
+    font-size:56px;
+  }
+}
+    
   </style>
 </head>
 <body>
