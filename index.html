@@ -896,15 +896,18 @@ function getCenterLogoHTML(opts={}){
     }
 
     function renderPips(player){
+  const total = Number.isFinite(winGames) ? winGames : 4;     // pips = games needed to win match
+  const filled = Number.isFinite(player?.games) ? player.games : 0;
+
   let html = '';
-  for(let i=0; i < matchLength; i++){
+  for(let i = 0; i < total; i++){
     html += `<span style="
       display:inline-block;
       width:10px;
       height:10px;
       margin:0 3px;
       border-radius:50%;
-      background:${i < player.gamesWon ? getTeamColor(player.id) : 'rgba(255,255,255,.15)'};
+      background:${i < filled ? getTeamColor(player.id) : 'rgba(255,255,255,.15)'};
     "></span>`;
   }
   return html;
