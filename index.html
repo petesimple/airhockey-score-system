@@ -916,7 +916,7 @@ function getCenterLogoHTML(opts={}){
       const sec = timeElapsed % 60;
       const timer = document.getElementById('timer');
       timer.textContent = `${min}:${sec.toString().padStart(2,'0')}` + (timerRunning ? '' : ' (Paused)');
-      updateSkinnyScoreboard(); updateMiniScoreboard();
+      updateSkinnyScoreboard(); updateMiniScoreboard(); updateLowerThirdScoreboard();
     }
     function toggleTimer() {
       const t = document.getElementById('timer');
