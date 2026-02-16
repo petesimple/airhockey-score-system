@@ -1509,7 +1509,7 @@ function uiToggleLowerThird(on){
 
     function updateLowerThirdScoreboard(winnerId=null){
   const lt = document.getElementById('lowerThirdScoreboard');
-  if(!lt || lt.style.display==='none') return;
+  if(!lt || lt.style.display === 'none') return;
 
   const mirror = isMirrored();
   lt.classList.toggle('mirrored', mirror);
@@ -1526,27 +1526,42 @@ function uiToggleLowerThird(on){
     .replace('Match Time: ','')
     .replace(' (Paused)','') || '0:00';
 
-  const timeoutActive = document.getElementById('timeoutTimer').style.display==='block';
+  const timeoutActive = document.getElementById('timeoutTimer').style.display === 'block';
   const timeoutText = document.getElementById('timeoutTimer').textContent.replace('Timeout: ','');
-  const bgActive = document.getElementById('betweenGamesTimer').style.display==='block';
+  const bgActive = document.getElementById('betweenGamesTimer').style.display === 'block';
   const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
   const subLine = timeoutActive ? `Timeout: ${timeoutText}` : (bgActive ? `Next Game: ${bgText}` : '');
 
+  // Players (name, score, pips)
   document.getElementById('lowerThirdContent').innerHTML = `
     <div class="lt-player left">
-  <div class="lt-name">${left.name}</div>
-  <div class="lt-score" style="color:${leftColor};">${left.points}</div>
-  <div class="lt-pips">${renderPips(left)}</div>
-</div>
+      <div class="lt-name">${left.name}</div>
+      <div class="lt-score" style="color:${leftColor};">${left.points}</div>
+      <div class="lt-pips">${renderPips(left)}</div>
+    </div>
 
     <div class="lt-player right">
-  <div class="lt-name">${right.name}</div>
-  <div class="lt-score" style="color:${rightColor};">${right.points}</div>
-  <div class="lt-pips">${renderPips(right)}</div>
-</div>
+      <div class="lt-name">${right.name}</div>
+      <div class="lt-score" style="color:${rightColor};">${right.points}</div>
+      <div class="lt-pips">${renderPips(right)}</div>
+    </div>
   `;
 
-  function toggleHideLTTimer(){
+  // Center (logo + optional timer + subline) - no nested template literals
+  const hideTimer = !!document.getElementById('toggleHideLTTimer')?.checked;
+
+  let centerHTML = getCenterLogoHTML({ size: 48, marginBottom: 8 });
+
+  if(!hideTimer){
+    centerHTML += '<div class="lt-timer">' + timerText + '</div>';
+  }
+
+  centerHTML += '<div class="lt-sub">' + (subLine || '') + '</div>';
+
+  document.getElementById('lowerThirdCenter').innerHTML = centerHTML;
+}
+
+function toggleHideLTTimer(){
   updateLowerThirdScoreboard();
 }
 
@@ -1556,21 +1571,15 @@ function uiToggleHideLTTimer(on){
   toggleHideLTTimer();
 }
 
-    function toggleHideLTTimer(){
-  updateLowerThirdScoreboard();
-}
-
-function uiToggleHideLTTimer(on){
-  const t = document.getElementById('toggleHideLTTimer');
-  if(t) t.checked = on;
-  toggleHideLTTimer();
-}
-    function updateMirrorState(){
+function updateMirrorState(){
   const mirror = isMirrored();
-  document.getElementById('skinnyScoreboard').classList.toggle('mirrored', mirror);
-  document.getElementById('miniScoreboard').classList.toggle('mirrored', mirror);
-  document.getElementById('lowerThirdScoreboard').classList.toggle('mirrored', mirror);
-  updateScore(); updateSkinnyScoreboard(); updateMiniScoreboard(); updateLowerThirdScoreboard();
+  document.getElementById('skinnyScoreboard')?.classList.toggle('mirrored', mirror);
+  document.getElementById('miniScoreboard')?.classList.toggle('mirrored', mirror);
+  document.getElementById('lowerThirdScoreboard')?.classList.toggle('mirrored', mirror);
+  updateScore();
+  updateSkinnyScoreboard();
+  updateMiniScoreboard();
+  updateLowerThirdScoreboard();
 }
 
     function updateSkinnyScoreboard(winnerId=null){
