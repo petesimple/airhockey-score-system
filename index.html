@@ -213,14 +213,19 @@
   font-family:'Arial Black', sans-serif;
 }
 
-/* Player blocks */
-
+/* Player blocks (Lower 3rd) */
 .lt-player{
   flex: 1;
   max-width: 46%;
-  width: auto; /* override the old 42% */
+  width: auto;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;  /* center vertically */
+  height: 100%;
 }
-    .lt-player.left{
+
+.lt-player.left{
   align-items: flex-start;
   text-align: left;
 }
@@ -232,50 +237,36 @@
 
 .lt-name{
   font-size: clamp(18px, 4vw, 44px);
-  line-height:1;
-  color:#fff;
-  text-shadow:0 10px 30px rgba(0,0,0,.8);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 10px 30px rgba(0,0,0,.8);
+
+  margin-bottom: 6px;
+  transform: translateY(50px); /* tweak this value */
 }
 
 .lt-score{
-  font-size:84px;
-  line-height:1;
-  font-weight:900;
-  text-shadow:0 10px 30px rgba(0,0,0,.9);
-}    
-    
-/* LOWER THIRD - vertical centering fix */
-.lt-player{
-  display:flex;
-  flex-direction:column;
-  justify-content:center;   /* center vertically */
-  height:100%;
-}
-
-/* Move name slightly down visually */
-.lt-name{
-  margin-bottom: 6px;
+  font-size: 84px;
+  line-height: 1;
+  font-weight: 900;
+  text-shadow: 0 10px 30px rgba(0,0,0,.9);
 }
 
 /* Keep names on outer edges */
-.lt-player.left .lt-name{ align-self:flex-start; }
-.lt-player.right .lt-name{ align-self:flex-end; }
+.lt-player.left  .lt-name{ align-self: flex-start; }
+.lt-player.right .lt-name{ align-self: flex-end; }
 
-/* Keep score + pips pulled toward center */
-.lt-player.left .lt-score,
-.lt-player.left .lt-pips{
-  align-self:flex-end;
+/* Pull score + pips toward center */
+.lt-player.left  .lt-score,
+.lt-player.left  .lt-pips{
+  align-self: flex-end;
   margin-right: clamp(16px, 3vw, 40px);
 }
 
 .lt-player.right .lt-score,
 .lt-player.right .lt-pips{
-  align-self:flex-start;
+  align-self: flex-start;
   margin-left: clamp(16px, 3vw, 40px);
-}
-
-.lt-name{
-  transform: translateY(50px);
 }
 
 /* Center content inside bucket */
