@@ -1559,19 +1559,29 @@ function uiToggleLowerThird(on){
   const subLine = timeoutActive ? `Timeout: ${timeoutText}` : (bgActive ? `Next Game: ${bgText}` : '');
 
   // Players (name, score, pips)
-  document.getElementById('lowerThirdContent').innerHTML = `
-    <div class="lt-player left">
-      <div class="lt-name">${left.name}</div>
-      <div class="lt-score" style="color:${leftColor};">${left.points}</div>
-      <div class="lt-pips">${renderPips(left)}</div>
-    </div>
+  function formatLTName(fullName){
+  if(!fullName) return '';
+  const parts = fullName.trim().split(' ');
+  if(parts.length === 1) return parts[0];
 
-    <div class="lt-player right">
-      <div class="lt-name">${right.name}</div>
-      <div class="lt-score" style="color:${rightColor};">${right.points}</div>
-      <div class="lt-pips">${renderPips(right)}</div>
-    </div>
-  `;
+  const first = parts[0];
+  const last  = parts.slice(1).join(' ');
+  return `${first}<br>${last}`;
+}
+
+document.getElementById('lowerThirdContent').innerHTML = `
+  <div class="lt-player left">
+    <div class="lt-name">${formatLTName(left.name)}</div>
+    <div class="lt-score" style="color:${leftColor};">${left.points}</div>
+    <div class="lt-pips">${renderPips(left)}</div>
+  </div>
+
+  <div class="lt-player right">
+    <div class="lt-name">${formatLTName(right.name)}</div>
+    <div class="lt-score" style="color:${rightColor};">${right.points}</div>
+    <div class="lt-pips">${renderPips(right)}</div>
+  </div>
+`;
 
   // Center (logo + optional timer + subline) - no nested template literals
   const hideTimer = !!document.getElementById('toggleHideLTTimer')?.checked;
