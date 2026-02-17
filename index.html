@@ -214,33 +214,38 @@
 }
 
 /* Player blocks */
+/* LOWER THIRD - vertical centering fix */
 .lt-player{
-  flex: 1;
-  max-width: 46%;
-  width: auto; /* override the old 42% */
-}
-    .lt-player.left{
-  align-items: flex-start;
-  text-align: left;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;   /* center vertically */
+  height:100%;
 }
 
-.lt-player.right{
-  align-items: flex-end;
-  text-align: right;
+/* Move name slightly down visually */
+.lt-name{
+  margin-bottom: 6px;
+}
+
+/* Keep names on outer edges */
+.lt-player.left .lt-name{ align-self:flex-start; }
+.lt-player.right .lt-name{ align-self:flex-end; }
+
+/* Keep score + pips pulled toward center */
+.lt-player.left .lt-score,
+.lt-player.left .lt-pips{
+  align-self:flex-end;
+  margin-right: clamp(16px, 3vw, 40px);
+}
+
+.lt-player.right .lt-score,
+.lt-player.right .lt-pips{
+  align-self:flex-start;
+  margin-left: clamp(16px, 3vw, 40px);
 }
 
 .lt-name{
-  font-size: clamp(18px, 4vw, 44px);
-  line-height:1;
-  color:#fff;
-  text-shadow:0 10px 30px rgba(0,0,0,.8);
-}
-
-.lt-score{
-  font-size:84px;
-  line-height:1;
-  font-weight:900;
-  text-shadow:0 10px 30px rgba(0,0,0,.9);
+  transform: translateY(50px);
 }
 
 /* Center content inside bucket */
