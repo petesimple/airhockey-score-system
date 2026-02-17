@@ -214,6 +214,36 @@
 }
 
 /* Player blocks */
+
+.lt-player{
+  flex: 1;
+  max-width: 46%;
+  width: auto; /* override the old 42% */
+}
+    .lt-player.left{
+  align-items: flex-start;
+  text-align: left;
+}
+
+.lt-player.right{
+  align-items: flex-end;
+  text-align: right;
+}
+
+.lt-name{
+  font-size: clamp(18px, 4vw, 44px);
+  line-height:1;
+  color:#fff;
+  text-shadow:0 10px 30px rgba(0,0,0,.8);
+}
+
+.lt-score{
+  font-size:84px;
+  line-height:1;
+  font-weight:900;
+  text-shadow:0 10px 30px rgba(0,0,0,.9);
+}    
+    
 /* LOWER THIRD - vertical centering fix */
 .lt-player{
   display:flex;
