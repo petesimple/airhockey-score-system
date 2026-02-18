@@ -484,6 +484,7 @@ Brian Q
     <div class="right">
       <button class="btn" id="btnExportJSON">Export JSON</button>
       <button class="btn" id="btnImportJSON">Import JSON</button>
+      <button class="btn" id="btnExportResults">Export Results (CSV)</button>
     </div>
   </div>
 
@@ -1116,6 +1117,138 @@ Brian Q
 
     document.getElementById('btnExportJSON').addEventListener('click', exportJSON);
     document.getElementById('btnImportJSON').addEventListener('click', importJSON);
+    document.getElementById('btnExportResults').addEventListener('click', exportResultsCSV);
+
+    function getChampionData(){
+  if(!BRACKET_STATE || !BRACKET_STATE.grandFinal) return null;
+
+  const gf1 = BRACKET_STATE.grandFinal[0];
+  const gf2 = BRACKET_STATE.grandFinal[1];
+
+  // If GF-2 has players and a winner, that overrides GF-1
+  const finalMatch = (gf2 && gf2.p1 && gf2.p2 && gf2.winner) ? gf2 : (gf1 && gf1.winner ? gf1 : null);
+  if(!finalMatch) return null;
+
+  const champ = finalMatch.winner === "p1" ? finalMatch.p1 : finalMatch.p2;
+  const runner = finalMatch.winner === "p1" ? finalMatch.p2 : finalMatch.p1;
+
+  return { champ, runner, finalMatchId: finalMatch.id };
+}
+
+function collectEliminations(){
+  // We treat "loser of any L-match" as eliminated (simple + practical).
+  // This yields a usable elimination order for placements like 3rd/4th/etc.
+  if(!BRACKET_STATE) return [];
+
+  const elim = [];
+  const pushElim = (m) => {
+    if(!m || !m.winner || !m.loser) return;
+    const loserName = (m.loser === "p1" ? m.p1 : m.p2);
+    const winnerName = (m.winner === "p1" ? m.p1 : m.p2);
+    if(!loserName || loserName === "BYE" || loserName === "TBD") return;
+    elim.push({
+      name: loserName,
+      eliminatedBy: winnerName || "",
+      matchId: m.id || "",
+      when: Date.now()
+    });
+  };
+
+  // Losers bracket eliminations
+  (BRACKET_STATE.losersRounds || []).forEach(r => r.forEach(pushElim));
+
+  // De-dupe (keep last occurrence)
+  const map = new Map();
+  elim.forEach(e => map.set(e.name.toLowerCase(), e));
+  return Array.from(map.values());
+}
+
+function buildPlacements(){
+  if(!BRACKET_STATE) return [];
+
+  const entrants = (BRACKET_STATE.entrants || []).filter(n => n && n !== "BYE");
+  const champData = getChampionData();
+
+  // Default placements list
+  const placements = [];
+
+  if(champData && champData.champ){
+    placements.push({ place: 1, name: champData.champ });
+  }
+  if(champData && champData.runner){
+    placements.push({ place: 2, name: champData.runner });
+  }
+
+  // Remaining placements by “latest eliminations first”
+  const eliminated = collectEliminations();
+
+  // Remove champ/runner if present
+  const taken = new Set((placements.map(p => p.name.toLowerCase())));
+  const remainingElims = eliminated
+    .filter(e => !taken.has(e.name.toLowerCase()))
+    .reverse(); // last eliminated = higher placement
+
+  let nextPlace = placements.length + 1;
+  for(const e of remainingElims){
+    placements.push({ place: nextPlace++, name: e.name, eliminatedBy: e.eliminatedBy, matchId: e.matchId });
+  }
+
+  // Add anyone never eliminated / never placed (in-progress or edge cases)
+  const placedSet = new Set(placements.map(p => p.name.toLowerCase()));
+  const leftovers = entrants.filter(n => !placedSet.has(n.toLowerCase()));
+  for(const n of leftovers){
+    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded (in progress?)" });
+  }
+
+  return placements;
+}
+
+function exportResultsCSV(){
+  if(!BRACKET_STATE){
+    alert("No bracket loaded.");
+    return;
+  }
+
+  const placements = buildPlacements();
+  const champData = getChampionData();
+
+  // If no champion yet, still export what we have.
+  const header = ["Place","Player","Eliminated By","Match Id","Note"];
+  const lines = [header.join(",")];
+
+  for(const p of placements){
+    const row = [
+      p.place ?? "",
+      csvCell(p.name ?? ""),
+      csvCell(p.eliminatedBy ?? ""),
+      csvCell(p.matchId ?? ""),
+      csvCell(p.note ?? "")
+    ];
+    lines.push(row.join(","));
+  }
+
+  // Add a little meta footer as comments (CSV-safe)
+  lines.push("");
+  lines.push(csvCell("# BracketSize: " + (BRACKET_STATE.bracketSize || "")));
+  lines.push(csvCell("# Created: " + new Date(BRACKET_STATE.createdAt || Date.now()).toLocaleString()));
+  lines.push(csvCell("# ChampionKnown: " + (!!(champData && champData.champ))));
+
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(v){
+  const s = String(v ?? "");
+  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
 
     // =========================================================
     // Init
