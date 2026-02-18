@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <meta name="theme-color" content="#121212">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AHSS - Full Bracket (Live View)</title>
+
+  <style>
+    :root{
+      --bg:#121212;
+      --panel:#0f0f10;
+      --panel2:#141415;
+      --border:#2d2f33;
+      --text:#f0f0f0;
+      --muted:#a7abcc;
+      --teamA:#d32f2f;
+      --teamB:#1976d2;
+      --radius:14px;
+      --shadow:0 14px 40px rgba(0,0,0,.45);
+    }
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      padding:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: Arial, sans-serif;
+      touch-action: manipulation;
+    }
+
+    .wrap{
+      max-width:1400px;
+      margin:0 auto;
+      padding:16px 14px 84px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .brand img{ max-width:150px; height:auto; }
+    .brand h1{ margin:0; font-size:18px; letter-spacing:.3px; }
+    .brand .sub{ margin-top:2px; font-size:12px; color:rgba(255,255,255,.65); }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card-h{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), transparent);
+    }
+    .card-h h2{ margin:0; font-size:15px; letter-spacing:.3px; }
+    .card-b{ padding:12px; }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.2px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      background:#1f1f1f;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .btn:hover{ opacity:.92; }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .btn-primary{
+      background: linear-gradient(90deg, var(--teamA), #ffffff, var(--teamB));
+      color:#000;
+      border:none;
+    }
+
+    .meta{
+      font-size:12px;
+      color:rgba(255,255,255,.7);
+    }
+
+    .chk{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color:rgba(255,255,255,.85);
+      user-select:none;
+    }
+    .chk input{ transform: scale(1.15); }
+
+    /* Viewer + zoom */
+    .viewer{
+      overflow:auto;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      padding:10px;
+    }
+
+    .zoomStage{
+      transform-origin: top left;
+      display:inline-block;
+    }
+
+    .bracket{
+      min-width:900px;
+      display:flex;
+      gap:22px;
+      padding:10px 6px 6px;
+      align-items:flex-start;
+    }
+
+    .col{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      min-width:260px;
+    }
+    .col-title{
+      font-size:12px;
+      color:rgba(255,255,255,.7);
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      margin-left:6px;
+    }
+
+    .match{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      padding:10px;
+    }
+
+    .match-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+      color:rgba(255,255,255,.75);
+      font-size:12px;
+    }
+    .match-head .tag{
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.05);
+      font-weight:800;
+      color:#fff;
+      font-size:11px;
+      letter-spacing:.2px;
+    }
+
+    .slot{
+      display:grid;
+      grid-template-columns: 1fr 42px 42px;
+      gap:8px;
+      align-items:center;
+      margin-bottom:8px;
+      padding:8px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.20);
+    }
+    .slot:last-child{ margin-bottom:0; }
+
+    .name{
+      font-weight:900;
+      font-size:13px;
+      line-height:1.1;
+    }
+    .seed{
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+      margin-top:2px;
+    }
+
+    .scoreBox{
+      width:42px;
+      text-align:center;
+      padding:8px 6px;
+      border-radius:10px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:#fff;
+      font-weight:900;
+    }
+
+    .slot.win{
+      border-color: rgba(61,220,132,.55);
+      box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset;
+    }
+    .slot.lose{
+      opacity:.78;
+      border-color: rgba(255,255,255,.08);
+    }
+
+    .footerbar{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background:rgba(10,10,12,.92);
+      border-top:1px solid rgba(255,255,255,.10);
+      padding:10px 14px;
+      backdrop-filter: blur(10px);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      z-index:999;
+    }
+    .footerbar .left{
+      font-size:12px;
+      color:rgba(255,255,255,.65);
+      line-height:1.2;
+    }
+    .footerbar .right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    input[type="range"]{ width:190px; }
+
+    .tiny{
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        <div>
+          <h1>Full Bracket - Live View</h1>
+          <div class="sub">Auto-refreshes from local bracket state. Read-only.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <a class="btn" href="brackets.html">Open TD Brackets</a>
+        <a class="btn" href="AYPT.html">Open AYPT</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Live Controls</h2>
+        <div class="row">
+          <label class="chk" title="Disable/enable the 20 second auto-refresh">
+            <input type="checkbox" id="chkAuto" checked />
+            Auto-refresh (20s)
+          </label>
+
+          <button class="btn" id="btnRefresh">Refresh now</button>
+
+          <div class="row" style="gap:8px;">
+            <span class="meta">Zoom</span>
+            <button class="btn" id="btnZoomOut">-</button>
+            <input type="range" id="zoomRange" min="50" max="200" value="100" />
+            <button class="btn" id="btnZoomIn">+</button>
+            <button class="btn btn-primary" id="btnFit">Fit</button>
+          </div>
+        </div>
+
+        <div class="tiny" id="lastInfo">Last update: -</div>
+      </div>
+
+      <div class="card-b">
+        <div class="viewer" id="viewer">
+          <div class="zoomStage" id="zoomStage">
+            <div id="bracketRoot" class="meta">No bracket state found yet. Start the tournament in brackets.html.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footerbar">
+    <div class="left">
+      <div><strong>Tip</strong> - pinch/scroll the container; use slider to zoom. Read-only view.</div>
+      <div class="tiny">If you need cross-device live syncing, we’ll wire bracket state into Apps Script.</div>
+    </div>
+    <div class="right">
+      <button class="btn" id="btnExportJSON">Export JSON</button>
+    </div>
+  </div>
+
+  <script>
+    // Same key as brackets.html uses
+    const STATE_KEY = "ahss_brackets_state";
+
+    // Theme + logo keys (same pattern as brackets.html)
+    const THEME_KEYS = {
+      A:'ahss_theme_teamA',
+      B:'ahss_theme_teamB',
+      LOGO:'ahss_custom_logo_data'
+    };
+
+    function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
+    function applySavedTheme(){
+      const a = localStorage.getItem(THEME_KEYS.A);
+      const b = localStorage.getItem(THEME_KEYS.B);
+      if(a) setCssVar('--teamA', a);
+      if(b) setCssVar('--teamB', b);
+      const storedLogo = localStorage.getItem(THEME_KEYS.LOGO);
+      const img = document.getElementById('appLogo');
+      if(storedLogo && img) img.src = storedLogo;
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STATE_KEY);
+        if(!raw) return null;
+        const s = JSON.parse(raw);
+        if(!s || !s.winnersRounds) return null;
+        return s;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function render(state){
+      const root = document.getElementById("bracketRoot");
+      if(!state){
+        root.innerHTML = `<div class="meta">No bracket state found yet. Start the tournament in brackets.html.</div>`;
+        return;
+      }
+
+      const bracketEl = document.createElement("div");
+      bracketEl.className = "bracket";
+
+      // Winners
+      (state.winnersRounds || []).forEach((round, idx) => {
+        const col = document.createElement("div");
+        col.className = "col";
+        col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+        round.forEach(m => col.appendChild(renderMatch(m, "W")));
+        bracketEl.appendChild(col);
+      });
+
+      // Losers
+      (state.losersRounds || []).forEach((round, idx) => {
+        const col = document.createElement("div");
+        col.className = "col";
+        col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+        round.forEach(m => col.appendChild(renderMatch(m, "L")));
+        bracketEl.appendChild(col);
+      });
+
+      // Finals
+      const gfCol = document.createElement("div");
+      gfCol.className = "col";
+      gfCol.innerHTML = `<div class="col-title">Finals</div>`;
+      (state.grandFinal || []).forEach(m => gfCol.appendChild(renderMatch(m, "GF")));
+      bracketEl.appendChild(gfCol);
+
+      root.innerHTML = "";
+      root.appendChild(bracketEl);
+    }
+
+    function renderMatch(match, lane){
+      const card = document.createElement("div");
+      card.className = "match";
+      const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
+
+      card.innerHTML = `
+        <div class="match-head">
+          <div>${escapeHtml(match.label || match.id || "")}</div>
+          <div class="tag">${tagText}</div>
+        </div>
+      `;
+
+      card.appendChild(renderSlot(match, "p1"));
+      card.appendChild(renderSlot(match, "p2"));
+      return card;
+    }
+
+    function renderSlot(match, which){
+      const slot = document.createElement("div");
+      slot.className = "slot";
+
+      if(match.winner === which) slot.classList.add("win");
+      if(match.winner && match.winner !== which) slot.classList.add("lose");
+
+      const name = (which === "p1" ? match.p1 : match.p2) || "TBD";
+      const score = which === "p1" ? (match.s1 ?? "") : (match.s2 ?? "");
+      const id = match.id || "";
+
+      slot.innerHTML = `
+        <div>
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="seed">${escapeHtml(id)} - ${which.toUpperCase()}</div>
+        </div>
+        <div class="scoreBox">${escapeHtml(score)}</div>
+        <div></div>
+      `;
+      return slot;
+    }
+
+    // Zoom handling
+    const zoomStage = document.getElementById("zoomStage");
+    const zoomRange = document.getElementById("zoomRange");
+    let zoom = 1;
+
+    function applyZoom(){
+      zoomStage.style.transform = `scale(${zoom})`;
+      zoomRange.value = String(Math.round(zoom * 100));
+    }
+
+    function setZoomPercent(pct){
+      zoom = Math.max(0.5, Math.min(2.0, pct / 100));
+      applyZoom();
+      localStorage.setItem("ahss_fullbracket_zoom", String(Math.round(zoom*100)));
+    }
+
+    function fitToViewer(){
+      // crude fit: compare viewer width to bracket content width
+      const viewer = document.getElementById("viewer");
+      const content = document.querySelector("#bracketRoot .bracket");
+      if(!viewer || !content) return;
+
+      // temporarily reset zoom to measure
+      const prev = zoom;
+      zoom = 1;
+      applyZoom();
+
+      const vw = viewer.clientWidth - 24;
+      const cw = content.scrollWidth;
+      if(cw > 0){
+        const target = Math.max(0.5, Math.min(2.0, vw / cw));
+        zoom = target;
+        applyZoom();
+        localStorage.setItem("ahss_fullbracket_zoom", String(Math.round(zoom*100)));
+      } else {
+        zoom = prev;
+        applyZoom();
+      }
+    }
+
+    // Auto refresh
+    let timer = null;
+
+    function refreshNow(){
+      const state = loadState();
+      render(state);
+
+      const lastInfo = document.getElementById("lastInfo");
+      lastInfo.textContent = "Last update: " + new Date().toLocaleTimeString();
+    }
+
+    function startAuto(){
+      stopAuto();
+      timer = setInterval(() => {
+        if(document.getElementById("chkAuto").checked){
+          refreshNow();
+        }
+      }, 20000);
+    }
+
+    function stopAuto(){
+      if(timer) clearInterval(timer);
+      timer = null;
+    }
+
+    // Export JSON (viewer convenience)
+    function exportJSON(){
+      const state = loadState();
+      if(!state){
+        alert("No bracket loaded.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AHSS_Brackets_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Wiring
+    document.getElementById("btnRefresh").addEventListener("click", refreshNow);
+    document.getElementById("btnExportJSON").addEventListener("click", exportJSON);
+
+    document.getElementById("btnZoomIn").addEventListener("click", () => setZoomPercent((zoom*100) + 10));
+    document.getElementById("btnZoomOut").addEventListener("click", () => setZoomPercent((zoom*100) - 10));
+    zoomRange.addEventListener("input", () => setZoomPercent(parseInt(zoomRange.value, 10) || 100));
+    document.getElementById("btnFit").addEventListener("click", fitToViewer);
+
+    document.getElementById("chkAuto").addEventListener("change", () => {
+      // no-op; interval checks the box each tick
+      localStorage.setItem("ahss_fullbracket_autorefresh", document.getElementById("chkAuto").checked ? "1" : "0");
+    });
+
+    // Optional ctrl+wheel zoom
+    document.getElementById("viewer").addEventListener("wheel", (e) => {
+      if(!e.ctrlKey) return;
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY);
+      const step = 5;
+      setZoomPercent((zoom*100) + (delta > 0 ? -step : step));
+    }, { passive:false });
+
+    // Init
+    document.addEventListener("DOMContentLoaded", () => {
+      applySavedTheme();
+
+      const savedZoom = parseInt(localStorage.getItem("ahss_fullbracket_zoom") || "100", 10);
+      setZoomPercent(isFinite(savedZoom) ? savedZoom : 100);
+
+      const savedAuto = localStorage.getItem("ahss_fullbracket_autorefresh");
+      if(savedAuto === "0") document.getElementById("chkAuto").checked = false;
+
+      refreshNow();
+      startAuto();
+    });
+  </script>
+
+  <div style="text-align:center; margin-top:18px; padding-bottom:86px; color:rgba(255,255,255,.45); font-size:12px;">
+    v1.0 - fullbracket.html (auto refresh 20s + zoom + disable refresh)
+  </div>
+</body>
+</html>
