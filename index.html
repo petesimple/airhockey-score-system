@@ -1540,6 +1540,14 @@ function uiToggleLowerThird(on){
 
   const mirror = isMirrored(); // swap data only
 
+  const ltRoot = document.getElementById('lowerThirdScoreboard');
+  if(ltRoot){
+    const a = cssVar('--teamA');
+    const b = cssVar('--teamB');
+    ltRoot.style.setProperty('--ltA', mirror ? b : a);
+    ltRoot.style.setProperty('--ltB', mirror ? a : b);
+  }
+      
   let L = isPlayer1Left ? players[0] : players[1];
   let R = isPlayer1Left ? players[1] : players[0];
   const left  = mirror ? R : L;
