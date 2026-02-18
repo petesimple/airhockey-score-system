@@ -1538,8 +1538,7 @@ function uiToggleLowerThird(on){
   const lt = document.getElementById('lowerThirdScoreboard');
   if(!lt || lt.style.display === 'none') return;
 
-  const mirror = isMirrored();
-  lt.classList.toggle('mirrored', mirror);
+  const mirror = isMirrored(); // swap data only
 
   let L = isPlayer1Left ? players[0] : players[1];
   let R = isPlayer1Left ? players[1] : players[0];
