@@ -1,4 +1,3 @@
-<!-- brackets.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,139 +5,110 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <meta name="theme-color" content="#121212">
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AHSS - Double Elimination Brackets</title>
 
   <style>
     :root{
-      --teamA:#d32f2f;
-      --teamB:#1976d2;
-
       --bg:#121212;
       --panel:#0f0f10;
-      --panel2:#0b0b0c;
-      --line:#2a2a2a;
+      --panel2:#141415;
+      --border:#2d2f33;
       --text:#f0f0f0;
-      --muted:#a9a9a9;
-
-      --good:#33d17a;
+      --muted:#a7abcc;
+      --teamA:#d32f2f;
+      --teamB:#1976d2;
+      --good:#3ddc84;
       --warn:#f2c94c;
-      --bad:#ff5a5f;
-
+      --bad:#ff5252;
       --radius:14px;
-      --shadow:0 10px 28px rgba(0,0,0,.45);
+      --shadow:0 14px 40px rgba(0,0,0,.45);
     }
 
     *{ box-sizing:border-box; }
-    html, body{
+    html,body{
       margin:0;
+      padding:0;
       background:var(--bg);
       color:var(--text);
       font-family: Arial, sans-serif;
-      padding:16px;
       touch-action: manipulation;
+    }
+
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:18px 16px 80px;
     }
 
     .topbar{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
+      gap:14px;
       flex-wrap:wrap;
-      margin-bottom:12px;
+      margin-bottom:14px;
     }
 
     .brand{
       display:flex;
       align-items:center;
       gap:12px;
-      min-width:260px;
     }
     .brand img{
-      height:44px;
-      width:auto;
-      object-fit:contain;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,.6));
+      max-width:160px;
+      height:auto;
     }
     .brand h1{
       margin:0;
       font-size:18px;
-      line-height:1.1;
+      letter-spacing:.3px;
     }
-    .brand small{
-      display:block;
-      margin-top:2px;
-      color:var(--muted);
-      font-size:12px;
-    }
-
-    .actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:flex-end;
+    .brand .sub{
+      margin:2px 0 0;
+      color:rgba(255,255,255,.65);
+      font-size:13px;
     }
 
-    button{
-      border:none;
-      border-radius:12px;
-      padding:10px 12px;
-      background:#1f1f1f;
-      color:#fff;
-      cursor:pointer;
-      border:1px solid #333;
-      box-shadow: 0 8px 22px rgba(0,0,0,.35);
-      font-weight:700;
-    }
-    button:hover{ filter:brightness(1.06); }
-    button:active{ transform:translateY(1px); }
-    .btn-primary{ background:linear-gradient(180deg, #262626, #161616); border-color:#3a3a3a; }
-    .btn-good{ background:linear-gradient(180deg, rgba(51,209,122,.25), rgba(51,209,122,.10)); border-color:rgba(51,209,122,.35); }
-    .btn-warn{ background:linear-gradient(180deg, rgba(242,201,76,.22), rgba(242,201,76,.10)); border-color:rgba(242,201,76,.35); }
-    .btn-bad{ background:linear-gradient(180deg, rgba(255,90,95,.22), rgba(255,90,95,.10)); border-color:rgba(255,90,95,.35); }
-
-    .layout{
-      display:grid;
-      grid-template-columns: 360px 1fr;
-      gap:14px;
-      align-items:start;
-    }
-    @media (max-width: 980px){
-      .layout{ grid-template-columns: 1fr; }
-    }
-
-    .panel{
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      border:1px solid var(--line);
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
       border-radius:var(--radius);
       box-shadow:var(--shadow);
       overflow:hidden;
     }
-    .panel .hd{
-      padding:12px 12px;
-      border-bottom:1px solid #1d1d1d;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      background:rgba(0,0,0,.25);
-    }
-    .panel .hd strong{ font-size:14px; }
-    .panel .bd{ padding:12px; }
 
-    textarea{
-      width:100%;
-      min-height:220px;
-      resize:vertical;
-      border-radius:12px;
-      padding:10px;
-      border:1px solid #2f2f2f;
-      background:#0b0b0c;
-      color:#fff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12px;
-      line-height:1.35;
+    .card-h{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), transparent);
+    }
+    .card-h h2{
+      margin:0;
+      font-size:15px;
+      letter-spacing:.3px;
+    }
+
+    .card-b{ padding:14px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media (min-width: 980px){
+      .grid{ grid-template-columns: 420px 1fr; align-items:start; }
+    }
+
+    .controls{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
     }
 
     .row{
@@ -146,286 +116,409 @@
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
-      margin-top:10px;
     }
-    .row .pill{
-      padding:6px 10px;
-      border:1px solid #2a2a2a;
-      border-radius:999px;
-      color:#ddd;
-      background:#101010;
+
+    label{
+      display:block;
       font-size:12px;
+      color:rgba(255,255,255,.72);
+      margin-bottom:6px;
     }
-    .hint{
-      color:var(--muted);
-      font-size:12px;
-      margin-top:8px;
+
+    select, input[type="number"], textarea{
+      width:100%;
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      outline:none;
+      font-size:14px;
+    }
+
+    textarea{
+      min-height:160px;
+      resize:vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       line-height:1.35;
     }
-    .hint a{ color:#9fb0c7; text-decoration:none; }
+
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.2px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      background:#1f1f1f;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .btn:hover{ opacity:.92; }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .btn-primary{
+      background: linear-gradient(90deg, var(--teamA), #ffffff, var(--teamB));
+      color:#000;
+      border:none;
+    }
+
+    .btn-ghost{
+      background:transparent;
+      border:1px solid rgba(255,255,255,.14);
+      color:#fff;
+    }
+
+    .pillbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pill .x{
+      width:18px; height:18px;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.10);
+      cursor:pointer;
+      user-select:none;
+      font-weight:900;
+    }
 
     .status{
-      margin-top:10px;
-      padding:10px 12px;
-      border:1px dashed rgba(255,255,255,.18);
-      border-radius:12px;
-      background:rgba(255,255,255,.03);
-      color:#ddd;
       font-size:12px;
-      line-height:1.35;
-      white-space:pre-wrap;
+      color:rgba(255,255,255,.72);
+      margin-top:8px;
     }
 
     /* Bracket area */
-    .bracketWrap{
+    .bracket-wrap{
       overflow:auto;
-      padding:12px;
+      padding-bottom:8px;
     }
 
-    .bracketGrid{
-      display:grid;
-      gap:14px;
-      align-items:start;
-      min-width: 980px;
+    .bracket{
+      min-width:900px;
+      display:flex;
+      gap:22px;
+      padding:10px 6px 6px;
+      align-items:flex-start;
     }
 
     .col{
       display:flex;
       flex-direction:column;
-      gap:12px;
-      min-width:240px;
+      gap:14px;
+      min-width:260px;
     }
 
-    .colTitle{
-      font-weight:900;
-      letter-spacing:.3px;
+    .col-title{
       font-size:12px;
-      color:#d9d9d9;
-      padding:8px 10px;
-      border:1px solid #2a2a2a;
-      border-radius:12px;
-      background:#0f0f10;
+      color:rgba(255,255,255,.7);
+      letter-spacing:.4px;
       text-transform:uppercase;
+      margin-left:6px;
     }
 
     .match{
-      border:1px solid #2c2c2c;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
       border-radius:14px;
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.15));
-      box-shadow:0 10px 22px rgba(0,0,0,.25);
-      overflow:hidden;
+      padding:10px;
     }
-    .match .mh{
+
+    .match-head{
       display:flex;
-      justify-content:space-between;
       align-items:center;
+      justify-content:space-between;
       gap:10px;
-      padding:8px 10px;
-      border-bottom:1px solid #222;
-      background:rgba(0,0,0,.25);
+      margin-bottom:10px;
+      color:rgba(255,255,255,.75);
       font-size:12px;
-      color:#d7d7d7;
     }
-    .match .mh .tag{
-      padding:3px 8px;
+    .match-head .tag{
+      padding:4px 8px;
       border-radius:999px;
-      border:1px solid #2a2a2a;
-      background:#111;
-      color:#ddd;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.05);
       font-weight:800;
+      color:#fff;
       font-size:11px;
-    }
-    .match .mh .note{
-      color:#9aa1aa;
-      font-weight:700;
-      font-size:11px;
+      letter-spacing:.2px;
     }
 
     .slot{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:10px 10px;
-      gap:10px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .slot + .slot{ border-top:1px solid #1f1f1f; }
-    .slot:hover{ background:rgba(255,255,255,.04); }
-
-    .name{
-      display:flex;
+      display:grid;
+      grid-template-columns: 1fr 40px 40px;
       gap:8px;
       align-items:center;
-      min-width:0;
+      margin-bottom:8px;
+      padding:8px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.20);
+    }
+
+    .slot:last-child{ margin-bottom:0; }
+
+    .name{
+      font-weight:900;
+      font-size:13px;
+      line-height:1.1;
     }
     .seed{
-      font-weight:900;
       font-size:11px;
-      width:34px;
-      text-align:center;
-      padding:4px 6px;
-      border-radius:10px;
-      border:1px solid #2a2a2a;
-      background:#0f0f10;
-      color:#bbb;
-      flex:0 0 auto;
-    }
-    .player{
-      font-weight:900;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width: 155px;
-    }
-    .sub{
-      display:block;
-      font-weight:700;
-      color:#a7a7a7;
-      font-size:11px;
+      color:rgba(255,255,255,.55);
       margin-top:2px;
     }
 
-    .result{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex:0 0 auto;
-    }
     .score{
-      width:64px;
+      width:40px;
       text-align:center;
+      padding:8px 6px;
       border-radius:10px;
-      border:1px solid #2a2a2a;
-      background:#0b0b0c;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
       color:#fff;
-      padding:6px 8px;
       font-weight:900;
-      font-size:12px;
       outline:none;
     }
 
-    .slot.win{
-      background: rgba(51,209,122,.10);
-    }
-    .slot.win .seed{
-      border-color: rgba(51,209,122,.35);
-      color: #dff7ea;
-    }
-    .slot.win .player{ color:#dff7ea; }
-    .slot.lose{
-      opacity:.72;
+    .btn-mini{
+      padding:8px 10px;
+      border-radius:10px;
+      font-weight:900;
+      font-size:12px;
+      background:#1f1f1f;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+      cursor:pointer;
     }
 
-    .finalBadge{
+    .btn-win{ background:rgba(61,220,132,.18); border-color:rgba(61,220,132,.35); }
+    .btn-lose{ background:rgba(255,82,82,.12); border-color:rgba(255,82,82,.35); }
+
+    .slot.win{
+      border-color: rgba(61,220,132,.55);
+      box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset;
+    }
+    .slot.lose{
+      opacity:.78;
+      border-color: rgba(255,255,255,.08);
+    }
+
+    .footerbar{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background:rgba(10,10,12,.92);
+      border-top:1px solid rgba(255,255,255,.10);
+      padding:10px 14px;
+      backdrop-filter: blur(10px);
       display:flex;
       align-items:center;
-      gap:8px;
-      font-weight:900;
+      justify-content:space-between;
+      gap:12px;
+      z-index:999;
+    }
+    .footerbar .left{
+      font-size:12px;
+      color:rgba(255,255,255,.65);
+      line-height:1.2;
+    }
+    .footerbar .right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .tiny{
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+    }
+
+    .note{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px dashed rgba(255,255,255,.22);
+      background:rgba(245,192,79,.08);
+      color:#f5c04f;
+      font-weight:800;
+      font-size:13px;
+    }
+
+    .kbd{
+      padding:2px 6px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:6px;
+      background:rgba(255,255,255,.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px;
       color:#fff;
     }
-    .dot{
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      background: var(--warn);
-      box-shadow:0 0 10px rgba(242,201,76,.35);
-    }
 
-    .miniNote{
-      font-size:11px;
-      color:#9aa1aa;
-      margin-top:8px;
-      line-height:1.35;
-    }
-
-    .dangerLine{
-      margin-top:10px;
-      font-size:12px;
-      color:#ffd7d7;
-      background: rgba(255,90,95,.08);
-      border: 1px solid rgba(255,90,95,.25);
-      padding:10px 12px;
-      border-radius:12px;
-      display:none;
-    }
-
-    .footer{
-      margin-top:14px;
-      color:#777;
-      font-size:12px;
-      text-align:center;
-    }
+    /* Hide scrollbars gently (still scrollable) */
+    .bracket-wrap::-webkit-scrollbar{ height:10px; }
+    .bracket-wrap::-webkit-scrollbar-thumb{ background:#2c2c2c; border-radius:999px; }
   </style>
 </head>
 
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <img id="appLogo" src="logo.png" alt="AHSS logo" />
-      <div>
-        <h1>Double Elimination Brackets</h1>
-        <small>Build from AYPT signups, then tap winners to advance.</small>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        <div>
+          <h1>Double Elimination Brackets</h1>
+          <div class="sub">Built for AHSS - pulls tonight’s signups from AYPT Google Sheet</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <a class="btn btn-ghost" href="index.html">Back to AHSS</a>
+        <a class="btn btn-ghost" href="AYPT.html">Open AYPT</a>
       </div>
     </div>
 
-    <div class="actions">
-      <button class="btn-primary" onclick="openAYPT()">Open AYPT</button>
-      <button class="btn-warn" onclick="loadFromAYPT()">Load tonight from AYPT</button>
-      <button class="btn-good" onclick="buildBracket()">Build bracket</button>
-      <button class="btn-bad" onclick="resetAll()">Reset</button>
+    <div class="grid">
+      <!-- LEFT: Controls -->
+      <div class="controls">
+        <div class="card">
+          <div class="card-h">
+            <h2>Entrants</h2>
+            <div class="tiny">Paste, edit, or load from AYPT sheet</div>
+          </div>
+          <div class="card-b">
+            <div class="row">
+              <button class="btn btn-primary" id="btnLoadAYPT">Load from AYPT Sheet</button>
+              <button class="btn" id="btnClear">Clear</button>
+            </div>
+
+            <div style="margin-top:12px;">
+              <label for="entrantsBox">One name per line</label>
+              <textarea id="entrantsBox" placeholder="Example:
+Sammy Mora
+Connor Cummings
+Brian Q
+..."></textarea>
+              <div class="pillbar" id="entrantPills"></div>
+              <div class="status" id="status">Ready.</div>
+            </div>
+
+            <div style="margin-top:12px;" class="note">
+              Tip - after loading, hit <span class="kbd">Build bracket</span>. You can still edit names before building.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>Bracket Options</h2>
+          </div>
+          <div class="card-b">
+            <div class="row">
+              <div style="flex:1; min-width:160px;">
+                <label for="seedMode">Seeding</label>
+                <select id="seedMode">
+                  <option value="random">Random (shuffle)</option>
+                  <option value="alpha">Alphabetical</option>
+                </select>
+              </div>
+
+              <div style="flex:1; min-width:160px;">
+                <label for="maxPlayers">Max players</label>
+                <input id="maxPlayers" type="number" min="2" max="64" step="1" value="16" />
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <button class="btn btn-primary" id="btnBuild">Build bracket</button>
+              <button class="btn" id="btnResetResults">Reset results</button>
+            </div>
+
+            <div class="status" id="buildInfo" style="margin-top:10px;">
+              Double elim - creates Winners + Losers lanes and a Grand Final shell. (This is a practical TD view, not a perfect PDF bracket.)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Bracket -->
+      <div class="card">
+        <div class="card-h">
+          <h2>Bracket</h2>
+          <div class="tiny">Tap scores - click “Win” to advance</div>
+        </div>
+        <div class="card-b bracket-wrap">
+          <div id="bracketRoot">
+            <div class="status">No bracket yet - load entrants and click Build bracket.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="layout">
-    <!-- Left: Entrants -->
-    <div class="panel">
-      <div class="hd">
-        <strong>Entrants</strong>
-        <span class="pill" id="countPill">0 players</span>
-      </div>
-      <div class="bd">
-        <textarea id="entrantsBox" placeholder="One player per line&#10;&#10;Tip: click Load tonight from AYPT (same device)"></textarea>
-
-        <div class="row">
-          <span class="pill" id="sizePill">Bracket size: -</span>
-          <span class="pill" id="byePill">Byes: -</span>
-        </div>
-
-        <div class="hint">
-          - AYPT sync method (easy mode): players sign up on <a href="AYPT.html">AYPT.html</a> on this device, then you load here. <br>
-          - Tap a player line inside a match to mark them winner. That advances winner + drops loser appropriately.
-        </div>
-
-        <div id="warnBox" class="dangerLine"></div>
-
-        <div id="status" class="status">No bracket yet. Paste names or load from AYPT.</div>
-
-        <div class="miniNote">
-          Notes:
-          - Works best for 2, 4, 8, 16, 32 players. Non-power-of-two gets BYEs.
-          - Grand Final has an “if needed” reset match if the Losers champ beats the Winners champ.
-        </div>
-      </div>
+  <div class="footerbar">
+    <div class="left">
+      <div><strong>Controls</strong> - click score boxes to type. Use Win button to advance.</div>
+      <div class="tiny">This is built to be fast for tonight - not a full bracket publishing system (yet).</div>
     </div>
-
-    <!-- Right: Bracket -->
-    <div class="panel">
-      <div class="hd">
-        <strong>Bracket</strong>
-        <span class="pill" id="tapHint">Tap winners to advance</span>
-      </div>
-      <div class="bracketWrap">
-        <div id="bracketMount"></div>
-      </div>
+    <div class="right">
+      <button class="btn" id="btnExportJSON">Export JSON</button>
+      <button class="btn" id="btnImportJSON">Import JSON</button>
     </div>
   </div>
-
-  <div class="footer">AHSS Brackets - local only (no network required)</div>
 
   <script>
     // =========================================================
-    // AHSS theme/logo compatibility (shares keys with your main page)
+    // AYPT SHEET CONFIG (same endpoint as AYPT.html)
+    // =========================================================
+    const AYPT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
+
+    // JSONP helper (avoids CORS) - same approach as AYPT.html
+    function jsonp(url, params = {}, timeoutMs = 12000){
+      return new Promise((resolve, reject) => {
+        const cb = "BRACKETS_CB_" + Math.random().toString(36).slice(2);
+        params.callback = cb;
+        const qs = new URLSearchParams(params).toString();
+
+        const s = document.createElement("script");
+        s.src = `${url}?${qs}`;
+        s.id  = cb;
+
+        const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
+        window[cb] = (data) => { cleanup(); resolve(data); };
+
+        function cleanup(){
+          clearTimeout(timeout);
+          const el = document.getElementById(cb);
+          if(el) el.remove();
+          try { delete window[cb]; } catch(_) { window[cb] = undefined; }
+        }
+        document.body.appendChild(s);
+      });
+    }
+
+    // =========================================================
+    // Theme + logo helpers (reuse AHSS behavior lightly)
     // =========================================================
     const THEME_KEYS = {
       A:'ahss_theme_teamA',
@@ -441,645 +534,616 @@
       const b = localStorage.getItem(THEME_KEYS.B);
       if(a) setCssVar('--teamA', a);
       if(b) setCssVar('--teamB', b);
-    }
-    function applyCustomLogo(){
-      const stored = localStorage.getItem(THEME_KEYS.LOGO);
+      const storedLogo = localStorage.getItem(THEME_KEYS.LOGO);
       const img = document.getElementById('appLogo');
-      img.src = stored || 'logo.png';
+      if(storedLogo && img) img.src = storedLogo;
     }
 
     // =========================================================
-    // AYPT local roster helpers (must match what you added to AYPT.html)
+    // Entrant editing UX
     // =========================================================
-    function ayptKeyForToday(){
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const day = String(d.getDate()).padStart(2,'0');
-      return `ahss_aypt_roster_${y}-${m}-${day}`;
-    }
+    const entrantsBox = document.getElementById('entrantsBox');
+    const entrantPills = document.getElementById('entrantPills');
+    const statusEl = document.getElementById('status');
 
-    function openAYPT(){
-      location.href = 'AYPT.html';
-    }
-
-    function loadFromAYPT(){
-      const key = ayptKeyForToday();
-      const roster = JSON.parse(localStorage.getItem(key) || '[]');
-      const status = document.getElementById('status');
-
-      if(!roster.length){
-        status.textContent =
-          "No AYPT signups found for today on this device.\n\n" +
-          "Fix:\n" +
-          "1) Open AYPT.html on THIS device\n" +
-          "2) Submit at least one signup\n" +
-          "3) Come back and tap Load tonight from AYPT";
-        return;
-      }
-
-      const names = roster
-        .map(x => (x?.name || '').trim())
-        .filter(Boolean);
-
-      document.getElementById('entrantsBox').value = names.join('\n');
-      status.textContent = `Loaded ${names.length} players from AYPT (today). Now tap Build bracket.`;
-      updateEntrantPills();
-    }
-
-    // =========================================================
-    // Bracket engine (double elimination, power-of-two padded)
-    // - Generates WB rounds (single elim)
-    // - Generates LB rounds (standard: 2k-2 rounds for n=2^k)
-    // - Grand Final + Reset Final (if needed)
-    // - Tap winner to set, auto-advances winner/loser downstream
-    // =========================================================
-
-    function nextPow2(n){
-      let p = 1;
-      while(p < n) p <<= 1;
-      return p;
-    }
-    function log2Pow2(n){
-      let k = 0;
-      while((1 << k) < n) k++;
-      return k;
-    }
-
-    // Match store
-    let BRACKET = null;
-
-    function uid(prefix){
-      return prefix + '_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
-    }
-
-    function normalizeNames(raw){
-      const lines = (raw || '')
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      // de-dupe (case-insensitive) while preserving order
+    function parseEntrants(){
+      const raw = (entrantsBox.value || '').split('\n').map(s=>s.trim()).filter(Boolean);
+      // de-dupe case-insensitive
       const out = [];
       const seen = new Set();
-      for(const n of lines){
-        const key = n.toLowerCase();
-        if(seen.has(key)) continue;
-        seen.add(key);
+      for(const n of raw){
+        const k = n.toLowerCase();
+        if(seen.has(k)) continue;
+        seen.add(k);
         out.push(n);
       }
       return out;
     }
 
     function updateEntrantPills(){
-      const names = normalizeNames(document.getElementById('entrantsBox').value);
-      document.getElementById('countPill').textContent = `${names.length} players`;
-
-      if(names.length < 2){
-        document.getElementById('sizePill').textContent = 'Bracket size: -';
-        document.getElementById('byePill').textContent = 'Byes: -';
-        return;
-      }
-      const size = nextPow2(names.length);
-      const byes = size - names.length;
-      document.getElementById('sizePill').textContent = `Bracket size: ${size}`;
-      document.getElementById('byePill').textContent = `Byes: ${byes}`;
+      const list = parseEntrants();
+      entrantPills.innerHTML = '';
+      list.forEach((name, idx) => {
+        const pill = document.createElement('div');
+        pill.className = 'pill';
+        pill.innerHTML = `<span>${escapeHtml(name)}</span><span class="x" title="Remove">×</span>`;
+        pill.querySelector('.x').addEventListener('click', () => {
+          const cur = parseEntrants();
+          cur.splice(idx, 1);
+          entrantsBox.value = cur.join('\n');
+          updateEntrantPills();
+        });
+        entrantPills.appendChild(pill);
+      });
+      statusEl.textContent = `${list.length} entrant(s) in box.`;
     }
 
-    document.getElementById('entrantsBox').addEventListener('input', updateEntrantPills);
+    entrantsBox.addEventListener('input', () => updateEntrantPills());
+
+    // =========================================================
+    // Load from AYPT Sheet (JSONP list=1)
+    // =========================================================
+    async function loadFromAYPT(){
+      statusEl.textContent = "Loading from AYPT Google Sheet…";
+
+      try{
+        const data = await jsonp(AYPT_SCRIPT_URL, { list: "1" });
+        if(!data || !data.ok) throw new Error((data && data.message) || "Load failed");
+
+        const rows = data.rows || [];
+        if(!rows.length){
+          statusEl.textContent = "AYPT sheet returned 0 rows.";
+          return;
+        }
+
+        // Build names from fields: firstName / lastName (as used in your AYPT admin UI)
+        const names = rows
+          .map(r => `${String(r.firstName || "").trim()} ${String(r.lastName || "").trim()}`.trim())
+          .filter(n => n && n !== "");
+
+        // Optional: paid-only
+        // const names = rows
+        //   .filter(r => !!r.paid)
+        //   .map(r => `${String(r.firstName||"").trim()} ${String(r.lastName||"").trim()}`.trim())
+        //   .filter(Boolean);
+
+        // De-dupe case-insensitive
+        const out = [];
+        const seen = new Set();
+        for(const n of names){
+          const key = n.toLowerCase();
+          if(seen.has(key)) continue;
+          seen.add(key);
+          out.push(n);
+        }
+
+        entrantsBox.value = out.join('\n');
+        updateEntrantPills();
+        statusEl.textContent = `Loaded ${out.length} players from AYPT Sheet. Tap "Build bracket".`;
+      } catch(err){
+        console.error(err);
+        statusEl.textContent = `Failed to load from AYPT Sheet: ${err.message || err}`;
+      }
+    }
+
+    // =========================================================
+    // Bracket engine (practical double-elim shell)
+    // =========================================================
+    const bracketRoot = document.getElementById('bracketRoot');
+    const seedModeEl = document.getElementById('seedMode');
+    const maxPlayersEl = document.getElementById('maxPlayers');
+
+    // State saved for export/import
+    let BRACKET_STATE = null;
+
+    function nextPow2(n){
+      let p = 1;
+      while(p < n) p <<= 1;
+      return p;
+    }
+
+    function seededList(list, mode){
+      const a = [...list];
+      if(mode === 'alpha'){
+        a.sort((x,y)=>x.localeCompare(y));
+      } else {
+        shuffle(a);
+      }
+      return a;
+    }
+
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function makeMatch(id, label, p1=null, p2=null){
+      return {
+        id,
+        label,
+        p1, p2,
+        s1: "",
+        s2: "",
+        winner: null, // 'p1' or 'p2'
+        loser: null
+      };
+    }
 
     function buildBracket(){
-      const warn = document.getElementById('warnBox');
-      warn.style.display = 'none';
-      warn.textContent = '';
+      const entrants = parseEntrants();
+      const maxP = clamp(parseInt(maxPlayersEl.value||"16",10), 2, 64);
+      const trimmed = entrants.slice(0, maxP);
 
-      const names = normalizeNames(document.getElementById('entrantsBox').value);
-      const status = document.getElementById('status');
-
-      if(names.length < 2){
-        warn.style.display = 'block';
-        warn.textContent = 'Need at least 2 players.';
-        status.textContent = 'Add at least 2 players, then Build bracket.';
+      if(trimmed.length < 2){
+        bracketRoot.innerHTML = `<div class="status">Need at least 2 entrants.</div>`;
         return;
       }
 
-      const size = nextPow2(names.length);
-      const byes = size - names.length;
+      const seeded = seededList(trimmed, seedModeEl.value);
+      const bracketSize = nextPow2(seeded.length);
+      const byes = bracketSize - seeded.length;
 
-      // Pad with BYE entries (not real players)
-      const entrants = names.map((name, i) => ({ seed: i+1, name }));
-      for(let i=0;i<byes;i++){
-        entrants.push({ seed: names.length + i + 1, name: 'BYE', bye: true });
+      const slots = [...seeded];
+      for(let i=0;i<byes;i++) slots.push("BYE");
+
+      // Winners Round 1 matches
+      const wr1 = [];
+      for(let i=0;i<bracketSize;i+=2){
+        const m = makeMatch(`W1-${i/2+1}`, `W R1 - M${i/2+1}`, slots[i], slots[i+1]);
+        wr1.push(m);
       }
 
-      // Basic warning if huge
-      if(size > 32){
-        warn.style.display = 'block';
-        warn.textContent = `Heads up: ${size} bracket is big. It still works, but scroll city.`;
-      }
+      // Winners Round 2+ (shell only, we will populate as winners advance)
+      const winnersRounds = [];
+      winnersRounds.push(wr1);
 
-      BRACKET = createDoubleElimBracket(entrants, size);
-      resolveAllAutoWins(BRACKET); // auto-advance BYEs
-      renderBracket(BRACKET);
-
-      status.textContent =
-        `Built a ${size}-player double elimination bracket.\n` +
-        `Tap winners inside matches to advance. BYEs auto-advance.`;
-    }
-
-    function resetAll(){
-      if(!confirm('Reset bracket and clear all results?')) return;
-      BRACKET = null;
-      document.getElementById('bracketMount').innerHTML = '';
-      document.getElementById('status').textContent = 'No bracket yet. Paste names or load from AYPT.';
-    }
-
-    // ---------- Bracket creation ----------
-    // Reference format:
-    //  { type:'seed', seed:number }
-    //  { type:'winner', matchId:string }
-    //  { type:'loser', matchId:string }
-    function createMatch(label, bracket, roundIndex, matchIndex){
-      return {
-        id: uid(bracket + '_' + roundIndex + '_' + matchIndex),
-        bracket,
-        roundIndex,
-        matchIndex,
-        label,
-        A: null,
-        B: null,
-        winner: null, // 'A' | 'B'
-        scoreA: '',
-        scoreB: ''
-      };
-    }
-
-    function createDoubleElimBracket(entrants, size){
-      const n = size;
-      const k = log2Pow2(n);
-
-      const matches = new Map();
-
-      // Winners bracket rounds
-      const WB = [];
-      for(let r=1; r<=k; r++){
-        const cnt = n / (1<<r); // n/2, n/4, ..., 1
+      let roundSize = wr1.length;
+      let r = 2;
+      while(roundSize > 1){
+        roundSize = Math.ceil(roundSize/2);
         const round = [];
-        for(let m=0; m<cnt; m++){
-          const match = createMatch(`W${r}-M${m+1}`, 'W', r, m+1);
-          round.push(match);
-          matches.set(match.id, match);
+        for(let i=0;i<roundSize;i++){
+          round.push(makeMatch(`W${r}-${i+1}`, `W R${r} - M${i+1}`));
         }
-        WB.push(round);
+        winnersRounds.push(round);
+        r++;
       }
 
-      // Seed into WB round 1
-      // Pairing: (1 vs 2), (3 vs 4)... based on entrant list order
-      // (If you want true seeding later: swap to 1vN etc)
-      const first = WB[0];
-      for(let i=0; i<first.length; i++){
-        const e1 = entrants[i*2];
-        const e2 = entrants[i*2+1];
-        first[i].A = { type:'seed', seed: e1.seed };
-        first[i].B = { type:'seed', seed: e2.seed };
-      }
-
-      // Link WB winners forward
-      for(let r=2; r<=k; r++){
-        const prev = WB[r-2];
-        const cur  = WB[r-1];
-        for(let i=0;i<cur.length;i++){
-          cur[i].A = { type:'winner', matchId: prev[i*2].id };
-          cur[i].B = { type:'winner', matchId: prev[i*2+1].id };
-        }
-      }
-
-      // Losers bracket rounds: 2k-2 rounds
-      const lbRoundsCount = Math.max(1, 2*k - 2);
-      const LB = [];
-      for(let i=1; i<=lbRoundsCount; i++){
-        const stage = Math.min(Math.ceil(i/2) + 1, k); // good sizing behavior
-        const cnt = n / (1<<stage);
+      // Losers (shell) - not exact bracket mapping for every bracket size,
+      // but practical: a lane of matches that fills with losers as play proceeds.
+      // We'll create enough loser rounds to keep it usable.
+      const losersRounds = [];
+      const loserRoundsCount = Math.max(2, (winnersRounds.length - 1) * 2);
+      for(let lr=1; lr<=loserRoundsCount; lr++){
+        const count = Math.max(1, Math.ceil(bracketSize / Math.pow(2, Math.ceil(lr/2)+1)));
         const round = [];
-        for(let m=0; m<cnt; m++){
-          const match = createMatch(`L${i}-M${m+1}`, 'L', i, m+1);
-          round.push(match);
-          matches.set(match.id, match);
+        for(let i=0;i<count;i++){
+          round.push(makeMatch(`L${lr}-${i+1}`, `L R${lr} - M${i+1}`));
         }
-        LB.push(round);
+        losersRounds.push(round);
       }
 
-      // Wire LB:
-      // - L1: losers from WB1 paired (1&2), (3&4), ...
-      // - Even Li: winners from L(i-1) vs losers from WB(r) where r = i/2 + 1
-      // - Odd Li>1: winners from L(i-1) paired
-      for(let i=1; i<=lbRoundsCount; i++){
-        const round = LB[i-1];
-        if(i === 1){
-          // losers from WB round1
-          const wb1 = WB[0];
-          // wb1 losers count = n/2; round match count = n/4; each needs 2 losers
-          for(let m=0; m<round.length; m++){
-            const src1 = wb1[m*2];
-            const src2 = wb1[m*2+1];
-            round[m].A = { type:'loser', matchId: src1.id };
-            round[m].B = { type:'loser', matchId: src2.id };
-          }
-        } else if(i % 2 === 0){
-          // even: winners from prev LB + losers from WB round r
-          const prevLB = LB[i-2];
-          const r = (i/2) + 1; // WB round index (1-based)
-          const wbR = WB[r-1]; // may exist up to k
-          for(let m=0; m<round.length; m++){
-            const lbSrc = prevLB[m];
-            const wbSrc = wbR[m];
-            round[m].A = { type:'winner', matchId: lbSrc.id };
-            round[m].B = { type:'loser',  matchId: wbSrc.id };
-          }
-        } else {
-          // odd > 1: winners from prev LB paired
-          const prevLB = LB[i-2];
-          for(let m=0; m<round.length; m++){
-            const src1 = prevLB[m*2];
-            const src2 = prevLB[m*2+1];
-            round[m].A = { type:'winner', matchId: src1.id };
-            round[m].B = { type:'winner', matchId: src2.id };
-          }
-        }
-      }
+      const gf1 = makeMatch("GF-1", "Grand Final", null, null);
+      const gf2 = makeMatch("GF-2", "Grand Final Reset (if needed)", null, null);
 
-      // Grand Final + Reset Final
-      const GF = createMatch('GF', 'F', 1, 1);
-      const RF = createMatch('GF-RESET (if needed)', 'F', 2, 1);
-      matches.set(GF.id, GF);
-      matches.set(RF.id, RF);
-
-      // GF: WB champ vs LB champ
-      const wbFinal = WB[k-1][0];
-      const lbFinal = LB[lbRoundsCount-1][0];
-
-      GF.A = { type:'winner', matchId: wbFinal.id }; // Winners champ
-      GF.B = { type:'winner', matchId: lbFinal.id }; // Losers champ
-
-      // Reset Final: same two, but only relevant if GF winner is from Losers side
-      RF.A = { type:'winner', matchId: GF.id };
-      RF.B = { type:'loser',  matchId: GF.id };
-
-      return {
-        entrants, size:n, k,
-        WB, LB,
-        finals: [GF, RF],
-        matches
+      BRACKET_STATE = {
+        createdAt: Date.now(),
+        bracketSize,
+        entrants: trimmed,
+        seeded,
+        winnersRounds,
+        losersRounds,
+        grandFinal: [gf1, gf2]
       };
-    }
 
-    // ---------- Resolution / propagation ----------
-    function getEntrantBySeed(br, seed){
-      return br.entrants.find(e => e.seed === seed) || null;
-    }
-
-    function resolveRef(br, ref){
-      if(!ref) return { name:'—', seed:'', bye:false, known:false };
-
-      if(ref.type === 'seed'){
-        const e = getEntrantBySeed(br, ref.seed);
-        if(!e) return { name:'—', seed:'', bye:false, known:false };
-        return {
-          name: e.name,
-          seed: e.seed,
-          bye: !!e.bye,
-          known: true
-        };
-      }
-
-      const m = br.matches.get(ref.matchId);
-      if(!m) return { name:'—', seed:'', bye:false, known:false };
-
-      if(ref.type === 'winner'){
-        if(m.winner === 'A') return resolveRef(br, m.A);
-        if(m.winner === 'B') return resolveRef(br, m.B);
-        return { name:'TBD', seed:'', bye:false, known:false };
-      }
-
-      if(ref.type === 'loser'){
-        if(m.winner === 'A') return resolveRef(br, m.B);
-        if(m.winner === 'B') return resolveRef(br, m.A);
-        return { name:'TBD', seed:'', bye:false, known:false };
-      }
-
-      return { name:'—', seed:'', bye:false, known:false };
-    }
-
-    function setWinner(br, matchId, side){
-      const m = br.matches.get(matchId);
-      if(!m) return;
-
-      // Can't pick winner if one side is unknown TBD
-      const ra = resolveRef(br, m.A);
-      const rb = resolveRef(br, m.B);
-
-      // Allow BYE auto wins, but block clicking TBD
-      if(side === 'A' && (!ra.known || ra.name === 'TBD')) return;
-      if(side === 'B' && (!rb.known || rb.name === 'TBD')) return;
-
-      // If opponent is BYE, force correct winner
-      if(ra.name === 'BYE' && rb.name !== 'BYE') side = 'B';
-      if(rb.name === 'BYE' && ra.name !== 'BYE') side = 'A';
-
-      // Toggle off if same side clicked
-      if(m.winner === side){
-        m.winner = null;
-      } else {
-        m.winner = side;
-      }
-
-      // If this is Reset Final, it only matters if it becomes resolvable
-      // After changes, resolve BYE auto wins again downstream.
-      resolveAllAutoWins(br);
-
-      // If GF winner is Losers champ, Reset match should become "active"
-      // If GF winner is Winners champ, clear reset match winner if set.
-      enforceGrandFinalLogic(br);
-
-      renderBracket(br);
-    }
-
-    function enforceGrandFinalLogic(br){
-      const GF = br.finals[0];
-      const RF = br.finals[1];
-
-      const gfA = resolveRef(br, GF.A); // winners champ
-      const gfB = resolveRef(br, GF.B); // losers champ
-
-      // If GF decided and winner == gfA (winners champ), reset is irrelevant -> clear it
-      if(GF.winner){
-        const gfWinner = (GF.winner === 'A') ? gfA : gfB;
-        if(gfWinner.name === gfA.name){
-          RF.winner = null;
-          RF.scoreA = '';
-          RF.scoreB = '';
-        }
-      }
-
-      // If GF not decided, also clear reset
-      if(!GF.winner){
-        RF.winner = null;
-        RF.scoreA = '';
-        RF.scoreB = '';
-      }
-    }
-
-    function resolveAllAutoWins(br){
-      // Iterate a few passes so downstream becomes resolvable
-      for(let pass=0; pass<6; pass++){
-        let changed = false;
-
-        for(const m of br.matches.values()){
-          const a = resolveRef(br, m.A);
-          const b = resolveRef(br, m.B);
-
-          // If either side is BYE and the other is known non-BYE -> auto-win
-          if(a.known && b.known){
-            if(a.name === 'BYE' && b.name !== 'BYE'){
-              if(m.winner !== 'B'){ m.winner = 'B'; changed = true; }
-            }
-            if(b.name === 'BYE' && a.name !== 'BYE'){
-              if(m.winner !== 'A'){ m.winner = 'A'; changed = true; }
-            }
-          }
-
-          // If both are BYE (rare), clear
-          if(a.known && b.known && a.name === 'BYE' && b.name === 'BYE'){
-            if(m.winner){ m.winner = null; changed = true; }
-          }
-        }
-
-        if(!changed) break;
-      }
-
-      enforceGrandFinalLogic(br);
-    }
-
-    // ---------- Rendering ----------
-    function renderBracket(br){
-      const mount = document.getElementById('bracketMount');
-      if(!br){ mount.innerHTML = ''; return; }
-
-      // Build columns:
-      // Winners R1..Rk, Losers L1..L(2k-2), Finals
-      const cols = [];
-
-      for(let r=1; r<=br.k; r++){
-        cols.push({ title: `Winners R${r}`, matches: br.WB[r-1] });
-      }
-      for(let i=1; i<=br.LB.length; i++){
-        cols.push({ title: `Losers R${i}`, matches: br.LB[i-1] });
-      }
-      cols.push({ title: 'Finals', matches: br.finals });
-
-      // Grid template columns
-      const grid = document.createElement('div');
-      grid.className = 'bracketGrid';
-      grid.style.gridTemplateColumns = `repeat(${cols.length}, minmax(240px, 240px))`;
-
-      cols.forEach((c, colIdx) => {
-        const col = document.createElement('div');
-        col.className = 'col';
-
-        const t = document.createElement('div');
-        t.className = 'colTitle';
-
-        if(c.title === 'Finals'){
-          t.innerHTML = `<span class="finalBadge"><span class="dot"></span>${c.title}</span>`;
-        } else {
-          t.textContent = c.title;
-        }
-
-        col.appendChild(t);
-
-        c.matches.forEach(m => {
-          col.appendChild(renderMatch(br, m));
-        });
-
-        grid.appendChild(col);
+      // Auto-advance BYE matches in W R1
+      winnersRounds[0].forEach(m=>{
+        if(m.p1 === "BYE" && m.p2 !== "BYE"){ setWinner(m, "p2", true); }
+        else if(m.p2 === "BYE" && m.p1 !== "BYE"){ setWinner(m, "p1", true); }
       });
 
-      mount.innerHTML = '';
-      mount.appendChild(grid);
-
-      updateLiveStatus(br);
+      renderBracket();
+      document.getElementById('buildInfo').textContent =
+        `Built for ${trimmed.length} players (bracket size ${bracketSize}, ${byes} bye(s)).`;
     }
 
-    function renderMatch(br, m){
-      const card = document.createElement('div');
-      card.className = 'match';
-
-      const mh = document.createElement('div');
-      mh.className = 'mh';
-
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.textContent = m.label;
-
-      const note = document.createElement('span');
-      note.className = 'note';
-
-      // Special note for reset final
-      if(m.label.includes('RESET')){
-        const gf = br.finals[0];
-        if(!gf.winner){
-          note.textContent = 'Waiting for GF';
-        } else {
-          // Active only if GF winner was Losers champ
-          const gfA = resolveRef(br, gf.A);
-          const gfB = resolveRef(br, gf.B);
-          const gfWinner = (gf.winner === 'A') ? gfA : gfB;
-          if(gfWinner.name === gfA.name){
-            note.textContent = 'Not needed';
-          } else {
-            note.textContent = 'If needed';
-          }
-        }
-      } else {
-        note.textContent = 'tap winner';
+    function renderBracket(){
+      if(!BRACKET_STATE){
+        bracketRoot.innerHTML = `<div class="status">No bracket yet.</div>`;
+        return;
       }
 
-      mh.appendChild(tag);
-      mh.appendChild(note);
-      card.appendChild(mh);
+      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
 
-      const a = resolveRef(br, m.A);
-      const b = resolveRef(br, m.B);
+      const bracketEl = document.createElement('div');
+      bracketEl.className = 'bracket';
 
-      card.appendChild(renderSlot(br, m, 'A', a));
-      card.appendChild(renderSlot(br, m, 'B', b));
+      // Winners columns
+      winnersRounds.forEach((round, idx) => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+        round.forEach(m => col.appendChild(renderMatchCard(m, "W")));
+        bracketEl.appendChild(col);
+      });
+
+      // Losers columns
+      losersRounds.forEach((round, idx) => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+        round.forEach(m => col.appendChild(renderMatchCard(m, "L")));
+        bracketEl.appendChild(col);
+      });
+
+      // Grand final column
+      const gfCol = document.createElement('div');
+      gfCol.className = 'col';
+      gfCol.innerHTML = `<div class="col-title">Finals</div>`;
+      grandFinal.forEach(m => gfCol.appendChild(renderMatchCard(m, "G")));
+      bracketEl.appendChild(gfCol);
+
+      bracketRoot.innerHTML = '';
+      bracketRoot.appendChild(bracketEl);
+    }
+
+    function renderMatchCard(match, lane){
+      const card = document.createElement('div');
+      card.className = 'match';
+      card.dataset.matchId = match.id;
+
+      const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
+      card.innerHTML = `
+        <div class="match-head">
+          <div>${escapeHtml(match.label)}</div>
+          <div class="tag">${tagText}</div>
+        </div>
+      `;
+
+      const s1 = renderSlot(match, "p1");
+      const s2 = renderSlot(match, "p2");
+      card.appendChild(s1);
+      card.appendChild(s2);
+
+      const actions = document.createElement('div');
+      actions.className = 'row';
+      actions.style.marginTop = "10px";
+      actions.innerHTML = `
+        <button class="btn-mini btn-win" data-win="p1">Win - Top</button>
+        <button class="btn-mini btn-win" data-win="p2">Win - Bottom</button>
+        <button class="btn-mini btn-lose" data-clear="1">Clear</button>
+      `;
+      actions.querySelector('[data-win="p1"]').addEventListener('click', () => winMatch(match.id, "p1"));
+      actions.querySelector('[data-win="p2"]').addEventListener('click', () => winMatch(match.id, "p2"));
+      actions.querySelector('[data-clear="1"]').addEventListener('click', () => clearMatch(match.id));
+      card.appendChild(actions);
+
+      // Auto-disable win buttons if missing players
+      const wp1 = actions.querySelector('[data-win="p1"]');
+      const wp2 = actions.querySelector('[data-win="p2"]');
+      if(!match.p1 || match.p1 === "BYE") wp1.disabled = true;
+      if(!match.p2 || match.p2 === "BYE") wp2.disabled = true;
 
       return card;
     }
 
-    function renderSlot(br, m, side, info){
+    function renderSlot(match, which){
       const slot = document.createElement('div');
       slot.className = 'slot';
 
-      const other = (side === 'A') ? 'B' : 'A';
+      const name = (which === "p1" ? match.p1 : match.p2) || "TBD";
+      const scoreKey = which === "p1" ? "s1" : "s2";
 
-      if(m.winner === side) slot.classList.add('win');
-      if(m.winner === other) slot.classList.add('lose');
+      if(match.winner === which) slot.classList.add('win');
+      if(match.winner && match.winner !== which) slot.classList.add('lose');
 
-      slot.addEventListener('click', () => setWinner(br, m.id, side));
+      slot.innerHTML = `
+        <div>
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="seed">${escapeHtml(match.id)} - ${which.toUpperCase()}</div>
+        </div>
+        <input class="score" inputmode="numeric" pattern="[0-9]*" value="${escapeHtml(match[scoreKey])}" />
+        <div></div>
+      `;
 
-      const left = document.createElement('div');
-      left.className = 'name';
-
-      const seed = document.createElement('div');
-      seed.className = 'seed';
-      seed.textContent = info.seed ? `#${info.seed}` : '—';
-
-      const nm = document.createElement('div');
-      nm.style.minWidth = '0';
-
-      const player = document.createElement('div');
-      player.className = 'player';
-      player.textContent = info.name || '—';
-
-      const sub = document.createElement('span');
-      sub.className = 'sub';
-
-      if(info.name === 'BYE'){
-        sub.textContent = 'auto-advance';
-        seed.style.borderColor = 'rgba(242,201,76,.35)';
-        seed.style.color = '#ffe7a0';
-      } else if(info.name === 'TBD'){
-        sub.textContent = 'waiting on upstream';
-      } else {
-        sub.textContent = '';
-      }
-
-      nm.appendChild(player);
-      nm.appendChild(sub);
-
-      left.appendChild(seed);
-      left.appendChild(nm);
-
-      const right = document.createElement('div');
-      right.className = 'result';
-
-      const score = document.createElement('input');
-      score.className = 'score';
-      score.placeholder = 'score';
-      score.inputMode = 'text';
-      score.value = (side === 'A') ? (m.scoreA || '') : (m.scoreB || '');
-
-      score.addEventListener('click', (e)=> e.stopPropagation());
-      score.addEventListener('input', ()=>{
-        if(side === 'A') m.scoreA = score.value;
-        else m.scoreB = score.value;
+      const scoreInput = slot.querySelector('.score');
+      scoreInput.addEventListener('input', () => {
+        match[scoreKey] = scoreInput.value.replace(/[^\d]/g,'').slice(0,2);
+        saveState();
       });
-
-      right.appendChild(score);
-
-      slot.appendChild(left);
-      slot.appendChild(right);
-
-      // Color hinting for WB/LB labels (tiny flourish)
-      if(m.bracket === 'W'){
-        slot.style.borderLeft = `6px solid ${cssVar('--teamA')}`;
-      } else if(m.bracket === 'L'){
-        slot.style.borderLeft = `6px solid ${cssVar('--teamB')}`;
-      } else {
-        slot.style.borderLeft = `6px solid var(--warn)`;
-      }
 
       return slot;
     }
 
-    function updateLiveStatus(br){
-      const status = document.getElementById('status');
+    // =========================================================
+    // Advance logic (simple + usable)
+    // =========================================================
+    function findMatchById(id){
+      if(!BRACKET_STATE) return null;
+      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
+      for(const r of winnersRounds){
+        for(const m of r) if(m.id === id) return m;
+      }
+      for(const r of losersRounds){
+        for(const m of r) if(m.id === id) return m;
+      }
+      for(const m of grandFinal){
+        if(m.id === id) return m;
+      }
+      return null;
+    }
 
-      const total = Array.from(br.matches.values()).length;
-      const decided = Array.from(br.matches.values()).filter(m => !!m.winner).length;
+    function setWinner(match, which, silent=false){
+      match.winner = which;
+      match.loser = (which === "p1" ? "p2" : "p1");
+      if(!silent) saveState();
+    }
 
-      const gf = br.finals[0];
-      const rf = br.finals[1];
+    function winMatch(matchId, which){
+      const m = findMatchById(matchId);
+      if(!m) return;
 
-      const gfA = resolveRef(br, gf.A);
-      const gfB = resolveRef(br, gf.B);
+      // block nonsense
+      const winnerName = (which === "p1" ? m.p1 : m.p2);
+      const loserName  = (which === "p1" ? m.p2 : m.p1);
+      if(!winnerName || winnerName === "TBD" || winnerName === "BYE") return;
 
-      let champLine = '';
-      if(rf.winner){
-        const rfa = resolveRef(br, rf.A);
-        const rfb = resolveRef(br, rf.B);
-        const champ = (rf.winner === 'A') ? rfa : rfb;
-        champLine = `Champion: ${champ.name}\n`;
-      } else if(gf.winner){
-        const gfw = (gf.winner === 'A') ? gfA : gfB;
-        // If GF winner is winners champ, that's champion; else reset needed
-        if(gfw.name === gfA.name){
-          champLine = `Champion: ${gfw.name}\n`;
-        } else {
-          champLine = `GF won by Losers champ (${gfw.name}). Reset match required.\n`;
-        }
+      setWinner(m, which);
+
+      // Determine lane type by ID prefix
+      if(m.id.startsWith("W")){
+        advanceInWinners(m, winnerName, loserName);
+      } else if(m.id.startsWith("L")){
+        advanceInLosers(m, winnerName, loserName);
+      } else if(m.id.startsWith("GF")){
+        advanceInFinals(m, winnerName, loserName);
       }
 
-      status.textContent =
-        `${champLine}` +
-        `Progress: ${decided}/${total} matches decided.\n` +
-        `Winners champ slot: ${gfA.name}\n` +
-        `Losers champ slot: ${gfB.name}\n` +
-        `Tip: tap a player row in a match to set winner (tap again to clear).`;
+      renderBracket();
+    }
+
+    function clearMatch(matchId){
+      const m = findMatchById(matchId);
+      if(!m) return;
+      m.s1 = "";
+      m.s2 = "";
+      m.winner = null;
+      m.loser = null;
+      saveState();
+      renderBracket();
+    }
+
+    function advanceInWinners(match, winnerName, loserName){
+      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
+
+      // Parse W{round}-{index}
+      const mm = match.id.match(/^W(\d+)-(\d+)$/);
+      if(!mm) return;
+      const roundNum = parseInt(mm[1],10);
+      const idx = parseInt(mm[2],10) - 1;
+
+      // Winners advance to next winners round
+      const nextRound = winnersRounds[roundNum]; // since roundNum is 1-based; next is index = roundNum
+      if(nextRound){
+        const nextIdx = Math.floor(idx/2);
+        const target = nextRound[nextIdx];
+        if(target){
+          // Place into p1 if empty else p2
+          if(!target.p1) target.p1 = winnerName;
+          else if(!target.p2) target.p2 = winnerName;
+        }
+      } else {
+        // Winner of winners bracket goes to Grand Final p1
+        const gf = grandFinal[0];
+        if(!gf.p1) gf.p1 = winnerName;
+      }
+
+      // Loser drops into first available Losers match slot (simple TD flow)
+      const drop = findFirstAvailableSlot(losersRounds);
+      if(drop){
+        if(!drop.p1) drop.p1 = loserName;
+        else if(!drop.p2) drop.p2 = loserName;
+      }
+
+      saveState();
+    }
+
+    function advanceInLosers(match, winnerName, loserName){
+      const { losersRounds, grandFinal } = BRACKET_STATE;
+
+      // Winner advances to next Losers round slot
+      const mm = match.id.match(/^L(\d+)-(\d+)$/);
+      if(!mm) return;
+      const roundNum = parseInt(mm[1],10);
+      const idx = parseInt(mm[2],10) - 1;
+
+      const nextRound = losersRounds[roundNum]; // next is index = roundNum
+      if(nextRound){
+        const nextIdx = Math.floor(idx/2);
+        const target = nextRound[nextIdx];
+        if(target){
+          if(!target.p1) target.p1 = winnerName;
+          else if(!target.p2) target.p2 = winnerName;
+        }
+      } else {
+        // last loser winner goes to Grand Final p2
+        const gf = grandFinal[0];
+        if(!gf.p2) gf.p2 = winnerName;
+      }
+
+      // Loser is eliminated (no further action)
+      saveState();
+    }
+
+    function advanceInFinals(match, winnerName, loserName){
+      const { grandFinal } = BRACKET_STATE;
+      // GF-1: if losers bracket winner beats winners bracket champ, trigger reset GF-2
+      // GF-2: winner is champion
+      if(match.id === "GF-1"){
+        // If p2 wins (losers champ beats winners champ), schedule reset match with same players
+        // If p1 wins, champion done.
+        if(match.winner === "p2"){
+          const reset = grandFinal[1];
+          reset.p1 = match.p1;
+          reset.p2 = match.p2;
+        } else {
+          // champion, clear reset
+          grandFinal[1].p1 = null;
+          grandFinal[1].p2 = null;
+          grandFinal[1].winner = null;
+          grandFinal[1].loser = null;
+          grandFinal[1].s1 = "";
+          grandFinal[1].s2 = "";
+        }
+      }
+      saveState();
+    }
+
+    function findFirstAvailableSlot(rounds){
+      for(const r of rounds){
+        for(const m of r){
+          if(!m.p1 || !m.p2) return m;
+        }
+      }
+      return null;
     }
 
     // =========================================================
-    // Boot
+    // Export / Import
     // =========================================================
-    document.addEventListener('DOMContentLoaded', ()=>{
+    function saveState(){
+      try{
+        localStorage.setItem('ahss_brackets_state', JSON.stringify(BRACKET_STATE));
+      }catch(e){
+        // ignore
+      }
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem('ahss_brackets_state');
+        if(!raw) return false;
+        const s = JSON.parse(raw);
+        if(!s || !s.winnersRounds) return false;
+        BRACKET_STATE = s;
+        return true;
+      }catch(e){
+        return false;
+      }
+    }
+
+    function exportJSON(){
+      if(!BRACKET_STATE){
+        alert('No bracket to export.');
+        return;
+      }
+      const blob = new Blob([JSON.stringify(BRACKET_STATE, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AHSS_Brackets_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(){
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if(!file) return;
+        try{
+          const text = await file.text();
+          const s = JSON.parse(text);
+          if(!s || !s.winnersRounds) throw new Error('Not a brackets export');
+          BRACKET_STATE = s;
+          saveState();
+          renderBracket();
+          document.getElementById('buildInfo').textContent = 'Imported bracket state.';
+        }catch(e){
+          alert('Import failed: ' + (e.message || e));
+        }
+      };
+      input.click();
+    }
+
+    // =========================================================
+    // Utilities
+    // =========================================================
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
+    // =========================================================
+    // Buttons wiring
+    // =========================================================
+    document.getElementById('btnLoadAYPT').addEventListener('click', loadFromAYPT);
+    document.getElementById('btnClear').addEventListener('click', () => {
+      entrantsBox.value = '';
+      updateEntrantPills();
+    });
+
+    document.getElementById('btnBuild').addEventListener('click', () => {
+      buildBracket();
+      saveState();
+    });
+
+    document.getElementById('btnResetResults').addEventListener('click', () => {
+      if(!BRACKET_STATE) return;
+      if(!confirm('Reset all match results (scores + winners) but keep bracket structure?')) return;
+
+      const wipe = (m) => { m.s1=""; m.s2=""; m.winner=null; m.loser=null; };
+
+      BRACKET_STATE.winnersRounds.forEach(r=>r.forEach(wipe));
+      BRACKET_STATE.losersRounds.forEach(r=>r.forEach(wipe));
+      BRACKET_STATE.grandFinal.forEach(wipe);
+
+      saveState();
+      renderBracket();
+    });
+
+    document.getElementById('btnExportJSON').addEventListener('click', exportJSON);
+    document.getElementById('btnImportJSON').addEventListener('click', importJSON);
+
+    // =========================================================
+    // Init
+    // =========================================================
+    document.addEventListener('DOMContentLoaded', () => {
       applySavedTheme();
-      applyCustomLogo();
+
+      // Restore entrants from last session (optional)
+      const last = localStorage.getItem('ahss_brackets_entrants');
+      if(last){
+        entrantsBox.value = last;
+      }
       updateEntrantPills();
 
-      // If user already has entrants in storage from a prior session, leave it
-      // (We don't auto-load AYPT to avoid confusion across devices.)
+      entrantsBox.addEventListener('change', () => {
+        localStorage.setItem('ahss_brackets_entrants', entrantsBox.value || '');
+      });
+
+      // Load existing bracket state if present
+      if(loadState()){
+        renderBracket();
+        document.getElementById('buildInfo').textContent = 'Restored bracket state from this device.';
+      }
     });
   </script>
+
+  <div style="text-align:center; margin-top:22px; padding-bottom:80px; color:rgba(255,255,255,.45); font-size:12px;">
+    v1.0 - brackets.html (AHSS)
+  </div>
 </body>
 </html>
