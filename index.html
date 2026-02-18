@@ -146,11 +146,11 @@
   background:
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--teamA) 70%, #000) 0%,
+      color-mix(in srgb, var(--ltA, var(--teamA)) 70%, #000) 0%,
       rgba(0,0,0,.80) 45%,
       rgba(0,0,0,.92) 50%,
       rgba(0,0,0,.80) 55%,
-      color-mix(in srgb, var(--teamB) 70%, #000) 100%
+      color-mix(in srgb, var(--ltB, var(--teamB)) 70%, #000) 100%
     );
   filter:saturate(1.15);
 }
