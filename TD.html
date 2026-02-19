@@ -1,8 +1,11 @@
 <!-- =====================
-TD.html — Tournament Director (Integrated)
-v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
-- Keeps your existing match link/QR/match log + cloud queue + IP editor + PIN gate + logo upload
-- Adds tabs: AYPT, Brackets, Full Bracket (live), Results
+TD.html - Tournament Director (Integrated)
+v2.1 - TD + AYPT viewer + Brackets + Full Bracket Live (cloud) + Results export
+- Keeps match link/QR/match log + cloud queue + IP editor + PIN gate + logo upload
+- Tabs: AYPT, Brackets, Full Bracket (live), Results
+- Brackets now publish/load from the "Brackets" sheet via Apps Script JSONP:
+  action=bracketSave, action=bracketGet
+  Headers required: tournamentId, updatedAt, bracketJson
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -51,7 +54,7 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   .pill{ padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); font-size:12px; color:rgba(255,255,255,.75); }
   .spacer{ height: 10px; }
 
-  /* ---- Tabs ---- */
+  /* Tabs */
   .tabs{ max-width:980px; margin:0 auto 10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .tabbtn{
     background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
@@ -64,7 +67,7 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   .tabpane{ display:none; }
   .tabpane.active{ display:block; }
 
-  /* ---- TD PIN gate overlay ---- */
+  /* TD PIN gate */
   #tdGate {
     position: fixed; inset: 0; z-index: 99999;
     display: none;
@@ -89,7 +92,7 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
   .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
 
-  /* ---- Tables ---- */
+  /* Tables */
   table{ width:100%; border-collapse: collapse; }
   th, td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align: top; }
   th{ position:sticky; top:0; background:#141415; z-index:2; text-align:left; font-size: 12px; color: rgba(255,255,255,.75); letter-spacing:.3px; text-transform: uppercase; }
@@ -99,7 +102,7 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   .ok{ color: var(--ok); font-weight: 900; }
   .bad{ color: var(--bad); font-weight: 900; }
 
-  /* ---- Bracket Viewer ---- */
+  /* Bracket Viewer */
   .viewer{
     overflow:auto;
     border-radius:14px;
@@ -152,7 +155,7 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:var(--ok); opacity:0; transition:opacity .2s ease; }
   .saved-dot.show{ opacity:1; }
 
-  /* Tiny buttons in tables */
+  /* Tiny buttons */
   .btnTiny{
     padding:6px 10px; margin:0; border-radius:10px; font-size:12px;
     background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
@@ -166,10 +169,10 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
 </head>
 
 <body>
-<!-- TD PIN gate (client-side) -->
+<!-- TD PIN gate -->
 <div id="tdGate">
   <div class="td-gate-inner">
-    <div class="td-gate-title">Tournament Director — Locked</div>
+    <div class="td-gate-title">Tournament Director - Locked</div>
     <div class="td-gate-sub">Enter 4-digit code to continue</div>
     <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
     <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
@@ -195,16 +198,14 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
   <button class="tabbtn" data-tab="tabResults">Results</button>
 </div>
 
-<!-- =======================
-TAB: Match Links (your original)
-======================== -->
+<!-- TAB: Match Links -->
 <div id="tabMatch" class="tabpane active">
 
   <details class="block">
-    <summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
+    <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
     <div style="margin-top: 10px; line-height: 1.5;">
       <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
-      <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
+      <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
       <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
       <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
       <p><strong>5. Match Log.</strong> Saves locally and posts to AYPT - Match Log (retries if offline).</p>
@@ -227,7 +228,7 @@ TAB: Match Links (your original)
     </div>
 
     <details class="block" style="max-width:900px;margin:14px auto">
-      <summary class="clicky">🖧 Table IPs (edit & save)</summary>
+      <summary class="clicky">Table IPs (edit and save)</summary>
       <div style="margin-top:10px">
         <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
         <div style="margin-top:10px" class="row-left">
@@ -239,8 +240,8 @@ TAB: Match Links (your original)
       </div>
     </details>
 
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
-    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
+    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
+    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
     <div class="muted" style="margin-top:4px;">AYPT endpoints are locked in this build.</div>
 
     <div id="result"></div>
@@ -249,12 +250,12 @@ TAB: Match Links (your original)
   </div>
 
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">📋 Show Match Log</summary>
+    <summary class="clicky">Show Match Log</summary>
     <input type="text" id="searchLog" placeholder="Search matches..." style="width: 92%; padding: 8px; font-size: 1em; margin: 10px 0; border-radius: 10px;" oninput="renderMatchLog()">
     <div id="paginationControls" style="margin: 10px 0;" class="row-left">
-      <button onclick="prevPage()">⬅️ Prev</button>
+      <button onclick="prevPage()">Prev</button>
       <span id="pageInfo" style="font-size: 0.9em;"></span>
-      <button onclick="nextPage()">Next ➡️</button>
+      <button onclick="nextPage()">Next</button>
     </div>
     <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
     <div class="row-left">
@@ -266,9 +267,7 @@ TAB: Match Links (your original)
   </details>
 </div>
 
-<!-- =======================
-TAB: AYPT Signups
-======================== -->
+<!-- TAB: AYPT Signups -->
 <div id="tabAYPT" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -300,17 +299,23 @@ TAB: AYPT Signups
   </div>
 </div>
 
-<!-- =======================
-TAB: Brackets (run)
-======================== -->
+<!-- TAB: Brackets -->
 <div id="tabBrackets" class="tabpane">
   <div class="card">
     <div class="row-left">
-      <div class="pill">Storage: localStorage</div>
+      <div class="pill">Storage: localStorage + Brackets Sheet</div>
+
+      <input id="tournamentId" placeholder="Tournament ID" style="width:220px" />
+
       <button class="btnTiny primary" id="btnNewBracket">New Bracket from Entrants</button>
       <button class="btnTiny" id="btnResetBracket">Reset Bracket</button>
+
+      <button class="btnTiny primary" id="btnPublishBracket">Publish to TVs</button>
+      <button class="btnTiny" id="btnLoadBracketCloud">Load from Cloud</button>
+
       <button class="btnTiny" id="btnExportBracketJSON">Export Bracket JSON</button>
       <button class="btnTiny" id="btnImportBracketJSON">Import Bracket JSON</button>
+
       <input id="importBracketFile" type="file" accept="application/json" style="display:none">
       <div class="muted" id="bracketStatus">-</div>
     </div>
@@ -319,7 +324,7 @@ TAB: Brackets (run)
 
     <div class="row-left" style="gap:12px;">
       <div style="min-width:280px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click “Use AYPT List…” in AYPT tab</div>
+        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click "Use AYPT List..." in AYPT tab</div>
         <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
       </div>
 
@@ -352,9 +357,7 @@ TAB: Brackets (run)
   </div>
 </div>
 
-<!-- =======================
-TAB: Full Bracket Live (viewer)
-======================== -->
+<!-- TAB: Full Bracket Live -->
 <div id="tabFull" class="tabpane">
   <div class="card">
     <div class="ctrlbar">
@@ -380,9 +383,7 @@ TAB: Full Bracket Live (viewer)
   </div>
 </div>
 
-<!-- =======================
-TAB: Results
-======================== -->
+<!-- TAB: Results -->
 <div id="tabResults" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -420,14 +421,16 @@ TAB: Results
 // Match-log endpoint you already use
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
-// Signup endpoint - if same script supports list/update, you can reuse.
+// Signup endpoint you already use (list/update)
 const AYPT_SIGNUPS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
+
+// Brackets endpoint - MUST support action=bracketGet and action=bracketSave (JSONP)
+// If your Brackets API is in the same Apps Script as signups, keep this as-is.
+// Otherwise set BRACKETS_ENDPOINT to that script's /exec URL.
+const BRACKETS_ENDPOINT = AYPT_SIGNUPS_ENDPOINT;
 
 // Bracket state key (shared by Brackets + Full Live)
 const STATE_KEY = "ahss_brackets_state";
-
-// Local theme/logo keys (optional)
-const THEME_KEYS = { A:'ahss_theme_teamA', B:'ahss_theme_teamB', LOGO:'ahss_custom_logo_data' };
 
 /* =========================================================
   SMALL UTILS
@@ -487,7 +490,7 @@ document.addEventListener("click", (e)=>{
 });
 
 /* =========================================================
-  MATCH LINK / QR (your original, kept)
+  MATCH LINK / QR (kept)
 ========================================================= */
 let generatedUrl = '';
 let currentPage = 1;
@@ -505,7 +508,6 @@ function generateMatchLink() {
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
 
-  // Unique 4-char ID + Date
   const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
   const yyyymmdd = new Date().toISOString().slice(0,10);
   const matchId = `weekly${randomId}-${yyyymmdd}`;
@@ -572,7 +574,7 @@ function copyLink() {
 }
 
 /* =========================================================
-  LOCAL MATCH LOG (your original, kept)
+  LOCAL MATCH LOG (kept)
 ========================================================= */
 function addToMatchLog(text, url) {
   const now = new Date();
@@ -603,7 +605,7 @@ function renderMatchLog() {
 }
 
 function clearMatchLog() {
-  if (confirm('⚠️ Are you sure you want to clear the match log?')) {
+  if (confirm('Are you sure you want to clear the match log?')) {
     localStorage.removeItem('matchLog');
     renderMatchLog();
   }
@@ -630,7 +632,7 @@ function nextPage() { currentPage++; renderMatchLog(); }
 function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
 
 /* =========================================================
-  CLOUD SYNC → AYPT MATCH LOG (your original, kept)
+  CLOUD SYNC - AYPT MATCH LOG (kept)
 ========================================================= */
 const QUEUE_KEY = 'matchLogCloudQueue';
 
@@ -646,20 +648,20 @@ function enqueue(payload) {
   const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   q.push(payload);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-  showCloudStatus(`Saved offline (${q.length} pending)…`, true);
+  showCloudStatus(`Saved offline (${q.length} pending)...`, true);
 }
 
 async function flushCloudQueue() {
   const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   if (!q.length) return;
-  showCloudStatus(`Syncing ${q.length} pending…`);
+  showCloudStatus(`Syncing ${q.length} pending...`);
   const remaining = [];
   for (const item of q) {
     const ok = await postToAYPTMatchLog(item);
     if (!ok) remaining.push(item);
   }
   localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-  showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
+  showCloudStatus(remaining.length ? `${remaining.length} still pending...` : 'All synced!', true);
 }
 
 function postToAYPTMatchLog(payload) {
@@ -702,7 +704,7 @@ let AYPT_ROWS = [];
 async function loadAYPT(){
   const statusEl = $('#ayptStatus');
   const tbody = $('#ayptTable tbody');
-  statusEl.textContent = "Loading…";
+  statusEl.textContent = "Loading...";
   tbody.innerHTML = "";
 
   try{
@@ -748,7 +750,6 @@ function pulseSaved(id){
 }
 
 async function ayptUpdate(id, fields){
-  // optional if your Apps Script supports update=1
   try{
     await jsonp(AYPT_SIGNUPS_ENDPOINT, Object.assign({ update:"1", id }, fields));
     pulseSaved(id);
@@ -780,10 +781,7 @@ function wireAYPTTable(){
       const v = e.target.value;
       clearTimeout(noteTimer);
       noteTimer = setTimeout(async ()=>{
-        const ok = await ayptUpdate(id, { adminNote: v });
-        if(!ok) {
-          // silent - endpoint may not support
-        }
+        await ayptUpdate(id, { adminNote: v });
       }, 400);
     }
   });
@@ -796,12 +794,11 @@ function useAYPTToSeed(){
 
   $('#entrantsBox').value = names.join("\n");
   setTab("tabBrackets");
-  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click “New Bracket…”`;
+  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click "New Bracket..."`;
 }
 
 /* =========================================================
-  BRACKETS ENGINE (simple double-elim)
-  - Stores BRACKET_STATE in localStorage under STATE_KEY
+  BRACKETS - LOCAL STATE
 ========================================================= */
 let BRACKET_STATE = null;
 
@@ -821,10 +818,70 @@ function loadBracketState(){
   }
 }
 
+/* Tournament Id helpers */
+function defaultTournamentId(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `weekly${yyyy}${mm}${dd}`;
+}
+function getTournamentId(){
+  const el = $('#tournamentId');
+  const v = (el?.value || "").trim();
+  return v || defaultTournamentId();
+}
+function setTournamentId(v){
+  const el = $('#tournamentId');
+  if(el) el.value = v || "";
+  localStorage.setItem("TD_TOURNAMENT_ID", v || "");
+}
+
+/* Cloud bracket save/load (Brackets sheet) */
+async function cloudSaveBracket(state){
+  const tid = getTournamentId();
+  const bracketJson = JSON.stringify(state);
+  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tournamentId: tid, bracketJson });
+  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud save failed");
+  $('#bracketStatus').textContent = `Published ✓ (${tid}) @ ${new Date().toLocaleTimeString()}`;
+  return data;
+}
+async function cloudLoadBracket(){
+  const tid = getTournamentId();
+  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud load failed");
+  if(!data.row || !data.row.bracketJson){
+    $('#bracketStatus').textContent = `No cloud bracket found for ${tid}.`;
+    return null;
+  }
+  const state = JSON.parse(data.row.bracketJson);
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  BRACKET_STATE = state;
+  renderBracket();
+  renderFullBracket();
+  buildMatchPicker();
+  $('#bracketStatus').textContent = `Loaded from cloud ✓ (${tid})`;
+  return state;
+}
+
+/* Debounced publish so Advance Winner does not spam */
+let publishTimer = null;
+function schedulePublish(){
+  clearTimeout(publishTimer);
+  publishTimer = setTimeout(async ()=>{
+    try{
+      if(BRACKET_STATE) await cloudSaveBracket(BRACKET_STATE);
+    }catch(e){
+      console.warn(e);
+      $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
+    }
+  }, 600);
+}
+
+/* Bracket generation helpers */
 function nextPow2(n){
   let p=1; while(p<n) p*=2; return p;
 }
-
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -832,7 +889,6 @@ function shuffle(arr){
   }
   return arr;
 }
-
 function makeMatch(id,label,p1,p2){
   return { id, label, p1, p2, s1:"", s2:"", winner:"", loser:"" };
 }
@@ -847,13 +903,11 @@ function newBracketFromEntrants(){
   const size = nextPow2(entrants.length);
   while(entrants.length < size) entrants.push("BYE");
 
-  // Winners round 1
   const w1 = [];
   for(let i=0;i<size;i+=2){
     w1.push(makeMatch(`W1-${i/2+1}`, `Winners R1 M${i/2+1}`, entrants[i], entrants[i+1]));
   }
 
-  // Build winners rounds skeleton
   const winnersRounds = [w1];
   let roundSize = size/2;
   let r=2;
@@ -868,15 +922,7 @@ function newBracketFromEntrants(){
     if(roundSize === 0) break;
     if(roundSize === 1) break;
   }
-  // winnersRounds currently includes an extra last round placeholder; normalize:
-  // We'll keep until it reaches 1 match.
-  while(winnersRounds[winnersRounds.length-1].length > 1){
-    // should not happen
-    break;
-  }
 
-  // Losers bracket rounds skeleton (enough for common sizes)
-  // Simple approach: create 2*(log2(size))-1 rounds with TBD
   const Lrounds = [];
   const wRoundsCount = Math.log2(size);
   const lCount = Math.max(1, (2*wRoundsCount)-1);
@@ -901,10 +947,9 @@ function newBracketFromEntrants(){
     winnersRounds,
     losersRounds: Lrounds,
     grandFinal,
-    notes: "Simple DE skeleton. Advance winners using selector.",
+    notes: "Simple DE skeleton. Advance winners using selector."
   };
 
-  // Auto-advance BYEs in Winners R1
   BRACKET_STATE.winnersRounds[0].forEach((m)=>{
     if(m.p1 === "BYE" && m.p2 !== "BYE"){ m.winner="p2"; m.loser="p1"; }
     if(m.p2 === "BYE" && m.p1 !== "BYE"){ m.winner="p1"; m.loser="p2"; }
@@ -916,10 +961,11 @@ function newBracketFromEntrants(){
   renderBracket();
   buildMatchPicker();
   $('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
+
+  schedulePublish();
 }
 
 function propagateWinners(){
-  // Push winners forward in winners bracket
   const WR = BRACKET_STATE.winnersRounds;
 
   for(let r=0;r<WR.length-1;r++){
@@ -930,23 +976,18 @@ function propagateWinners(){
       const target = next[Math.floor(i/2)];
       const slot = (i%2===0) ? "p1" : "p2";
       const winnerName = m.winner ? (m.winner==="p1"?m.p1:m.p2) : "TBD";
-      if(target){
-        target[slot] = winnerName || "TBD";
-      }
+      if(target) target[slot] = winnerName || "TBD";
     }
   }
 
-  // Winners champion goes to GF-1 p1
   const lastW = WR[WR.length-1][0];
   if(lastW){
     const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
     BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
   }
 
-  // Very light losers propagation (practical):
-  // Place losers from winners rounds into losers rounds in order.
   const losers = [];
-  WR.forEach((round, ri)=>{
+  WR.forEach((round)=>{
     round.forEach((m)=>{
       if(m.winner && m.loser){
         const loserName = (m.loser==="p1"?m.p1:m.p2);
@@ -955,19 +996,16 @@ function propagateWinners(){
     });
   });
 
-  // Fill L rounds sequentially with losers list as players (TBD for remaining)
   const LR = BRACKET_STATE.losersRounds;
   let idx=0;
   for(let r=0;r<LR.length;r++){
     for(let m=0;m<LR[r].length;m++){
       const match = LR[r][m];
-      // Only set if still TBD to avoid clobbering
       if(match.p1 === "TBD" && idx < losers.length) match.p1 = losers[idx++];
       if(match.p2 === "TBD" && idx < losers.length) match.p2 = losers[idx++];
     }
   }
 
-  // Losers champion (last losers round, last match winner) -> GF-1 p2
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
   const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
@@ -1042,7 +1080,6 @@ function advanceWinner(){
   m.winner = w;
   m.loser = (w==="p1") ? "p2" : "p1";
 
-  // quick score prompt (optional)
   const s1 = prompt("Score for " + m.p1 + " (optional):", m.s1 || "");
   const s2 = prompt("Score for " + m.p2 + " (optional):", m.s2 || "");
   if(s1 !== null) m.s1 = String(s1);
@@ -1051,9 +1088,10 @@ function advanceWinner(){
   propagateWinners();
   saveBracketState();
   renderBracket();
-  renderFullBracket(); // keep live view in sync
   buildMatchPicker();
   msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
+
+  schedulePublish();
 }
 
 function resetBracket(){
@@ -1142,7 +1180,7 @@ function renderBracket(){
 }
 
 /* =========================================================
-  FULL BRACKET LIVE (auto refresh + zoom)
+  FULL BRACKET LIVE (cloud pull + auto refresh + zoom)
 ========================================================= */
 let fullZoom = 1;
 let fullTimer = null;
@@ -1177,52 +1215,60 @@ function fullFit(){
   }
 }
 
-function renderFullBracket(){
-  const state = loadBracketState();
+async function renderFullBracket(){
   const root = $('#fullRoot');
-  if(!state){
-    root.innerHTML = `<div class="muted">No bracket loaded yet.</div>`;
-    return;
+  const tid = getTournamentId();
+
+  try{
+    const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+    if(!data || !data.ok) throw new Error((data && data.message) || "Cloud fetch failed");
+
+    if(!data.row || !data.row.bracketJson){
+      root.innerHTML = `<div class="muted">No bracket published yet for <b>${esc(tid)}</b>.</div>`;
+      $('#fullLast').textContent = "Last update: -";
+      return;
+    }
+
+    const state = JSON.parse(data.row.bracketJson);
+
+    const saved = BRACKET_STATE;
+    BRACKET_STATE = state;
+
+    const bracketEl = document.createElement("div");
+    bracketEl.className = "bracket";
+
+    (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
+      const col = document.createElement("div");
+      col.className = "col";
+      col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+      round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
+      bracketEl.appendChild(col);
+    });
+
+    (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
+      const col = document.createElement("div");
+      col.className = "col";
+      col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+      round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
+      bracketEl.appendChild(col);
+    });
+
+    const gfCol = document.createElement("div");
+    gfCol.className = "col";
+    gfCol.innerHTML = `<div class="col-title">Finals</div>`;
+    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
+    bracketEl.appendChild(gfCol);
+
+    root.innerHTML = "";
+    root.appendChild(bracketEl);
+
+    BRACKET_STATE = saved;
+
+    $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
+  }catch(e){
+    console.warn(e);
+    root.innerHTML = `<div class="muted">Live load failed: ${esc(e.message || e)}</div>`;
   }
-
-  // Use shared renderer, but temporarily point BRACKET_STATE
-  const saved = BRACKET_STATE;
-  BRACKET_STATE = state;
-
-  const tmp = document.createElement("div");
-  tmp.id = "tmpFull";
-  tmp.appendChild(document.createTextNode(""));
-
-  // Render to a temporary root using same logic
-  const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
-
-  (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
-    bracketEl.appendChild(col);
-  });
-  (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
-    bracketEl.appendChild(col);
-  });
-  const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
-  bracketEl.appendChild(gfCol);
-
-  root.innerHTML = "";
-  root.appendChild(bracketEl);
-
-  BRACKET_STATE = saved;
-
-  $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
 }
 
 function startFullAuto(){
@@ -1381,9 +1427,10 @@ function importBracketJSONFile(file){
       localStorage.setItem(STATE_KEY, JSON.stringify(state));
       BRACKET_STATE = state;
       renderBracket();
-      renderFullBracket();
       buildMatchPicker();
       $('#bracketStatus').textContent = "Imported bracket JSON.";
+
+      schedulePublish();
     }catch(e){
       alert("Import failed: " + e.message);
     }
@@ -1392,7 +1439,7 @@ function importBracketJSONFile(file){
 }
 
 /* =========================================================
-  LOGO upload + storage (your original)
+  LOGO upload + storage (kept)
 ========================================================= */
 const logo = document.getElementById('logo');
 const uploader = document.getElementById('logoUploader');
@@ -1420,7 +1467,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
 
 /* =========================================================
-  TD PIN gate logic (your original)
+  TD PIN gate logic (kept)
 ========================================================= */
 (function initTDGate(){
   const PIN = '2580';
@@ -1466,7 +1513,7 @@ function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo
 })();
 
 /* =========================================================
-  IP storage & curl builder (your original, kept)
+  IP storage & curl builder (kept)
 ========================================================= */
 const LS_KEY_IPS = "AH_TD_TABLE_IPS";
 const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
@@ -1556,7 +1603,7 @@ function copyCurlCommand() {
 }
 
 /* =========================================================
-  SW registration (your original)
+  SW registration (kept)
 ========================================================= */
 const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
 if ('serviceWorker' in navigator && !SW_OFF) {
@@ -1570,13 +1617,16 @@ if ('serviceWorker' in navigator && !SW_OFF) {
 /* =========================================================
   INIT / WIRE BUTTONS
 ========================================================= */
-document.addEventListener("DOMContentLoaded", ()=>{
-  // restore last tab
+document.addEventListener("DOMContentLoaded", async ()=>{
   const last = localStorage.getItem("TD_ACTIVE_TAB");
   if(last) setTab(last);
 
   renderMatchLog();
   flushCloudQueue();
+
+  // TournamentId restore
+  setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || defaultTournamentId());
+  $('#tournamentId').addEventListener("change", ()=> setTournamentId(getTournamentId()));
 
   // AYPT
   wireAYPTTable();
@@ -1590,6 +1640,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $('#btnExportBracketJSON').addEventListener("click", exportBracketJSON);
   $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
   $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
+
+  // Publish/load cloud
+  $('#btnPublishBracket').addEventListener("click", async ()=>{
+    if(!BRACKET_STATE) return alert("No bracket to publish.");
+    try{ await cloudSaveBracket(BRACKET_STATE); }
+    catch(e){ alert("Publish failed: " + (e.message || e)); }
+  });
+  $('#btnLoadBracketCloud').addEventListener("click", async ()=>{
+    try{ await cloudLoadBracket(); }
+    catch(e){ alert("Load failed: " + (e.message || e)); }
+  });
 
   // Full Live
   $('#btnFullRefresh').addEventListener("click", renderFullBracket);
@@ -1610,18 +1671,20 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // IP editor
   renderIpEditor();
 
-  // Load bracket if present
+  // Load bracket if present locally
   BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
     renderBracket();
     buildMatchPicker();
-    renderFullBracket();
   }
 
   // Restore full zoom + start auto
   const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
   setFullZoomPercent(isFinite(z) ? z : 100);
   startFullAuto();
+
+  // Prime live view once (cloud)
+  renderFullBracket();
 });
 </script>
 </body>
