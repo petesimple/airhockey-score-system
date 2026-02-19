@@ -1,8 +1,6 @@
 <!-- =====================
-TD.html — Tournament Director (Integrated)
-v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
-- Keeps your existing match link/QR/match log + cloud queue + IP editor + PIN gate + logo upload
-- Adds tabs: AYPT, Brackets, Full Bracket (live), Results
+TD.html — Tournament Director
+v1.1 — CORS-safe Apps Script post + fixed endpoint + offline queue
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -13,1387 +11,352 @@ v2.0 — TD + AYPT viewer + Brackets + Full Bracket Live + Results export
 <meta name="theme-color" content="#00bcd4">
 <link rel="icon" type="image/png" href="iconTD-192.png">
 <title>Tournament Director</title>
-
 <style>
-  :root{
-    --bg:#111;
-    --panel:#1a1a1a;
-    --panel2:#222;
-    --border:#333;
-    --text:#fff;
-    --muted:#aaa;
-    --accent:#00bcd4;
-    --ok:#3ddc84;
-    --bad:#ff5a5a;
-    --teamA:#d32f2f;
-    --teamB:#1976d2;
-    --radius:12px;
-  }
-  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); padding: 16px; text-align: center; }
-  input, select, button, textarea { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
-  input, textarea { background:#0f0f10; color:#fff; border:1px solid #333; }
-  input { width: 180px; }
-  textarea{ width:100%; max-width:700px; }
-  button { background: var(--accent); color: #000; cursor: pointer; font-weight: 800; }
-  button.secondary{ background:#333; color:#0f0; font-weight:700; }
-  button.danger{ background:#444; color:#f66; font-weight:800; }
-  button:disabled{ opacity:.5; cursor:not-allowed; }
-  #result, #qrcode { margin-top: 20px; }
-  a { color: #00eaff; }
-  #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
-  #copyBtn.copied { background: #0f0; color: #000; }
-  .muted { color:var(--muted); font-size:0.9em }
-  details.block { margin: 20px auto; max-width: 900px; background: var(--panel2); color: var(--text); padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
-  summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff; }
-  .card{ max-width: 980px; margin: 14px auto; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align:left; }
-  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; }
-  .row-left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
-  .pill{ padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); font-size:12px; color:rgba(255,255,255,.75); }
-  .spacer{ height: 10px; }
+body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; text-align: center; }
+input, select, button { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
+input { width: 150px; }
+button { background: #00bcd4; color: #000; cursor: pointer; }
+#result, #qrcode { margin-top: 20px; }
+a { color: #00eaff; }
+#copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
+#copyBtn.copied { background: #0f0; color: #000; }
+.muted { color:#aaa; font-size:0.9em }
+details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
+summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
 
-  /* ---- Tabs ---- */
-  .tabs{ max-width:980px; margin:0 auto 10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-  .tabbtn{
-    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
-    padding:10px 12px; border-radius: 12px; font-weight:900; cursor:pointer;
-  }
-  .tabbtn.active{
-    background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000; border:none;
-  }
-  .tabpane{ display:none; }
-  .tabpane.active{ display:block; }
-
-  /* ---- TD PIN gate overlay ---- */
-  #tdGate {
-    position: fixed; inset: 0; z-index: 99999;
-    display: none;
-    background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
-    color: #fff;
-  }
-  .td-gate-inner {
-    max-width: 360px; margin: 15vh auto 0; text-align: center;
-    background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.5);
-  }
-  .td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
-  .td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
-  .td-pin {
-    width: 160px; text-align: center; letter-spacing: .2em;
-    padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
-  }
-  .td-gate-btn {
-    margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
-    background:#00bcd4; color:#000; cursor: pointer; font-weight:900;
-  }
-  .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
-  .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
-
-  /* ---- Tables ---- */
-  table{ width:100%; border-collapse: collapse; }
-  th, td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align: top; }
-  th{ position:sticky; top:0; background:#141415; z-index:2; text-align:left; font-size: 12px; color: rgba(255,255,255,.75); letter-spacing:.3px; text-transform: uppercase; }
-  tr:hover td{ background: rgba(255,255,255,.03); }
-
-  .mini{ font-size: 12px; color: rgba(255,255,255,.7); }
-  .ok{ color: var(--ok); font-weight: 900; }
-  .bad{ color: var(--bad); font-weight: 900; }
-
-  /* ---- Bracket Viewer ---- */
-  .viewer{
-    overflow:auto;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.18);
-    padding:10px;
-  }
-  .zoomStage{ transform-origin: top left; display:inline-block; }
-  .bracket{ min-width:900px; display:flex; gap:22px; padding:10px 6px 6px; align-items:flex-start; }
-  .col{ display:flex; flex-direction:column; gap:14px; min-width:260px; }
-  .col-title{ font-size:12px; color:rgba(255,255,255,.7); letter-spacing:.4px; text-transform:uppercase; margin-left:6px; }
-  .match{
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:14px;
-    padding:10px;
-  }
-  .match-head{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    margin-bottom:10px; color:rgba(255,255,255,.75); font-size:12px;
-  }
-  .match-head .tag{
-    padding:4px 8px; border-radius:999px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(255,255,255,.05);
-    font-weight:800; color:#fff; font-size:11px; letter-spacing:.2px;
-  }
-  .slot{
-    display:grid; grid-template-columns: 1fr 44px 44px; gap:8px; align-items:center;
-    margin-bottom:8px; padding:8px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.20);
-  }
-  .slot:last-child{ margin-bottom:0; }
-  .name{ font-weight:900; font-size:13px; line-height:1.1; }
-  .seed{ font-size:11px; color:rgba(255,255,255,.55); margin-top:2px; }
-  .scoreBox{
-    width:44px; text-align:center; padding:8px 6px; border-radius:10px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10);
-    color:#fff; font-weight:900;
-  }
-  .slot.win{ border-color: rgba(61,220,132,.55); box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset; }
-  .slot.lose{ opacity:.78; }
-
-  .ctrlbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
-  .chk{ display:flex; align-items:center; gap:8px; font-size:13px; color:rgba(255,255,255,.85); user-select:none; }
-  .chk input{ transform: scale(1.15); }
-  input[type="range"]{ width:190px; }
-
-  .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:var(--ok); opacity:0; transition:opacity .2s ease; }
-  .saved-dot.show{ opacity:1; }
-
-  /* Tiny buttons in tables */
-  .btnTiny{
-    padding:6px 10px; margin:0; border-radius:10px; font-size:12px;
-    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
-    cursor:pointer; font-weight:900;
-  }
-  .btnTiny.primary{
-    background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000; border:none;
-  }
+/* ---- TD PIN gate overlay ---- */
+#tdGate {
+position: fixed; inset: 0; z-index: 99999;
+display: none; /* JS decides visibility */
+background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
+color: #fff; font-family: Arial, sans-serif;
+}
+.td-gate-inner {
+max-width: 360px; margin: 15vh auto 0; text-align: center;
+background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
+box-shadow: 0 12px 40px rgba(0,0,0,.5);
+}
+.td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
+.td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
+.td-pin {
+width: 160px; text-align: center; letter-spacing: .2em;
+padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
+}
+.td-gate-btn {
+margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
+background:#00bcd4; color:#000; cursor: pointer;
+}
+.td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
+.td-hint { margin-top: 10px; font-size:.85em; color:#888; }
 </style>
 </head>
-
 <body>
 <!-- TD PIN gate (client-side) -->
 <div id="tdGate">
-  <div class="td-gate-inner">
-    <div class="td-gate-title">Tournament Director — Locked</div>
-    <div class="td-gate-sub">Enter 4-digit code to continue</div>
-    <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
-    <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
-    <div id="tdGateMsg" class="td-gate-msg"></div>
-    <div class="td-hint">Tip: code is 4 digits</div>
-  </div>
+<div class="td-gate-inner">
+<div class="td-gate-title">Tournament Director — Locked</div>
+<div class="td-gate-sub">Enter 4-digit code to continue</div>
+<input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
+<div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
+<div id="tdGateMsg" class="td-gate-msg"></div>
+<div class="td-hint">Tip: code is 4 digits</div>
+</div>
 </div>
 
-<!-- Header -->
-<div class="row" style="margin-top:6px;">
-  <img id="logo" src="TDlogo.png" alt="Logo" style="height:160px; cursor: pointer;" draggable="false" unselectable="on" />
-</div>
+<img id="logo" src="TDlogo.png" alt="Logo" style="height:200px; cursor: pointer;" draggable="false" unselectable="on" />
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results</div>
-
-<!-- Tabs -->
-<div class="tabs" id="tabs">
-  <button class="tabbtn active" data-tab="tabMatch">Match Links</button>
-  <button class="tabbtn" data-tab="tabAYPT">AYPT Signups</button>
-  <button class="tabbtn" data-tab="tabBrackets">Brackets</button>
-  <button class="tabbtn" data-tab="tabFull">Full Bracket Live</button>
-  <button class="tabbtn" data-tab="tabResults">Results</button>
+<details class="block">
+<summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
+<div style="margin-top: 10px; line-height: 1.5;">
+<p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
+<p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
+<p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+<p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
+<p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
 </div>
+</details>
 
-<!-- =======================
-TAB: Match Links (your original)
-======================== -->
-<div id="tabMatch" class="tabpane active">
+<div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
+<input type="text" id="player1" placeholder="Player 1" autofocus />
+<input type="text" id="player2" placeholder="Player 2" />
+<input type="text" id="tableNumber" placeholder="Table #" />
+<input type="text" id="refName" placeholder="Referee Name" />
+<select id="matchLength">
+<option value="2">Best of 3</option>
+<option value="3">Best of 5</option>
+<option value="4">Best of 7</option>
+</select>
+<button onclick="generateMatchLink()">Generate Match Link</button>
+<button id="copyCurlBtn" style="display:none;">Copy Curl Command</button>
 
-  <details class="block">
-    <summary class="clicky">🧑‍⚖️ How to Use This Page (Quick TD Guide)</summary>
-    <div style="margin-top: 10px; line-height: 1.5;">
-      <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
-      <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
-      <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
-      <p><strong>5. Match Log.</strong> Saves locally and posts to AYPT - Match Log (retries if offline).</p>
+    <details class="block" style="max-width:700px;margin:20px auto">
+  <summary class="clicky">🖧 Table IPs (edit & save)</summary>
+  <div style="margin-top:10px">
+    <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
+    <div style="margin-top:10px">
+      <button id="addRowBtn" type="button">Add Table</button>
+      <button id="saveIPsBtn" type="button">Save IPs</button>
+      <button id="testIPsBtn" type="button">Test All</button>
     </div>
-  </details>
-
-  <div class="card">
-    <div class="row">
-      <input type="text" id="player1" placeholder="Player 1" autofocus />
-      <input type="text" id="player2" placeholder="Player 2" />
-      <input type="text" id="tableNumber" placeholder="Table #" />
-      <input type="text" id="refName" placeholder="Referee Name" />
-      <select id="matchLength">
-        <option value="2">Best of 3</option>
-        <option value="3">Best of 5</option>
-        <option value="4">Best of 7</option>
-      </select>
-      <button onclick="generateMatchLink()">Generate Match Link</button>
-      <button id="copyCurlBtn" style="display:none;" class="secondary">Copy Curl Command</button>
-    </div>
-
-    <details class="block" style="max-width:900px;margin:14px auto">
-      <summary class="clicky">🖧 Table IPs (edit & save)</summary>
-      <div style="margin-top:10px">
-        <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
-        <div style="margin-top:10px" class="row-left">
-          <button id="addRowBtn" type="button">Add Table</button>
-          <button id="saveIPsBtn" type="button">Save IPs</button>
-          <button id="testIPsBtn" type="button">Test All</button>
-        </div>
-        <div id="ipMsg" class="muted" style="margin-top:8px"></div>
-      </div>
-    </details>
-
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
-    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
-    <div class="muted" style="margin-top:4px;">AYPT endpoints are locked in this build.</div>
-
-    <div id="result"></div>
-    <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
-    <canvas id="qrcode"></canvas>
+    <div id="ipMsg" class="muted" style="margin-top:8px"></div>
   </div>
+</details>
 
-  <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">📋 Show Match Log</summary>
-    <input type="text" id="searchLog" placeholder="Search matches..." style="width: 92%; padding: 8px; font-size: 1em; margin: 10px 0; border-radius: 10px;" oninput="renderMatchLog()">
-    <div id="paginationControls" style="margin: 10px 0;" class="row-left">
-      <button onclick="prevPage()">⬅️ Prev</button>
-      <span id="pageInfo" style="font-size: 0.9em;"></span>
-      <button onclick="nextPage()">Next ➡️</button>
-    </div>
-    <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
-    <div class="row-left">
-      <button onclick="clearMatchLog()" class="danger">Clear Log</button>
-      <button onclick="exportMatchLogCSV()" style="background:#0f0;color:#000;">Export as CSV</button>
-      <button onclick="resetLogo()" style="background:#666;color:#fff;">Reset Logo</button>
-      <button onclick="document.getElementById('logoUploader').click()">Upload Logo</button>
-    </div>
-  </details>
+<a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
+<div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
+<!-- Removed endpoint UI; fixed constant is used -->
+    <div class="muted" style="margin-top:4px;">AYPTML endpoint is locked in this build.</div>
 </div>
 
-<!-- =======================
-TAB: AYPT Signups
-======================== -->
-<div id="tabAYPT" class="tabpane">
-  <div class="card">
-    <div class="row-left">
-      <div class="pill">Source: AYPT Sheet</div>
-      <button class="btnTiny primary" id="btnAYPTRefresh">Refresh</button>
-      <button class="btnTiny" id="btnUseAYPTToSeed">Use AYPT List to Seed Bracket</button>
-      <div class="muted" id="ayptStatus">-</div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div style="overflow:auto; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
-      <table id="ayptTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Cell Number</th>
-            <th>Player Notes</th>
-            <th>Timestamp</th>
-            <th>Paid</th>
-            <th>Admin Notes</th>
-          </tr>
-        </thead>
-        <tbody><!-- injected --></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- =======================
-TAB: Brackets (run)
-======================== -->
-<div id="tabBrackets" class="tabpane">
-  <div class="card">
-    <div class="row-left">
-      <div class="pill">Storage: localStorage</div>
-      <button class="btnTiny primary" id="btnNewBracket">New Bracket from Entrants</button>
-      <button class="btnTiny" id="btnResetBracket">Reset Bracket</button>
-      <button class="btnTiny" id="btnExportBracketJSON">Export Bracket JSON</button>
-      <button class="btnTiny" id="btnImportBracketJSON">Import Bracket JSON</button>
-      <input id="importBracketFile" type="file" accept="application/json" style="display:none">
-      <div class="muted" id="bracketStatus">-</div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="row-left" style="gap:12px;">
-      <div style="min-width:280px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click “Use AYPT List…” in AYPT tab</div>
-        <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
-      </div>
-
-      <div style="min-width:260px;">
-        <div class="mini" style="margin-bottom:6px;">Bracket options</div>
-        <div class="row-left">
-          <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
-          <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
-        </div>
-        <div class="mini">Tip - Double-elim is the default. BYEs auto-fill.</div>
-      </div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="row-left">
-      <button class="btnTiny primary" id="btnAdvanceSelected">Advance Winner</button>
-      <select id="selMatch" style="min-width:360px;"></select>
-      <select id="selWinner" style="min-width:220px;"></select>
-      <span class="muted" id="advanceMsg"></span>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="viewer" id="bracketViewer">
-      <div class="zoomStage" id="bracketZoomStage">
-        <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- =======================
-TAB: Full Bracket Live (viewer)
-======================== -->
-<div id="tabFull" class="tabpane">
-  <div class="card">
-    <div class="ctrlbar">
-      <label class="chk"><input type="checkbox" id="chkAutoFull" checked> Auto-refresh (20s)</label>
-      <button class="btnTiny primary" id="btnFullRefresh">Refresh now</button>
-
-      <span class="mini">Zoom</span>
-      <button class="btnTiny" id="btnFullZoomOut">-</button>
-      <input type="range" id="rngFullZoom" min="50" max="200" value="100" />
-      <button class="btnTiny" id="btnFullZoomIn">+</button>
-      <button class="btnTiny primary" id="btnFullFit">Fit</button>
-
-      <span class="muted" id="fullLast">Last update: -</span>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="viewer" id="fullViewer">
-      <div class="zoomStage" id="fullZoomStage">
-        <div id="fullRoot" class="muted">No bracket loaded yet.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- =======================
-TAB: Results
-======================== -->
-<div id="tabResults" class="tabpane">
-  <div class="card">
-    <div class="row-left">
-      <button class="btnTiny primary" id="btnBuildResults">Build Results</button>
-      <button class="btnTiny" id="btnExportResultsCSV">Export Results CSV</button>
-      <button class="btnTiny" id="btnExportResultsJSON">Export Results JSON</button>
-      <div class="muted" id="resultsStatus">-</div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div style="overflow:auto; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
-      <table id="resultsTable">
-        <thead>
-          <tr>
-            <th>Place</th>
-            <th>Player</th>
-            <th>Eliminated By</th>
-            <th>Match Id</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody><!-- injected --></tbody>
-      </table>
-    </div>
-  </div>
-</div>
+<div id="result"></div>
+<button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
+<canvas id="qrcode"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-
 <script>
-/* =========================================================
-  CONFIG
-========================================================= */
-// Match-log endpoint you already use
-const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
+// ==========================
+// Endpoint (fixed constant)
+// ==========================
+const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
-// Signup endpoint - if same script supports list/update, you can reuse.
-const AYPT_SIGNUPS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
-
-// Bracket state key (shared by Brackets + Full Live)
-const STATE_KEY = "ahss_brackets_state";
-
-// Local theme/logo keys (optional)
-const THEME_KEYS = { A:'ahss_theme_teamA', B:'ahss_theme_teamB', LOGO:'ahss_custom_logo_data' };
-
-/* =========================================================
-  SMALL UTILS
-========================================================= */
-const $ = (sel, root=document) => root.querySelector(sel);
-function esc(s){
-  return String(s ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
-function fmtLocal(iso){
-  if(!iso) return "";
-  try { return new Date(iso).toLocaleString(); } catch { return iso; }
-}
-function csvCell(v){
-  const s = String(v ?? "");
-  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-  return s;
-}
-
-/* JSONP helper */
-function jsonp(url, params = {}, timeoutMs = 12000){
-  return new Promise((resolve, reject) => {
-    const cb = "TD_CB_" + Math.random().toString(36).slice(2);
-    params.callback = cb;
-    const qs = new URLSearchParams(params).toString();
-
-    const s = document.createElement("script");
-    s.src = `${url}?${qs}`;
-    s.id  = cb;
-
-    const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
-    window[cb] = (data) => { cleanup(); resolve(data); };
-
-    function cleanup(){
-      clearTimeout(timeout);
-      const el = document.getElementById(cb);
-      if (el) el.remove();
-      try { delete window[cb]; } catch(_) { window[cb] = undefined; }
-    }
-    document.body.appendChild(s);
-  });
-}
-
-/* =========================================================
-  TABS
-========================================================= */
-function setTab(id){
-  document.querySelectorAll(".tabbtn").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
-  document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("active", p.id === id));
-  localStorage.setItem("TD_ACTIVE_TAB", id);
-}
-document.addEventListener("click", (e)=>{
-  const b = e.target.closest(".tabbtn");
-  if(!b) return;
-  setTab(b.dataset.tab);
-});
-
-/* =========================================================
-  MATCH LINK / QR (your original, kept)
-========================================================= */
 let generatedUrl = '';
 let currentPage = 1;
 const pageSize = 25;
 
 function generateMatchLink() {
-  const p1Raw = $('#player1').value.trim();
-  const p2Raw = $('#player2').value.trim();
-  const p1 = encodeURIComponent(p1Raw);
-  const p2 = encodeURIComponent(p2Raw);
-  const match = $('#matchLength').value;
-  const table = $('#tableNumber').value.trim();
-  const refRaw = $('#refName').value.trim();
-  const ref = encodeURIComponent(refRaw);
+const p1Raw = document.getElementById('player1').value.trim();
+const p2Raw = document.getElementById('player2').value.trim();
+const p1 = encodeURIComponent(p1Raw);
+const p2 = encodeURIComponent(p2Raw);
+const match = document.getElementById('matchLength').value;
+const table = document.getElementById('tableNumber').value.trim();
+const refRaw = document.getElementById('refName').value.trim();
+const ref = encodeURIComponent(refRaw);
 
-  const baseUrl = window.location.origin + '/airhockey-score-system/';
+const baseUrl = window.location.origin + '/airhockey-score-system/';
 
-  // Unique 4-char ID + Date
-  const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const yyyymmdd = new Date().toISOString().slice(0,10);
-  const matchId = `weekly${randomId}-${yyyymmdd}`;
+// Unique 4-char ID + Date
+const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+const yyyymmdd = new Date().toISOString().slice(0,10);
+const matchId = `weekly${randomId}-${yyyymmdd}`;
 
-  generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
-  if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
-  if (ref) generatedUrl += `&ref=${ref}`;
+// Scoreboard URL
+generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
+if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
+if (ref) generatedUrl += `&ref=${ref}`;
 
-  const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
-  const matchSheetLink = $('#matchSheetLink');
-  matchSheetLink.href = matchSheetUrl;
-  matchSheetLink.style.display = 'inline-block';
+// Match Sheet URL
+const matchSheetBase = 'https://petesimple.github.io/AHMS/';
+const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+const matchSheetLink = document.getElementById('matchSheetLink');
+matchSheetLink.href = matchSheetUrl;
+matchSheetLink.style.display = 'inline-block';
 
-  const extraNote = `
-    ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
-    ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ''}
-    <p><strong>Match ID:</strong> ${esc(matchId)}</p>
-  `;
+// Display
+const extraNote = `
+       ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
+       ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ''}
+       <p><strong>Match ID:</strong> ${matchId}</p>
+     `;
+document.getElementById('result').innerHTML = `
+       <p><strong>Match Link:</strong></p>
+       <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+       ${extraNote}
+     `;
 
-  $('#result').innerHTML = `
-    <p><strong>Match Link:</strong></p>
-    <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
-    ${extraNote}
-  `;
+document.getElementById('copyBtn').style.display = 'inline-block';
+const curlBtn = document.getElementById('copyCurlBtn');
+if (curlBtn) curlBtn.style.display = 'inline-block';
+document.getElementById('copyBtn').classList.remove('copied');
+document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
 
-  $('#copyBtn').style.display = 'inline-block';
-  const curlBtn = $('#copyCurlBtn');
-  if (curlBtn) curlBtn.style.display = 'inline-block';
-  $('#copyBtn').classList.remove('copied');
-  $('#copyBtn').innerText = 'Copy to Clipboard';
+QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+width: 220,
+color: { dark: '#ffffff', light: '#111111' }
+}, function (error) { if (error) console.error(error); });
 
-  QRCode.toCanvas($('#qrcode'), generatedUrl, {
-    width: 220,
-    color: { dark: '#ffffff', light: '#111111' }
-  }, function (error) { if (error) console.error(error); });
+const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
 
-  const readableMatch = `${p1Raw} vs ${p2Raw} - Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
-
-  addToMatchLog(readableMatch, generatedUrl);
-
-  const payload = {
-    timestamp: new Date().toISOString(),
-    source: 'TD',
-    matchId,
-    p1: p1Raw,
-    p2: p2Raw,
-    matchType: `Best of ${match}`,
-    table: table || '',
-    referee: refRaw || '',
-    scoreboardUrl: generatedUrl,
-    matchSheetUrl: matchSheetUrl
-  };
-  saveToAYPTMatchLog(payload);
+// Save locally and push to cloud
+addToMatchLog(readableMatch, generatedUrl);
+const payload = {
+timestamp: new Date().toISOString(),
+source: 'TD',
+matchId,
+p1: p1Raw,
+p2: p2Raw,
+matchType: `Best of ${match}`,
+table: table || '',
+referee: refRaw || '',
+scoreboardUrl: generatedUrl,
+matchSheetUrl: matchSheetUrl
+};
+saveToAYPTMatchLog(payload);
 }
 
 function copyLink() {
-  navigator.clipboard.writeText(generatedUrl).then(() => {
-    const btn = $('#copyBtn');
-    btn.classList.add('copied');
-    btn.innerText = 'Copied!';
-    setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
-  });
+navigator.clipboard.writeText(generatedUrl).then(() => {
+const btn = document.getElementById('copyBtn');
+btn.classList.add('copied');
+btn.innerText = 'Copied!';
+setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
+});
 }
 
-/* =========================================================
-  LOCAL MATCH LOG (your original, kept)
-========================================================= */
+// ==============================
+// Local Match Log
+// ==============================
 function addToMatchLog(text, url) {
-  const now = new Date();
-  const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  log.unshift(logItem);
-  localStorage.setItem('matchLog', JSON.stringify(log));
-  renderMatchLog();
+const now = new Date();
+const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+log.unshift(logItem);
+localStorage.setItem('matchLog', JSON.stringify(log));
+renderMatchLog();
 }
 
 function renderMatchLog() {
-  const searchQuery = $('#searchLog')?.value.toLowerCase() || '';
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  if (currentPage > totalPages) currentPage = totalPages || 1;
-  const start = (currentPage - 1) * pageSize;
-  const visible = filtered.slice(start, start + pageSize);
-  const logList = $('#logList');
-  logList.innerHTML = '';
-  visible.forEach(item => {
-    const li = document.createElement('li');
-    li.innerHTML = `<a href="${item.url}" target="_blank">${esc(item.text)}</a> <span style="color: #888; font-size: 0.85em;">(${esc(item.date)}, ${esc(item.time)})</span>`;
-    logList.appendChild(li);
-  });
-  const pageInfo = $('#pageInfo');
-  if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
+const totalPages = Math.ceil(filtered.length / pageSize);
+if (currentPage > totalPages) currentPage = totalPages || 1;
+const start = (currentPage - 1) * pageSize;
+const visible = filtered.slice(start, start + pageSize);
+const logList = document.getElementById('logList');
+logList.innerHTML = '';
+visible.forEach(item => {
+const li = document.createElement('li');
+li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
+logList.appendChild(li);
+});
+const pageInfo = document.getElementById('pageInfo');
+if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
 }
 
 function clearMatchLog() {
-  if (confirm('⚠️ Are you sure you want to clear the match log?')) {
-    localStorage.removeItem('matchLog');
-    renderMatchLog();
-  }
+if (confirm('⚠️ Are you sure you want to clear the match log?')) {
+localStorage.removeItem('matchLog');
+renderMatchLog();
+}
 }
 
 function exportMatchLogCSV() {
-  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  if (log.length === 0) { alert('No matches to export.'); return; }
-  const headers = ['Date', 'Time', 'Match Info', 'Link'];
-  const rows = log.map(item => [item.date, item.time, item.text, item.url]);
-  const csvContent = [headers, ...rows].map(e => e.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+if (log.length === 0) { alert('No matches to export.'); return; }
+const headers = ['Date', 'Time', 'Match Info', 'Link'];
+const rows = log.map(item => [item.date, item.time, item.text, item.url]);
+const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
+const blob = new Blob([csvContent], { type: 'text/csv' });
+const url = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = url;
+link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+URL.revokeObjectURL(url);
 }
 
-function nextPage() { currentPage++; renderMatchLog(); }
-function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
-
-/* =========================================================
-  CLOUD SYNC → AYPT MATCH LOG (your original, kept)
-========================================================= */
+// ==============================
+// Cloud Sync → AYPT (no preflight)
+// ==============================
 const QUEUE_KEY = 'matchLogCloudQueue';
 
 function showCloudStatus(msg, temp=false) {
-  const el = $('#cloudSyncStatus');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
+const el = document.getElementById('cloudSyncStatus');
+if (!el) return;
+el.textContent = msg;
+el.style.display = 'block';
+if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
 }
 
 function enqueue(payload) {
-  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  q.push(payload);
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-  showCloudStatus(`Saved offline (${q.length} pending)…`, true);
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+q.push(payload);
+localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+showCloudStatus(`Saved offline (${q.length} pending)…`, true);
 }
 
 async function flushCloudQueue() {
-  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  if (!q.length) return;
-  showCloudStatus(`Syncing ${q.length} pending…`);
-  const remaining = [];
-  for (const item of q) {
-    const ok = await postToAYPTMatchLog(item);
-    if (!ok) remaining.push(item);
-  }
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-  showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+if (!q.length) return;
+showCloudStatus(`Syncing ${q.length} pending…`);
+const remaining = [];
+for (const item of q) {
+const ok = await postToAYPT(item);
+if (!ok) remaining.push(item);
+}
+localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
 }
 
-function postToAYPTMatchLog(payload) {
-  try {
-    const body = new URLSearchParams({
-      action: 'appendMatchLog',
-      payload: JSON.stringify(payload)
-    });
-    return fetch(AYPT_MATCHLOG_ENDPOINT, {
-      method: 'POST',
-      cache: 'no-store',
-      body
-    }).then(async (resp) => {
-      if (!resp.ok) {
-        await fetch(AYPT_MATCHLOG_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
-        return true;
-      }
-      const text = await resp.text();
-      try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-    }).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
-  } catch (e) {
-    console.warn('AYPT post failed, will queue:', e);
-    return Promise.resolve(false);
-  }
+function postToAYPT(payload) {
+try {
+const body = new URLSearchParams({
+action: 'appendMatchLog',
+// secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
+payload: JSON.stringify(payload)
+});
+return fetch(AYPT_ENDPOINT, {
+method: 'POST',
+cache: 'no-store',
+body
+}).then(async (resp) => {
+if (!resp.ok) {
+// Attempt fire-and-forget for strict proxies
+await fetch(AYPT_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
+return true;
+}
+const text = await resp.text();
+try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
+}).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
+} catch (e) {
+console.warn('AYPT post failed, will queue:', e);
+return Promise.resolve(false);
+}
 }
 
+// Wrapper used by generateMatchLink()
 function saveToAYPTMatchLog(payload){
-  return postToAYPTMatchLog(payload).then(ok => {
-    if (!ok) enqueue(payload);
-    else showCloudStatus('Saved to AYPT ✓', true);
-    return ok;
-  });
+return postToAYPT(payload).then(ok => {
+if (!ok) {
+enqueue(payload);            // store offline, auto-flushed later
+} else {
+showCloudStatus('Saved to AYPT ✓', true);
+}
+return ok;
+});
 }
 
-/* =========================================================
-  AYPT SIGNUPS (list + optional update)
-========================================================= */
-let AYPT_ROWS = [];
-
-async function loadAYPT(){
-  const statusEl = $('#ayptStatus');
-  const tbody = $('#ayptTable tbody');
-  statusEl.textContent = "Loading…";
-  tbody.innerHTML = "";
-
-  try{
-    const data = await jsonp(AYPT_SIGNUPS_ENDPOINT, { list:"1" });
-    if(!data || !data.ok) throw new Error(data && data.message || "Load failed");
-    const rows = data.rows || [];
-    AYPT_ROWS = rows;
-
-    rows.forEach((r, idx) => {
-      const tr = document.createElement("tr");
-      const paidChecked = r.paid ? "checked" : "";
-      tr.innerHTML = `
-        <td class="mini">${idx+1}</td>
-        <td>${esc(r.firstName || "")}</td>
-        <td>${esc(r.lastName || "")}</td>
-        <td>${esc(r.cell || r.cellNumber || "")}</td>
-        <td>${esc(r.notes || r.playerNotes || "")}</td>
-        <td>${esc(fmtLocal(r.timestamp || r.time || ""))}</td>
-        <td style="text-align:center">
-          <input type="checkbox" class="paid-toggle" data-id="${esc(r.id ?? idx)}" ${paidChecked}>
-        </td>
-        <td>
-          <textarea class="admin-note" data-id="${esc(r.id ?? idx)}" rows="2" placeholder="Admin Notes">${esc(r.adminNotes || r.adminNote || "")}</textarea>
-          <span class="saved-dot" id="saved-${esc(r.id ?? idx)}" title="Saved"></span>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    statusEl.textContent = `${rows.length} signups loaded`;
-  }catch(e){
-    console.warn(e);
-    statusEl.textContent = "Failed to load AYPT.";
-  }
-}
-
-function pulseSaved(id){
-  const dot = document.getElementById(`saved-${id}`);
-  if (dot) {
-    dot.classList.add("show");
-    setTimeout(()=>dot.classList.remove("show"), 900);
-  }
-}
-
-async function ayptUpdate(id, fields){
-  // optional if your Apps Script supports update=1
-  try{
-    await jsonp(AYPT_SIGNUPS_ENDPOINT, Object.assign({ update:"1", id }, fields));
-    pulseSaved(id);
-    return true;
-  }catch(e){
-    console.warn("AYPT update failed", e);
-    return false;
-  }
-}
-
-function wireAYPTTable(){
-  const tbody = $('#ayptTable tbody');
-  if(!tbody) return;
-
-  let noteTimer = null;
-
-  tbody.addEventListener("change", async (e)=>{
-    if(e.target.classList.contains("paid-toggle")){
-      const id = e.target.getAttribute("data-id");
-      const paid = e.target.checked ? "1" : "0";
-      const ok = await ayptUpdate(id, { paid });
-      if(!ok) alert("Paid update failed (endpoint may not support update=1).");
-    }
-  });
-
-  tbody.addEventListener("input", (e)=>{
-    if(e.target.classList.contains("admin-note")){
-      const id = e.target.getAttribute("data-id");
-      const v = e.target.value;
-      clearTimeout(noteTimer);
-      noteTimer = setTimeout(async ()=>{
-        const ok = await ayptUpdate(id, { adminNote: v });
-        if(!ok) {
-          // silent - endpoint may not support
-        }
-      }, 400);
-    }
-  });
-}
-
-function useAYPTToSeed(){
-  const names = (AYPT_ROWS || [])
-    .map(r => `${(r.firstName||"").trim()} ${(r.lastName||"").trim()}`.trim())
-    .filter(n => n && n.toLowerCase() !== "bye");
-
-  $('#entrantsBox').value = names.join("\n");
-  setTab("tabBrackets");
-  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click “New Bracket…”`;
-}
-
-/* =========================================================
-  BRACKETS ENGINE (simple double-elim)
-  - Stores BRACKET_STATE in localStorage under STATE_KEY
-========================================================= */
-let BRACKET_STATE = null;
-
-function saveBracketState(){
-  localStorage.setItem(STATE_KEY, JSON.stringify(BRACKET_STATE));
-}
-
-function loadBracketState(){
-  try{
-    const raw = localStorage.getItem(STATE_KEY);
-    if(!raw) return null;
-    const s = JSON.parse(raw);
-    if(!s || !s.winnersRounds) return null;
-    return s;
-  }catch{
-    return null;
-  }
-}
-
-function nextPow2(n){
-  let p=1; while(p<n) p*=2; return p;
-}
-
-function shuffle(arr){
-  for(let i=arr.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [arr[i],arr[j]] = [arr[j],arr[i]];
-  }
-  return arr;
-}
-
-function makeMatch(id,label,p1,p2){
-  return { id, label, p1, p2, s1:"", s2:"", winner:"", loser:"" };
-}
-
-function newBracketFromEntrants(){
-  const raw = ($('#entrantsBox').value || "").split("\n").map(s=>s.trim()).filter(Boolean);
-  if(raw.length < 2) return alert("Need at least 2 entrants.");
-
-  let entrants = raw.slice();
-  if($('#chkShuffle').checked) entrants = shuffle(entrants);
-
-  const size = nextPow2(entrants.length);
-  while(entrants.length < size) entrants.push("BYE");
-
-  // Winners round 1
-  const w1 = [];
-  for(let i=0;i<size;i+=2){
-    w1.push(makeMatch(`W1-${i/2+1}`, `Winners R1 M${i/2+1}`, entrants[i], entrants[i+1]));
-  }
-
-  // Build winners rounds skeleton
-  const winnersRounds = [w1];
-  let roundSize = size/2;
-  let r=2;
-  while(roundSize >= 1){
-    const round = [];
-    for(let m=1;m<=roundSize;m++){
-      round.push(makeMatch(`W${r}-${m}`, `Winners R${r} M${m}`, "TBD", "TBD"));
-    }
-    winnersRounds.push(round);
-    roundSize = roundSize/2;
-    r++;
-    if(roundSize === 0) break;
-    if(roundSize === 1) break;
-  }
-  // winnersRounds currently includes an extra last round placeholder; normalize:
-  // We'll keep until it reaches 1 match.
-  while(winnersRounds[winnersRounds.length-1].length > 1){
-    // should not happen
-    break;
-  }
-
-  // Losers bracket rounds skeleton (enough for common sizes)
-  // Simple approach: create 2*(log2(size))-1 rounds with TBD
-  const Lrounds = [];
-  const wRoundsCount = Math.log2(size);
-  const lCount = Math.max(1, (2*wRoundsCount)-1);
-  for(let i=1;i<=lCount;i++){
-    const matchesInRound = Math.max(1, Math.floor(size / Math.pow(2, Math.ceil(i/2)+1)));
-    const lr = [];
-    for(let m=1;m<=matchesInRound;m++){
-      lr.push(makeMatch(`L${i}-${m}`, `Losers R${i} M${m}`, "TBD", "TBD"));
-    }
-    Lrounds.push(lr);
-  }
-
-  const grandFinal = [
-    makeMatch("GF-1","Grand Final 1","TBD","TBD"),
-    makeMatch("GF-2","Grand Final 2 (if needed)","TBD","TBD")
-  ];
-
-  BRACKET_STATE = {
-    createdAt: Date.now(),
-    bracketSize: size,
-    entrants: raw,
-    winnersRounds,
-    losersRounds: Lrounds,
-    grandFinal,
-    notes: "Simple DE skeleton. Advance winners using selector.",
-  };
-
-  // Auto-advance BYEs in Winners R1
-  BRACKET_STATE.winnersRounds[0].forEach((m)=>{
-    if(m.p1 === "BYE" && m.p2 !== "BYE"){ m.winner="p2"; m.loser="p1"; }
-    if(m.p2 === "BYE" && m.p1 !== "BYE"){ m.winner="p1"; m.loser="p2"; }
-    if(m.p1 === "BYE" && m.p2 === "BYE"){ m.winner=""; m.loser=""; }
-  });
-
-  propagateWinners();
-  saveBracketState();
-  renderBracket();
-  buildMatchPicker();
-  $('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
-}
-
-function propagateWinners(){
-  // Push winners forward in winners bracket
-  const WR = BRACKET_STATE.winnersRounds;
-
-  for(let r=0;r<WR.length-1;r++){
-    const round = WR[r];
-    const next = WR[r+1];
-    for(let i=0;i<round.length;i++){
-      const m = round[i];
-      const target = next[Math.floor(i/2)];
-      const slot = (i%2===0) ? "p1" : "p2";
-      const winnerName = m.winner ? (m.winner==="p1"?m.p1:m.p2) : "TBD";
-      if(target){
-        target[slot] = winnerName || "TBD";
-      }
-    }
-  }
-
-  // Winners champion goes to GF-1 p1
-  const lastW = WR[WR.length-1][0];
-  if(lastW){
-    const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
-    BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
-  }
-
-  // Very light losers propagation (practical):
-  // Place losers from winners rounds into losers rounds in order.
-  const losers = [];
-  WR.forEach((round, ri)=>{
-    round.forEach((m)=>{
-      if(m.winner && m.loser){
-        const loserName = (m.loser==="p1"?m.p1:m.p2);
-        if(loserName && loserName !== "BYE") losers.push(loserName);
-      }
-    });
-  });
-
-  // Fill L rounds sequentially with losers list as players (TBD for remaining)
-  const LR = BRACKET_STATE.losersRounds;
-  let idx=0;
-  for(let r=0;r<LR.length;r++){
-    for(let m=0;m<LR[r].length;m++){
-      const match = LR[r][m];
-      // Only set if still TBD to avoid clobbering
-      if(match.p1 === "TBD" && idx < losers.length) match.p1 = losers[idx++];
-      if(match.p2 === "TBD" && idx < losers.length) match.p2 = losers[idx++];
-    }
-  }
-
-  // Losers champion (last losers round, last match winner) -> GF-1 p2
-  const lastLround = LR[LR.length-1];
-  const lastL = lastLround && lastLround[lastLround.length-1];
-  const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
-  BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
-}
-
-function listAllMatches(){
-  const out = [];
-  if(!BRACKET_STATE) return out;
-  BRACKET_STATE.winnersRounds.forEach(r => r.forEach(m => out.push({ lane:"W", m })));
-  BRACKET_STATE.losersRounds.forEach(r => r.forEach(m => out.push({ lane:"L", m })));
-  BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m }));
-  return out;
-}
-
-function buildMatchPicker(){
-  const sel = $('#selMatch');
-  const selW = $('#selWinner');
-  sel.innerHTML = '';
-  selW.innerHTML = '';
-
-  const matches = listAllMatches().filter(x => x.m.p1 && x.m.p2 && x.m.p1!=="TBD" && x.m.p2!=="TBD");
-  matches.forEach(({lane,m})=>{
-    const opt = document.createElement("option");
-    opt.value = `${lane}|${m.id}`;
-    const done = m.winner ? " ✓" : "";
-    opt.textContent = `[${lane}] ${m.label || m.id} - ${m.p1} vs ${m.p2}${done}`;
-    sel.appendChild(opt);
-  });
-
-  function refreshWinners(){
-    selW.innerHTML = '';
-    const v = sel.value || '';
-    const [lane,id] = v.split("|");
-    const match = findMatch(lane,id);
-    if(!match) return;
-    const o1 = document.createElement("option"); o1.value="p1"; o1.textContent = match.p1;
-    const o2 = document.createElement("option"); o2.value="p2"; o2.textContent = match.p2;
-    selW.appendChild(o1); selW.appendChild(o2);
-  }
-  sel.addEventListener("change", refreshWinners);
-  refreshWinners();
-}
-
-function findMatch(lane,id){
-  if(!BRACKET_STATE) return null;
-  if(lane==="W"){
-    for(const r of BRACKET_STATE.winnersRounds) for(const m of r) if(m.id===id) return m;
-  }
-  if(lane==="L"){
-    for(const r of BRACKET_STATE.losersRounds) for(const m of r) if(m.id===id) return m;
-  }
-  if(lane==="GF"){
-    for(const m of BRACKET_STATE.grandFinal) if(m.id===id) return m;
-  }
-  return null;
-}
-
-function advanceWinner(){
-  const msg = $('#advanceMsg');
-  msg.textContent = '';
-  if(!BRACKET_STATE) return alert("No bracket loaded.");
-  const val = $('#selMatch').value;
-  if(!val) return alert("Pick a match.");
-  const [lane,id] = val.split("|");
-  const m = findMatch(lane,id);
-  if(!m) return alert("Match not found.");
-
-  const w = $('#selWinner').value;
-  if(!w) return alert("Pick winner.");
-
-  m.winner = w;
-  m.loser = (w==="p1") ? "p2" : "p1";
-
-  // quick score prompt (optional)
-  const s1 = prompt("Score for " + m.p1 + " (optional):", m.s1 || "");
-  const s2 = prompt("Score for " + m.p2 + " (optional):", m.s2 || "");
-  if(s1 !== null) m.s1 = String(s1);
-  if(s2 !== null) m.s2 = String(s2);
-
-  propagateWinners();
-  saveBracketState();
-  renderBracket();
-  renderFullBracket(); // keep live view in sync
-  buildMatchPicker();
-  msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
-}
-
-function resetBracket(){
-  if(!confirm("Reset bracket state?")) return;
-  localStorage.removeItem(STATE_KEY);
-  BRACKET_STATE = null;
-  $('#bracketRoot').textContent = "No bracket loaded yet.";
-  $('#fullRoot').textContent = "No bracket loaded yet.";
-  $('#bracketStatus').textContent = "Bracket reset.";
-  $('#resultsTable tbody').innerHTML = "";
-  $('#resultsStatus').textContent = "-";
-}
-
-/* =========================================================
-  BRACKET RENDER (shared)
-========================================================= */
-function renderMatchCard(match, lane){
-  const card = document.createElement("div");
-  card.className = "match";
-  const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
-
-  card.innerHTML = `
-    <div class="match-head">
-      <div>${esc(match.label || match.id || "")}</div>
-      <div class="tag">${tagText}</div>
-    </div>
-  `;
-  card.appendChild(renderSlot(match,"p1"));
-  card.appendChild(renderSlot(match,"p2"));
-  return card;
-}
-function renderSlot(match, which){
-  const slot = document.createElement("div");
-  slot.className = "slot";
-  if(match.winner === which) slot.classList.add("win");
-  if(match.winner && match.winner !== which) slot.classList.add("lose");
-
-  const name = (which==="p1"?match.p1:match.p2) || "TBD";
-  const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
-  const id = match.id || "";
-
-  slot.innerHTML = `
-    <div>
-      <div class="name">${esc(name)}</div>
-      <div class="seed">${esc(id)} - ${which.toUpperCase()}</div>
-    </div>
-    <div class="scoreBox">${esc(score)}</div>
-    <div></div>
-  `;
-  return slot;
-}
-
-function renderBracket(){
-  const root = $('#bracketRoot');
-  if(!BRACKET_STATE){
-    root.textContent = "No bracket loaded yet.";
-    return;
-  }
-  const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
-
-  (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
-    bracketEl.appendChild(col);
-  });
-
-  (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
-    bracketEl.appendChild(col);
-  });
-
-  const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
-  bracketEl.appendChild(gfCol);
-
-  root.innerHTML = "";
-  root.appendChild(bracketEl);
-}
-
-/* =========================================================
-  FULL BRACKET LIVE (auto refresh + zoom)
-========================================================= */
-let fullZoom = 1;
-let fullTimer = null;
-
-function setFullZoomPercent(pct){
-  fullZoom = Math.max(0.5, Math.min(2.0, pct/100));
-  $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
-  $('#rngFullZoom').value = String(Math.round(fullZoom*100));
-  localStorage.setItem("TD_FULL_ZOOM", String(Math.round(fullZoom*100)));
-}
-
-function fullFit(){
-  const viewer = $('#fullViewer');
-  const content = $('#fullRoot .bracket');
-  if(!viewer || !content) return;
-
-  const prev = fullZoom;
-  fullZoom = 1;
-  $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
-
-  const vw = viewer.clientWidth - 24;
-  const cw = content.scrollWidth;
-  if(cw>0){
-    const target = Math.max(0.5, Math.min(2.0, vw/cw));
-    fullZoom = target;
-    $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
-    $('#rngFullZoom').value = String(Math.round(fullZoom*100));
-    localStorage.setItem("TD_FULL_ZOOM", String(Math.round(fullZoom*100)));
-  }else{
-    fullZoom = prev;
-    $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
-  }
-}
-
-function renderFullBracket(){
-  const state = loadBracketState();
-  const root = $('#fullRoot');
-  if(!state){
-    root.innerHTML = `<div class="muted">No bracket loaded yet.</div>`;
-    return;
-  }
-
-  // Use shared renderer, but temporarily point BRACKET_STATE
-  const saved = BRACKET_STATE;
-  BRACKET_STATE = state;
-
-  const tmp = document.createElement("div");
-  tmp.id = "tmpFull";
-  tmp.appendChild(document.createTextNode(""));
-
-  // Render to a temporary root using same logic
-  const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
-
-  (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
-    bracketEl.appendChild(col);
-  });
-  (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
-    bracketEl.appendChild(col);
-  });
-  const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
-  bracketEl.appendChild(gfCol);
-
-  root.innerHTML = "";
-  root.appendChild(bracketEl);
-
-  BRACKET_STATE = saved;
-
-  $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
-}
-
-function startFullAuto(){
-  stopFullAuto();
-  fullTimer = setInterval(()=>{
-    if($('#chkAutoFull').checked){
-      renderFullBracket();
-    }
-  }, 20000);
-}
-function stopFullAuto(){
-  if(fullTimer) clearInterval(fullTimer);
-  fullTimer = null;
-}
-
-/* =========================================================
-  RESULTS (placements + export)
-========================================================= */
-let RESULTS = [];
-
-function getChampionData(state){
-  if(!state || !state.grandFinal) return null;
-  const gf1 = state.grandFinal[0];
-  const gf2 = state.grandFinal[1];
-
-  const finalMatch = (gf2 && gf2.p1 && gf2.p2 && gf2.winner) ? gf2 : (gf1 && gf1.winner ? gf1 : null);
-  if(!finalMatch) return null;
-
-  const champ = finalMatch.winner === "p1" ? finalMatch.p1 : finalMatch.p2;
-  const runner = finalMatch.winner === "p1" ? finalMatch.p2 : finalMatch.p1;
-  return { champ, runner, finalMatchId: finalMatch.id || "" };
-}
-
-function collectEliminations(state){
-  const elim = [];
-  if(!state) return elim;
-
-  const pushElim = (m) => {
-    if(!m || !m.winner || !m.loser) return;
-    const loserName = (m.loser === "p1" ? m.p1 : m.p2);
-    const winnerName = (m.winner === "p1" ? m.p1 : m.p2);
-    if(!loserName || loserName === "BYE" || loserName === "TBD") return;
-    elim.push({ name: loserName, eliminatedBy: winnerName || "", matchId: m.id || "" });
-  };
-
-  (state.losersRounds || []).forEach(r => r.forEach(pushElim));
-  const map = new Map();
-  elim.forEach(e => map.set(e.name.toLowerCase(), e));
-  return Array.from(map.values());
-}
-
-function buildPlacements(state){
-  const entrants = (state.entrants || []).filter(n => n && n !== "BYE");
-  const champData = getChampionData(state);
-  const placements = [];
-
-  if(champData && champData.champ) placements.push({ place: 1, name: champData.champ });
-  if(champData && champData.runner) placements.push({ place: 2, name: champData.runner });
-
-  const taken = new Set(placements.map(p => p.name.toLowerCase()));
-  const eliminated = collectEliminations(state).filter(e => !taken.has(e.name.toLowerCase())).reverse();
-
-  let nextPlace = placements.length + 1;
-  for(const e of eliminated){
-    placements.push({ place: nextPlace++, name: e.name, eliminatedBy: e.eliminatedBy, matchId: e.matchId });
-  }
-
-  const placedSet = new Set(placements.map(p => p.name.toLowerCase()));
-  const leftovers = entrants.filter(n => !placedSet.has(n.toLowerCase()));
-  for(const n of leftovers){
-    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded (in progress?)" });
-  }
-
-  return placements;
-}
-
-function renderResults(){
-  const state = loadBracketState();
-  if(!state){
-    $('#resultsStatus').textContent = "No bracket state.";
-    return;
-  }
-  RESULTS = buildPlacements(state);
-  const tbody = $('#resultsTable tbody');
-  tbody.innerHTML = "";
-  RESULTS.forEach(r=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${esc(r.place)}</td>
-      <td>${esc(r.name || "")}</td>
-      <td>${esc(r.eliminatedBy || "")}</td>
-      <td>${esc(r.matchId || "")}</td>
-      <td>${esc(r.note || "")}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  $('#resultsStatus').textContent = `Built results for ${RESULTS.length} players.`;
-}
-
-function exportResultsCSV(){
-  if(!RESULTS.length) renderResults();
-  if(!RESULTS.length) return alert("No results to export.");
-
-  const header = ["Place","Player","Eliminated By","Match Id","Note"];
-  const lines = [header.join(",")];
-  for(const p of RESULTS){
-    lines.push([
-      p.place ?? "",
-      csvCell(p.name ?? ""),
-      csvCell(p.eliminatedBy ?? ""),
-      csvCell(p.matchId ?? ""),
-      csvCell(p.note ?? "")
-    ].join(","));
-  }
-  const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function exportResultsJSON(){
-  if(!RESULTS.length) renderResults();
-  const blob = new Blob([JSON.stringify(RESULTS, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-/* =========================================================
-  EXPORT/IMPORT BRACKET JSON
-========================================================= */
-function exportBracketJSON(){
-  const state = loadBracketState();
-  if(!state) return alert("No bracket loaded.");
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `AHSS_Bracket_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function importBracketJSONFile(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const state = JSON.parse(reader.result);
-      if(!state || !state.winnersRounds) throw new Error("Invalid bracket JSON");
-      localStorage.setItem(STATE_KEY, JSON.stringify(state));
-      BRACKET_STATE = state;
-      renderBracket();
-      renderFullBracket();
-      buildMatchPicker();
-      $('#bracketStatus').textContent = "Imported bracket JSON.";
-    }catch(e){
-      alert("Import failed: " + e.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-/* =========================================================
-  LOGO upload + storage (your original)
-========================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+renderMatchLog();
+flushCloudQueue();
+});
+</script>
+
+<details id="matchLog" class="block" style="max-width: 700px; margin-left: auto; margin-right: auto;">
+<summary class="clicky">📋 Show Match Log</summary>
+<input type="text" id="searchLog" placeholder="Search matches..." style="width: 80%; padding: 6px; font-size: 1em; margin-bottom: 10px; border-radius: 6px;" oninput="renderMatchLog()">
+<div id="paginationControls" style="margin: 10px 0;">
+<button onclick="prevPage()" style="margin-right: 10px;">⬅️ Prev</button>
+<span id="pageInfo" style="font-size: 0.9em;"></span>
+<button onclick="nextPage()" style="margin-left: 10px;">Next ➡️</button>
+</div>
+<ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
+<button onclick="clearMatchLog()" style="margin-top: 10px; background: #444; color: #f66; border-radius: 6px; padding: 6px 12px;">Clear Log</button>
+<button onclick="exportMatchLogCSV()" style="margin-top: 10px; background: #0f0; color: #000; border-radius: 6px; padding: 6px 12px;">Export as CSV</button>
+<div style="margin-top: 10px;">
+<button onclick="resetLogo()" style="background: #666; color: #fff; border-radius: 6px; padding: 6px 12px; margin-right: 10px;">Reset Logo</button>
+<button onclick="document.getElementById('logoUploader').click()" style="background: #00bcd4; color: #000; border-radius: 6px; padding: 6px 12px;">Upload Logo</button>
+</div>
+</details>
+
+<script>
+// ==========================
+// Logo long-press + storage
+// ==========================
 const logo = document.getElementById('logo');
 const uploader = document.getElementById('logoUploader');
 let pressTimer;
@@ -1406,223 +369,185 @@ logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uplo
 logo.addEventListener('touchend', () => clearTimeout(pressTimer));
 logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
 uploader.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
-    reader.readAsDataURL(file);
-  }
+const file = e.target.files[0];
+if (file && file.type.startsWith('image/')) {
+const reader = new FileReader();
+reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
+reader.readAsDataURL(file);
+}
 });
-window.addEventListener('DOMContentLoaded', () => {
-  const savedLogo = localStorage.getItem('customLogo');
-  if (savedLogo) logo.src = savedLogo;
-});
+window.addEventListener('DOMContentLoaded', () => { const savedLogo = localStorage.getItem('customLogo'); if (savedLogo) logo.src = savedLogo; });
 function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
+function nextPage() { currentPage++; renderMatchLog(); }
+function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
+</script>
 
-/* =========================================================
-  TD PIN gate logic (your original)
-========================================================= */
-(function initTDGate(){
-  const PIN = '2580';
-  const gate = document.getElementById('tdGate');
-  const pinEl = document.getElementById('tdPin');
-  const msgEl = document.getElementById('tdGateMsg');
-
-  const qp = new URL(location.href).searchParams;
-  const urlCode = qp.get('code');
-  const already = sessionStorage.getItem('TD_UNLOCK') === '1';
-
-  function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
-
-  window.unlockTD = function unlockTD(){
-    const val = (pinEl.value || '').trim();
-    if (val === PIN || urlCode === PIN) {
-      sessionStorage.setItem('TD_UNLOCK', '1');
-      showGate(false);
-      msgEl.textContent = '';
-    } else {
-      msgEl.textContent = 'Incorrect code. Try again.';
-      pinEl.value = '';
-      pinEl.focus();
-    }
-  };
-
-  window.lockTD = function lockTD(){
-    sessionStorage.removeItem('TD_UNLOCK');
-    showGate(true);
-    setTimeout(()=> pinEl && pinEl.focus(), 50);
-  };
-
-  if (already || urlCode === PIN) {
-    showGate(false);
-  } else {
-    showGate(true);
-    setTimeout(()=> pinEl && pinEl.focus(), 50);
-  }
-
-  pinEl && pinEl.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter') unlockTD();
-  });
-})();
-
-/* =========================================================
-  IP storage & curl builder (your original, kept)
-========================================================= */
-const LS_KEY_IPS = "AH_TD_TABLE_IPS";
-const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
-const LISTENER_PORT = 7070;
-const AUTH_TOKEN    = "changeme-123";
-
-function loadTableIPs(){
-  try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
-  catch { return {...DEFAULT_TABLE_IPS}; }
-}
-function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
-function msg(text){
-  const m = document.getElementById("ipMsg");
-  if (m) { m.textContent = text; m.style.display = "block"; }
-}
-function addRow(tableVal, ipVal){
-  const wrap = document.getElementById("ipEditor");
-  const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
-  const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
-  const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
-  const row = document.createElement("div"); row.style.display = "contents";
-  rm.onclick = () => row.remove();
-  row.appendChild(t); row.appendChild(i); row.appendChild(rm);
-  wrap.appendChild(row);
-}
-function renderIpEditor(){
-  const wrap = document.getElementById("ipEditor");
-  if (!wrap) return;
-  wrap.innerHTML = "";
-  const map = loadTableIPs();
-  Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
-  document.getElementById("addRowBtn").onclick  = () => addRow("", "");
-  document.getElementById("saveIPsBtn").onclick = saveFromEditor;
-  document.getElementById("testIPsBtn").onclick = testAll;
-}
-function saveFromEditor(){
-  const wrap = document.getElementById("ipEditor");
-  const inputs = Array.from(wrap.querySelectorAll("input"));
-  const map = {};
-  for (let k=0; k<inputs.length; k+=2){
-    const table = (inputs[k].value||"").trim();
-    const ip    = (inputs[k+1].value||"").trim();
-    if (table && ip) map[table] = ip;
-  }
-  saveTableIPs(map);
-  msg("Saved IPs.");
-}
-async function testAll(){
-  const entries = Object.entries(loadTableIPs());
-  if (!entries.length) return msg("No tables configured.");
-  msg("Testing...");
-  const results = [];
-  for (const [tbl, ip] of entries){
-    try {
-      const r = await Promise.race([
-        fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
-        new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
-      ]);
-      results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
-    } catch {
-      results.push(`${tbl}: fail (${ip})`);
-    }
-  }
-  if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
-    results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
-  }
-  msg(results.join(" | "));
-}
-function buildCurlCommand(url, table) {
-  const map = loadTableIPs();
-  const ip  = map[String(table)] || "<TABLE_IP_HERE>";
-  const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
-  -H "Content-Type: application/json" \\
-  -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
-  return cmd;
-}
-function copyCurlCommand() {
-  const table = document.getElementById('tableNumber').value.trim();
-  if (!table) return alert("Enter a Table # first.");
-  if (!generatedUrl) return alert("Generate the match link first.");
-  const cmd = buildCurlCommand(generatedUrl, table);
-  navigator.clipboard.writeText(cmd).then(() => {
-    const btn = document.getElementById('copyCurlBtn');
-    btn.innerText = "Copied!";
-    setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
-  });
-}
-
-/* =========================================================
-  SW registration (your original)
-========================================================= */
+<!-- ==========================
+      Safe SW registration gate
+      Add ?sw=off to disable SW for debugging
+ ========================== -->
+<script>
 const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
 if ('serviceWorker' in navigator && !SW_OFF) {
-  navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
-    .then(() => console.log('TD Service Worker registered!'))
-    .catch(() => console.log('SW registration failed (ignored).'));
+navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
+.then(() => console.log('TD Service Worker registered!'))
+.catch(() => console.log('SW registration failed (ignored).'));
 } else {
-  console.log('SW disabled for this session.');
+console.log('SW disabled for this session.');
+}
+</script>
+
+<script>
+// ---- TD PIN gate logic ----
+(function initTDGate(){
+const PIN = '2580';
+const gate = document.getElementById('tdGate');
+const pinEl = document.getElementById('tdPin');
+const msgEl = document.getElementById('tdGateMsg');
+
+// Auto-unlock if session already validated or code in URL (?code=2580)
+const qp = new URL(location.href).searchParams;
+const urlCode = qp.get('code');
+const already = sessionStorage.getItem('TD_UNLOCK') === '1';
+
+function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
+
+window.unlockTD = function unlockTD(){
+const val = (pinEl.value || '').trim();
+if (val === PIN || urlCode === PIN) {
+sessionStorage.setItem('TD_UNLOCK', '1');
+showGate(false);
+msgEl.textContent = '';
+} else {
+msgEl.textContent = 'Incorrect code. Try again.';
+pinEl.value = '';
+pinEl.focus();
+}
+};
+
+// Optional: allow manual relock
+window.lockTD = function lockTD(){
+sessionStorage.removeItem('TD_UNLOCK');
+showGate(true);
+setTimeout(()=> pinEl && pinEl.focus(), 50);
+};
+
+if (already || urlCode === PIN) {
+showGate(false);
+} else {
+showGate(true);
+setTimeout(()=> pinEl && pinEl.focus(), 50);
 }
 
-/* =========================================================
-  INIT / WIRE BUTTONS
-========================================================= */
-document.addEventListener("DOMContentLoaded", ()=>{
-  // restore last tab
-  const last = localStorage.getItem("TD_ACTIVE_TAB");
-  if(last) setTab(last);
+pinEl && pinEl.addEventListener('keydown', (e)=>{
+if (e.key === 'Enter') unlockTD();
+});
+})();
 
-  renderMatchLog();
-  flushCloudQueue();
+    // === IP storage & helpers ===
+  const LS_KEY_IPS = "AH_TD_TABLE_IPS";
+  const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
+  const LISTENER_PORT = 7070;           // tablet listener port
+  const AUTH_TOKEN    = "changeme-123"; // must match tablet /config
 
-  // AYPT
-  wireAYPTTable();
-  $('#btnAYPTRefresh').addEventListener("click", loadAYPT);
-  $('#btnUseAYPTToSeed').addEventListener("click", useAYPTToSeed);
+  function loadTableIPs(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
+    catch { return {...DEFAULT_TABLE_IPS}; }
+  }
+  function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
 
-  // Brackets
-  $('#btnNewBracket').addEventListener("click", newBracketFromEntrants);
-  $('#btnResetBracket').addEventListener("click", resetBracket);
-  $('#btnAdvanceSelected').addEventListener("click", advanceWinner);
-  $('#btnExportBracketJSON').addEventListener("click", exportBracketJSON);
-  $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
-  $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
-
-  // Full Live
-  $('#btnFullRefresh').addEventListener("click", renderFullBracket);
-  $('#btnFullZoomIn').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)+10));
-  $('#btnFullZoomOut').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)-10));
-  $('#rngFullZoom').addEventListener("input", ()=> setFullZoomPercent(parseInt($('#rngFullZoom').value,10) || 100));
-  $('#btnFullFit').addEventListener("click", fullFit);
-
-  // Results
-  $('#btnBuildResults').addEventListener("click", renderResults);
-  $('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
-  $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
-
-  // Curl button
-  const curlBtn = document.getElementById("copyCurlBtn");
-  if (curlBtn) curlBtn.addEventListener("click", copyCurlCommand);
-
-  // IP editor
-  renderIpEditor();
-
-  // Load bracket if present
-  BRACKET_STATE = loadBracketState();
-  if(BRACKET_STATE){
-    renderBracket();
-    buildMatchPicker();
-    renderFullBracket();
+  function msg(text){
+    const m = document.getElementById("ipMsg");
+    if (m) { m.textContent = text; m.style.display = "block"; }
   }
 
-  // Restore full zoom + start auto
-  const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
-  setFullZoomPercent(isFinite(z) ? z : 100);
-  startFullAuto();
-});
+  function addRow(tableVal, ipVal){
+    const wrap = document.getElementById("ipEditor");
+    const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
+    const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
+    const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
+    const row = document.createElement("div"); row.style.display = "contents";
+    rm.onclick = () => row.remove();
+    row.appendChild(t); row.appendChild(i); row.appendChild(rm);
+    wrap.appendChild(row);
+  }
+
+  function renderIpEditor(){
+    const wrap = document.getElementById("ipEditor");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    const map = loadTableIPs();
+    Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
+    document.getElementById("addRowBtn").onclick  = () => addRow("", "");
+    document.getElementById("saveIPsBtn").onclick = saveFromEditor;
+    document.getElementById("testIPsBtn").onclick = testAll;
+  }
+
+  function saveFromEditor(){
+    const wrap = document.getElementById("ipEditor");
+    const inputs = Array.from(wrap.querySelectorAll("input"));
+    const map = {};
+    for (let k=0; k<inputs.length; k+=2){
+      const table = (inputs[k].value||"").trim();
+      const ip    = (inputs[k+1].value||"").trim();
+      if (table && ip) map[table] = ip;
+    }
+    saveTableIPs(map);
+    msg("Saved IPs.");
+  }
+
+  async function testAll(){
+    const entries = Object.entries(loadTableIPs());
+    if (!entries.length) return msg("No tables configured.");
+    msg("Testing...");
+    const results = [];
+    for (const [tbl, ip] of entries){
+      try {
+        // NOTE: if TD is served over https://, browser may block these http:// calls (mixed content)
+        const r = await Promise.race([
+          fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
+          new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
+        ]);
+        results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
+      } catch {
+        results.push(`${tbl}: fail (${ip})`);
+      }
+    }
+    if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
+      results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
+    }
+    msg(results.join(" | "));
+  }
+
+  // === Curl builder uses the stored IPs ===
+  function buildCurlCommand(url, table) {
+    const map = loadTableIPs();
+    const ip  = map[String(table)] || "<TABLE_IP_HERE>";
+    // Safer: JSON body with POST (no URL-encoding headaches)
+    const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
+  -H "Content-Type: application/json" \\
+  -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+    return cmd;
+  }
+
+  function copyCurlCommand() {
+    const table = document.getElementById('tableNumber').value.trim();
+    if (!table) return alert("Enter a Table # first.");
+    if (!generatedUrl) return alert("Generate the match link first.");
+    const cmd = buildCurlCommand(generatedUrl, table);
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copyCurlBtn');
+      btn.innerText = "Copied!";
+      setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
+    });
+  }
+
+  // Hook up the Copy Curl button after DOM is ready
+  document.addEventListener("DOMContentLoaded", ()=>{
+    renderIpEditor();
+    const btn = document.getElementById("copyCurlBtn");
+    if (btn) btn.addEventListener("click", copyCurlCommand);
+  });
 </script>
 </body>
 </html>
