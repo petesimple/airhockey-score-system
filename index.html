@@ -431,6 +431,41 @@
 .lt-centerContent{
   transform: translate(-50%, -45%); /* was -50%, -50% */
 }
+
+/* LOWER THIRD - Stable Pip Anchor (TSO baseline) */
+
+#lowerThirdScoreboard .lt-player{
+  position: relative !important;
+  padding-bottom: 48px !important;  /* reserves space above pips */
+}
+
+#lowerThirdScoreboard .lt-pips{
+  position: absolute !important;
+
+  bottom: 22px !important;   /* gives ~15px true visual margin */
+
+  left: 0 !important;
+  right: 0 !important;
+
+  font-size: clamp(14px, 2.2vh, 20px) !important;
+  letter-spacing: clamp(4px, 1.2vh, 10px) !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* inward alignment preserved */
+#lowerThirdScoreboard .lt-player.left  .lt-pips{
+  text-align: right !important;
+  padding-right: clamp(10px, 2vw, 30px) !important;
+}
+
+#lowerThirdScoreboard .lt-player.right .lt-pips{
+  text-align: left !important;
+  padding-left: clamp(10px, 2vw, 30px) !important;
+}
     
   </style>
 </head>
