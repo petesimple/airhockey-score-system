@@ -1587,19 +1587,18 @@ function uiToggleLowerThird(on){
 
   const mirror = isMirrored(); // swap data only
 
-    // Set LT gradient to match CURRENT left/right player colors (changes between games)
-  const ltRoot = document.getElementById('lowerThirdScoreboard');
-  if(ltRoot){
-    // left/right already account for isPlayer1Left + mirror below
-    // so we set background to match the live sides every render
-    ltRoot.style.setProperty('--ltA', getTeamColor(left.id));
-    ltRoot.style.setProperty('--ltB', getTeamColor(right.id));
-  }
-      
+  // Determine logical left/right players for THIS game
   let L = isPlayer1Left ? players[0] : players[1];
   let R = isPlayer1Left ? players[1] : players[0];
   const left  = mirror ? R : L;
   const right = mirror ? L : R;
+
+  // ✅ FIX: Set LT gradient AFTER left/right exist (and follow between-games swaps)
+  const ltRoot = document.getElementById('lowerThirdScoreboard');
+  if(ltRoot){
+    ltRoot.style.setProperty('--ltA', getTeamColor(left.id));
+    ltRoot.style.setProperty('--ltB', getTeamColor(right.id));
+  }
 
   const leftColor  = getTeamColor(left.id);
   const rightColor = getTeamColor(right.id);
@@ -1614,32 +1613,31 @@ function uiToggleLowerThird(on){
   const bgText = document.getElementById('betweenGamesTimer').textContent.replace('Next Game: ','');
   const subLine = timeoutActive ? `Timeout: ${timeoutText}` : (bgActive ? `Next Game: ${bgText}` : '');
 
-  // Players (name, score, pips)
   function formatLTName(fullName){
-  if(!fullName) return '';
-  const parts = fullName.trim().split(' ');
-  if(parts.length === 1) return parts[0];
+    if(!fullName) return '';
+    const parts = fullName.trim().split(' ');
+    if(parts.length === 1) return parts[0];
+    const first = parts[0];
+    const last  = parts.slice(1).join(' ');
+    return `${first}<br>${last}`;
+  }
 
-  const first = parts[0];
-  const last  = parts.slice(1).join(' ');
-  return `${first}<br>${last}`;
-}
+  // Players (name, score, pips)
+  document.getElementById('lowerThirdContent').innerHTML = `
+    <div class="lt-player left">
+      <div class="lt-name">${formatLTName(left.name)}</div>
+      <div class="lt-score" style="color:${leftColor};">${left.points}</div>
+      <div class="lt-pips">${renderPips(left)}</div>
+    </div>
 
-document.getElementById('lowerThirdContent').innerHTML = `
-  <div class="lt-player left">
-    <div class="lt-name">${formatLTName(left.name)}</div>
-    <div class="lt-score" style="color:${leftColor};">${left.points}</div>
-    <div class="lt-pips">${renderPips(left)}</div>
-  </div>
+    <div class="lt-player right">
+      <div class="lt-name">${formatLTName(right.name)}</div>
+      <div class="lt-score" style="color:${rightColor};">${right.points}</div>
+      <div class="lt-pips">${renderPips(right)}</div>
+    </div>
+  `;
 
-  <div class="lt-player right">
-    <div class="lt-name">${formatLTName(right.name)}</div>
-    <div class="lt-score" style="color:${rightColor};">${right.points}</div>
-    <div class="lt-pips">${renderPips(right)}</div>
-  </div>
-`;
-
-  // Center (logo + optional timer + subline) - no nested template literals
+  // Center (logo + optional timer + subline)
   const hideTimer = !!document.getElementById('toggleHideLTTimer')?.checked;
 
   let centerHTML = getCenterLogoHTML({ size: 48, marginBottom: 8 });
