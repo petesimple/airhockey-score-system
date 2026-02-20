@@ -1587,12 +1587,13 @@ function uiToggleLowerThird(on){
 
   const mirror = isMirrored(); // swap data only
 
+    // Set LT gradient to match CURRENT left/right player colors (changes between games)
   const ltRoot = document.getElementById('lowerThirdScoreboard');
   if(ltRoot){
-    const a = cssVar('--teamA');
-    const b = cssVar('--teamB');
-    ltRoot.style.setProperty('--ltA', mirror ? b : a);
-    ltRoot.style.setProperty('--ltB', mirror ? a : b);
+    // left/right already account for isPlayer1Left + mirror below
+    // so we set background to match the live sides every render
+    ltRoot.style.setProperty('--ltA', getTeamColor(left.id));
+    ltRoot.style.setProperty('--ltB', getTeamColor(right.id));
   }
       
   let L = isPlayer1Left ? players[0] : players[1];
