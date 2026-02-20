@@ -983,26 +983,38 @@ function getCenterLogoHTML(opts={}){
     }
 
     function renderPips(player){
-  if(!Array.isArray(gameHistory) || gameHistory.length === 0) return '';
+  // winGames is 2 (Bo3), 3 (Bo5), 4 (Bo7)
+  const total = Math.max(1, parseInt(winGames, 10) || 4);
 
-  return gameHistory.map(g=>{
+  let wins = 0;
+  const winSkunks = []; // for each win, store whether it was a skunk win
+
+  gameHistory.forEach(g=>{
     const m = g.match(/(\d+)\s*-\s*(\d+)/);
-    if(!m) return '–';
+    if(!m) return;
 
     const s1 = parseInt(m[1],10);
     const s2 = parseInt(m[2],10);
 
-    const playerIsP1 = player.id === 'player1';
-    const playerScore = playerIsP1 ? s1 : s2;
-    const oppScore    = playerIsP1 ? s2 : s1;
+    const isP1 = (player.id === 'player1');
+    const ps = isP1 ? s1 : s2; // player score
+    const os = isP1 ? s2 : s1; // opp score
 
-    const win = playerScore > oppScore;
-    const skunk = (playerScore === 7 && oppScore === 0);
+    if(ps > os){
+      winSkunks.push(ps === 7 && os === 0);
+      wins++;
+    }
+  });
 
-    if(skunk) return '🦨';
-    if(win)   return '●';
-    return '○';
-  }).join(' ');
+  const out = [];
+  for(let i=0;i<total;i++){
+    if(i < wins){
+      out.push(winSkunks[i] ? '🦨' : '●');
+    } else {
+      out.push('○'); // empty slot shows match type capacity
+    }
+  }
+  return out.join(' ');
 }
 
     function updateScore() {
