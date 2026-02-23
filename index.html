@@ -1211,100 +1211,139 @@ function getCenterLogoHTML(opts={}){
     }
 
     function resetMatch() {
-      if (!confirm('Do you really want to reset the match?')) return;
-      clearInterval(timerInterval);
-      clearTimeoutTimer();
-      clearBetweenGamesTimer();
-      timerInterval = null;
-      timerRunning = false;
-      timeElapsed = 0;
+  if (!confirm('Do you really want to reset the match?')) return;
 
-      players = [
-        { id:'player1', name:'', points:0, games:0, timeoutUsed:false },
-        { id:'player2', name:'', points:0, games:0, timeoutUsed:false }
-      ];
-      gameHistory = [];
-      isPlayer1Left = true;
+  // --- Stop all timers ---
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  timerRunning = false;
+  timeElapsed = 0;
 
-      document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
-      document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
-      document.getElementById('matchLength').value = '4';
+  clearTimeoutTimer();
+  clearBetweenGamesTimer();
 
-      ['matchWinner','gameWinner','compactSummary','miniCompactSummary'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = '';
-      });
+  // --- Reset core state ---
+  players = [
+    { id:'player1', name:'', points:0, games:0, timeoutUsed:false },
+    { id:'player2', name:'', points:0, games:0, timeoutUsed:false }
+  ];
+  gameHistory = [];
+  isPlayer1Left = true;
 
-      const history = document.getElementById('history');
-      if (history) history.innerHTML = '';
+  // --- Reset setup inputs (keep saved names) ---
+  document.getElementById('player1Name').value = localStorage.getItem('player1Name') || '';
+  document.getElementById('player2Name').value = localStorage.getItem('player2Name') || '';
+  document.getElementById('matchLength').value = '4';
 
-      const postCard = document.getElementById('postMatchNotice');
-      if (postCard) postCard.style.display = 'none';
+  // --- Clear text outputs ---
+  ['matchWinner','gameWinner','compactSummary','miniCompactSummary'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
 
-      const matchCardScores = document.getElementById('matchCardScores');
-      if (matchCardScores) matchCardScores.textContent = '';
+  const history = document.getElementById('history');
+  if (history) history.innerHTML = '';
 
-      const sb = document.getElementById('summaryButtons');
-      if (sb) sb.style.display = 'none';
+  const postCard = document.getElementById('postMatchNotice');
+  if (postCard) postCard.style.display = 'none';
 
-      const ng = document.getElementById('nextGameBtn');
-      if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
+  const matchCardScores = document.getElementById('matchCardScores');
+  if (matchCardScores) matchCardScores.textContent = '';
 
-      const lock = document.getElementById('lockTopToggle');
-      if (lock && lock.checked) lock.checked = false;
+  const sb = document.getElementById('summaryButtons');
+  if (sb) sb.style.display = 'none';
 
-      document.getElementById('fullscoreboard').classList.remove('locked-top');
-      document.body.classList.remove('locked-body');
-      const spacer = document.getElementById('scoreboardSpacer');
-      if (spacer) spacer.style.height = '0';
-      localStorage.setItem('scoreboardLocked','false');
+  const ng = document.getElementById('nextGameBtn');
+  if (ng) { ng.style.display = 'none'; ng.textContent = 'Start Next Game'; }
 
-      const skinny = document.getElementById('skinnyScoreboard');
-      const mini   = document.getElementById('miniScoreboard');
-      const tSkinny = document.getElementById('toggleSkinny');
-      const tMini   = document.getElementById('toggleMini');
-      const tMirror = document.getElementById('mirrorAll');
-      if (tSkinny) tSkinny.checked = false;
-      if (tMini)   tMini.checked   = false;
-      if (tMirror) tMirror.checked = false;
+  // --- HARD reset all "view modes" + layout side effects ---
+  // Lock top off
+  const lock = document.getElementById('lockTopToggle');
+  if (lock) lock.checked = false;
+  document.getElementById('fullscoreboard')?.classList.remove('locked-top');
+  document.body.classList.remove('locked-body');
+  const spacer = document.getElementById('scoreboardSpacer');
+  if (spacer) spacer.style.height = '0';
+  localStorage.setItem('scoreboardLocked','false');
 
-      if (skinny) {
-        skinny.style.display = 'none';
-        skinny.classList.remove('locked','mirrored');
-        const skinnyContent = document.getElementById('skinnyContent');
-        if (skinnyContent) skinnyContent.innerHTML = '';
-        const compact = document.getElementById('compactSummary');
-        if (compact) compact.innerHTML = '';
-      }
+  // Mirror off
+  const tMirror = document.getElementById('mirrorAll');
+  if (tMirror) tMirror.checked = false;
 
-      if (mini) {
-        mini.style.display = 'none';
-        mini.classList.remove('mirrored');
-        const miniContent = document.getElementById('miniContent');
-        if (miniContent) miniContent.innerHTML = '';
-      }
-      document.body.classList.remove('mini-active');
+  // Skinny off
+  const skinny = document.getElementById('skinnyScoreboard');
+  const tSkinny = document.getElementById('toggleSkinny');
+  if (tSkinny) tSkinny.checked = false;
+  if (skinny) {
+    skinny.style.display = 'none';
+    skinny.classList.remove('locked','mirrored');
+    const skinnyContent = document.getElementById('skinnyContent');
+    if (skinnyContent) skinnyContent.innerHTML = '';
+    const compact = document.getElementById('compactSummary');
+    if (compact) compact.innerHTML = '';
+  }
+  // Skinny can leave paddingTop behind
+  document.body.style.paddingTop = '';
 
-      const scoreBoard = document.getElementById('scoreBoard');
-      if (scoreBoard) scoreBoard.innerHTML = '';
+  // Mini off
+  const mini = document.getElementById('miniScoreboard');
+  const tMini = document.getElementById('toggleMini');
+  if (tMini) tMini.checked = false;
+  if (mini) {
+    mini.style.display = 'none';
+    mini.classList.remove('mirrored');
+    const miniContent = document.getElementById('miniContent');
+    if (miniContent) miniContent.innerHTML = '';
+  }
+  document.body.classList.remove('mini-active');
 
-      const timer = document.getElementById('timer');
-      if (timer) {
-        timer.classList.remove('running');
-        timer.style.color = 'white';
-        timer.textContent = 'Match Time: 0:00';
-      }
+  // Lower Third off (this is the black box fix)
+  const lt = document.getElementById('lowerThirdScoreboard');
+  const tLT = document.getElementById('toggleLowerThird');
+  if (tLT) tLT.checked = false;
+  const tHideLT = document.getElementById('toggleHideLTTimer');
+  if (tHideLT) tHideLT.checked = false;
+  if (lt) {
+    lt.style.display = 'none';
+    lt.classList.remove('mirrored');
+  }
+  const ltContent = document.getElementById('lowerThirdContent');
+  if (ltContent) ltContent.innerHTML = '';
+  const ltCenter = document.getElementById('lowerThirdCenter');
+  if (ltCenter) ltCenter.innerHTML = '';
 
-      const scoreSection = document.getElementById('scoreSection');
-      if (scoreSection) scoreSection.style.display = 'none';
+  // --- Clear main scoreboard html ---
+  const scoreBoard = document.getElementById('scoreBoard');
+  if (scoreBoard) scoreBoard.innerHTML = '';
 
-      showStartScreen();
-      document.getElementById('inMatchControls').style.display = 'none';
+  // --- Reset timer display ---
+  const timer = document.getElementById('timer');
+  if (timer) {
+    timer.classList.remove('running');
+    timer.style.color = 'white';
+    timer.textContent = 'Match Time: 0:00';
+  }
 
-      renderButtons();
-      updateScore();
-      updateTimer();
-    }
+  // --- Hide score section and go back to start screen ---
+  const scoreSection = document.getElementById('scoreSection');
+  if (scoreSection) scoreSection.style.display = 'none';
+
+  showStartScreen();
+
+  // Hide in-match controls
+  const im = document.getElementById('inMatchControls');
+  if (im) im.style.display = 'none';
+
+  // Close settings panel if it was left open
+  toggleSettings(false);
+
+  // --- Re-render base UI ---
+  renderButtons();
+  updateScore();
+  updateTimer();
+  updateMirrorState();      // ensures mirrored classes are removed everywhere
+  syncInMatchToggles();     // keeps the gear toggles honest
+}
 
     function showStartScreen() {
       const logo = document.getElementById('appLogo');
