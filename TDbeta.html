@@ -1,8 +1,9 @@
 <!-- =====================
 TDbeta.html - Tournament Director (Integrated)
-v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
-- Brackets tab: edit scores directly in the chart + click a player row to set winner (Shift-click clears)
-- Full Bracket Live: stays read-only
+v2.2.1 - SAFE MODE added to prevent ANY Google Apps Script hits (stops mystery timestamp spam)
+- Default: SAFE MODE ON (no calls to AYPT_SIGNUPS_ENDPOINT, BRACKETS_ENDPOINT, AYPT_MATCHLOG_ENDPOINT)
+- You can manually turn SAFE MODE OFF with a toggle button (session only)
+- Full Bracket Live stays read-only
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -142,7 +143,7 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
     color:#fff; font-weight:900;
   }
 
-  /* NEW - editable score boxes (Brackets tab only) */
+  /* editable score boxes */
   .scoreInput{
     width:44px;
     text-align:center;
@@ -180,6 +181,21 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
     background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
     color:#000; border:none;
   }
+
+  /* SAFE MODE banner */
+  .safeBanner{
+    max-width:980px; margin:10px auto 0;
+    background:#0f1418; border:1px solid rgba(0,234,255,.25);
+    border-radius:14px; padding:10px 12px;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  }
+  .safeLeft{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .safeTag{
+    padding:4px 10px; border-radius:999px;
+    border:1px solid rgba(0,234,255,.35);
+    background:rgba(0,234,255,.08);
+    font-weight:900; font-size:12px; color:#bff7ff;
+  }
 </style>
 </head>
 
@@ -203,6 +219,17 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
 <div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results</div>
+
+<!-- SAFE MODE banner -->
+<div class="safeBanner" id="safeBanner">
+  <div class="safeLeft">
+    <span class="safeTag" id="safeTag">SAFE MODE ON</span>
+    <span class="muted" id="safeMsg">Cloud calls are blocked to prevent accidental writes to Google Sheets.</span>
+  </div>
+  <div class="row-left" style="justify-content:flex-end;">
+    <button class="btnTiny" id="btnToggleSafe">Temporarily enable cloud</button>
+  </div>
+</div>
 
 <!-- Tabs -->
 <div class="tabs" id="tabs">
@@ -257,7 +284,7 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
 
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
     <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
-    <div class="muted" style="margin-top:4px;">AYPT endpoints are locked in this build.</div>
+    <div class="muted" style="margin-top:4px;">Tip: SAFE MODE blocks match log posting until you enable cloud.</div>
 
     <div id="result"></div>
     <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
@@ -339,7 +366,7 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
 
     <div class="row-left" style="gap:12px;">
       <div style="min-width:280px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click "Use AYPT List..." in AYPT tab</div>
+        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) or click "Use AYPT List..." in AYPT tab</div>
         <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
       </div>
 
@@ -349,8 +376,7 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
           <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
           <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
         </div>
-        <div class="mini">Tip - Double-elim is the default. BYEs auto-fill.</div>
-        <div class="mini" style="margin-top:6px;">Tip - click a player row in the chart to set winner. Shift-click to clear.</div>
+        <div class="mini">Tip: click a player row in the chart to set winner. Shift-click to clear.</div>
       </div>
     </div>
 
@@ -434,13 +460,18 @@ v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
 /* =========================================================
   CONFIG
 ========================================================= */
+// SAFE MODE (default ON)
+// This blocks ANY call to your Google Apps Script endpoints.
+// That guarantees the TD page cannot spam timestamps into the AYPT sheet.
+let TD_SAFE_MODE = true;
+
 // Match-log endpoint you already use
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
 // Signup endpoint you already use (list/update)
 const AYPT_SIGNUPS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
-// Brackets endpoint - MUST support action=bracketGet and action=bracketSave (JSONP)
+// Brackets endpoint (JSONP)
 const BRACKETS_ENDPOINT = AYPT_SIGNUPS_ENDPOINT;
 
 // Bracket state key (shared by Brackets + Full Live)
@@ -465,9 +496,49 @@ function csvCell(v){
   return s;
 }
 
-/* JSONP helper */
+/* SAFE MODE UI */
+function refreshSafeUI(){
+  const tag = $('#safeTag');
+  const msg = $('#safeMsg');
+  const btn = $('#btnToggleSafe');
+  if(!tag || !msg || !btn) return;
+
+  if(TD_SAFE_MODE){
+    tag.textContent = "SAFE MODE ON";
+    msg.textContent = "Cloud calls are blocked to prevent accidental writes to Google Sheets.";
+    btn.textContent = "Temporarily enable cloud";
+  }else{
+    tag.textContent = "SAFE MODE OFF";
+    msg.textContent = "Cloud calls are enabled. If the Apps Script still appends on reads, you will see spam again.";
+    btn.textContent = "Turn SAFE MODE back on";
+  }
+
+  // Disable buttons that would hit cloud when safe mode is ON
+  const needsCloud = [
+    '#btnAYPTRefresh',
+    '#btnPublishBracket',
+    '#btnLoadBracketCloud',
+    '#btnFullRefresh'
+  ];
+  needsCloud.forEach(sel=>{
+    const el = $(sel);
+    if(el) el.disabled = TD_SAFE_MODE;
+  });
+
+  const chk = $('#chkAutoFull');
+  if(chk) chk.disabled = TD_SAFE_MODE;
+}
+
+/* =========================================================
+  JSONP helper (now SAFE MODE aware)
+========================================================= */
 function jsonp(url, params = {}, timeoutMs = 12000){
   return new Promise((resolve, reject) => {
+    if(TD_SAFE_MODE){
+      reject(new Error("SAFE MODE is ON. Cloud call blocked."));
+      return;
+    }
+
     const cb = "TD_CB_" + Math.random().toString(36).slice(2);
     params.callback = cb;
     const qs = new URLSearchParams(params).toString();
@@ -646,7 +717,7 @@ function nextPage() { currentPage++; renderMatchLog(); }
 function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
 
 /* =========================================================
-  CLOUD SYNC - AYPT MATCH LOG (kept)
+  CLOUD SYNC - AYPT MATCH LOG (SAFE MODE aware)
 ========================================================= */
 const QUEUE_KEY = 'matchLogCloudQueue';
 
@@ -666,6 +737,7 @@ function enqueue(payload) {
 }
 
 async function flushCloudQueue() {
+  if(TD_SAFE_MODE) return;
   const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   if (!q.length) return;
   showCloudStatus(`Syncing ${q.length} pending...`);
@@ -679,6 +751,7 @@ async function flushCloudQueue() {
 }
 
 function postToAYPTMatchLog(payload) {
+  if(TD_SAFE_MODE) return Promise.resolve(false);
   try {
     const body = new URLSearchParams({
       action: 'appendMatchLog',
@@ -703,6 +776,11 @@ function postToAYPTMatchLog(payload) {
 }
 
 function saveToAYPTMatchLog(payload){
+  if(TD_SAFE_MODE){
+    enqueue(payload);
+    showCloudStatus("SAFE MODE: queued only (not posted).", true);
+    return Promise.resolve(false);
+  }
   return postToAYPTMatchLog(payload).then(ok => {
     if (!ok) enqueue(payload);
     else showCloudStatus('Saved to AYPT ✓', true);
@@ -711,7 +789,7 @@ function saveToAYPTMatchLog(payload){
 }
 
 /* =========================================================
-  AYPT SIGNUPS (list + optional update)
+  AYPT SIGNUPS (list + optional update) (SAFE MODE aware)
 ========================================================= */
 let AYPT_ROWS = [];
 
@@ -751,7 +829,7 @@ async function loadAYPT(){
     statusEl.textContent = `${rows.length} signups loaded`;
   }catch(e){
     console.warn(e);
-    statusEl.textContent = "Failed to load AYPT.";
+    statusEl.textContent = TD_SAFE_MODE ? "SAFE MODE: cloud disabled." : "Failed to load AYPT.";
   }
 }
 
@@ -764,6 +842,7 @@ function pulseSaved(id){
 }
 
 async function ayptUpdate(id, fields){
+  if(TD_SAFE_MODE) return false;
   try{
     await jsonp(AYPT_SIGNUPS_ENDPOINT, Object.assign({ update:"1", id }, fields));
     pulseSaved(id);
@@ -782,6 +861,11 @@ function wireAYPTTable(){
 
   tbody.addEventListener("change", async (e)=>{
     if(e.target.classList.contains("paid-toggle")){
+      if(TD_SAFE_MODE){
+        alert("SAFE MODE is ON. Paid update blocked.");
+        e.target.checked = !e.target.checked;
+        return;
+      }
       const id = e.target.getAttribute("data-id");
       const paid = e.target.checked ? "1" : "0";
       const ok = await ayptUpdate(id, { paid });
@@ -791,6 +875,7 @@ function wireAYPTTable(){
 
   tbody.addEventListener("input", (e)=>{
     if(e.target.classList.contains("admin-note")){
+      if(TD_SAFE_MODE) return;
       const id = e.target.getAttribute("data-id");
       const v = e.target.value;
       clearTimeout(noteTimer);
@@ -851,8 +936,9 @@ function setTournamentId(v){
   localStorage.setItem("TD_TOURNAMENT_ID", v || "");
 }
 
-/* Cloud bracket save/load (Brackets sheet) */
+/* Cloud bracket save/load (SAFE MODE aware) */
 async function cloudSaveBracket(state){
+  if(TD_SAFE_MODE) throw new Error("SAFE MODE is ON. Cloud publish blocked.");
   const tid = getTournamentId();
   const bracketJson = JSON.stringify(state);
   const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tournamentId: tid, bracketJson });
@@ -861,6 +947,7 @@ async function cloudSaveBracket(state){
   return data;
 }
 async function cloudLoadBracket(){
+  if(TD_SAFE_MODE) throw new Error("SAFE MODE is ON. Cloud load blocked.");
   const tid = getTournamentId();
   const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
   if(!data || !data.ok) throw new Error((data && data.message) || "Cloud load failed");
@@ -878,9 +965,10 @@ async function cloudLoadBracket(){
   return state;
 }
 
-/* Debounced publish so score typing does not spam */
+/* Debounced publish */
 let publishTimer = null;
 function schedulePublish(){
+  if(TD_SAFE_MODE) return;
   clearTimeout(publishTimer);
   publishTimer = setTimeout(async ()=>{
     try{
@@ -1120,7 +1208,7 @@ function resetBracket(){
 }
 
 /* =========================================================
-  BRACKET RENDER (shared) - UPDATED
+  BRACKET RENDER (shared)
 ========================================================= */
 function renderMatchCard(match, lane, editable=false){
   const card = document.createElement("div");
@@ -1177,7 +1265,6 @@ function renderSlot(match, lane, which, editable){
     <div></div>
   `;
 
-  // Click-to-set-winner for editable bracket view
   if(canEdit){
     slot.style.cursor = "pointer";
     slot.setAttribute("data-action", "pickWinner");
@@ -1202,7 +1289,7 @@ function renderBracket(){
     const col = document.createElement("div");
     col.className = "col";
     col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W", true))); /* editable */
+    round.forEach(m => col.appendChild(renderMatchCard(m,"W", true)));
     bracketEl.appendChild(col);
   });
 
@@ -1210,26 +1297,24 @@ function renderBracket(){
     const col = document.createElement("div");
     col.className = "col";
     col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L", true))); /* editable */
+    round.forEach(m => col.appendChild(renderMatchCard(m,"L", true)));
     bracketEl.appendChild(col);
   });
 
   const gfCol = document.createElement("div");
   gfCol.className = "col";
   gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", true))); /* editable */
+  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", true)));
   bracketEl.appendChild(gfCol);
 
   root.innerHTML = "";
   root.appendChild(bracketEl);
 }
 
-/* NEW - inline score entry + click-to-set-winner in chart */
 function wireBracketChartEditing(){
   const root = document.getElementById("bracketRoot");
   if(!root) return;
 
-  // Save score edits
   root.addEventListener("input", (e)=>{
     const inp = e.target.closest(".scoreInput");
     if(!inp || !BRACKET_STATE) return;
@@ -1250,7 +1335,6 @@ function wireBracketChartEditing(){
     schedulePublish();
   });
 
-  // Click row to set winner (Shift-click clears)
   root.addEventListener("click", (e)=>{
     const slot = e.target.closest('.slot[data-action="pickWinner"]');
     if(!slot || !BRACKET_STATE) return;
@@ -1280,7 +1364,7 @@ function wireBracketChartEditing(){
 }
 
 /* =========================================================
-  FULL BRACKET LIVE (cloud pull + auto refresh + zoom)
+  FULL BRACKET LIVE (SAFE MODE aware)
 ========================================================= */
 let fullZoom = 1;
 let fullTimer = null;
@@ -1319,6 +1403,12 @@ async function renderFullBracket(){
   const root = $('#fullRoot');
   const tid = getTournamentId();
 
+  if(TD_SAFE_MODE){
+    root.innerHTML = `<div class="muted">SAFE MODE: live cloud view is disabled.</div>`;
+    $('#fullLast').textContent = "Last update: -";
+    return;
+  }
+
   try{
     const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
     if(!data || !data.ok) throw new Error((data && data.message) || "Cloud fetch failed");
@@ -1341,7 +1431,7 @@ async function renderFullBracket(){
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"W", false))); /* read-only */
+      round.forEach(m => col.appendChild(renderMatchCard(m,"W", false)));
       bracketEl.appendChild(col);
     });
 
@@ -1349,21 +1439,20 @@ async function renderFullBracket(){
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"L", false))); /* read-only */
+      round.forEach(m => col.appendChild(renderMatchCard(m,"L", false)));
       bracketEl.appendChild(col);
     });
 
     const gfCol = document.createElement("div");
     gfCol.className = "col";
     gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false))); /* read-only */
+    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
     bracketEl.appendChild(gfCol);
 
     root.innerHTML = "";
     root.appendChild(bracketEl);
 
     BRACKET_STATE = saved;
-
     $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
   }catch(e){
     console.warn(e);
@@ -1374,6 +1463,7 @@ async function renderFullBracket(){
 function startFullAuto(){
   stopFullAuto();
   fullTimer = setInterval(()=>{
+    if(TD_SAFE_MODE) return;
     if($('#chkAutoFull').checked){
       renderFullBracket();
     }
@@ -1529,7 +1619,6 @@ function importBracketJSONFile(file){
       renderBracket();
       buildMatchPicker();
       $('#bracketStatus').textContent = "Imported bracket JSON.";
-
       schedulePublish();
     }catch(e){
       alert("Import failed: " + e.message);
@@ -1718,6 +1807,26 @@ if ('serviceWorker' in navigator && !SW_OFF) {
   INIT / WIRE BUTTONS
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async ()=>{
+  // SAFE MODE toggle button (session only)
+  $('#btnToggleSafe').addEventListener('click', ()=>{
+    TD_SAFE_MODE = !TD_SAFE_MODE;
+    refreshSafeUI();
+
+    if(TD_SAFE_MODE){
+      // stop live polling immediately
+      stopFullAuto();
+      $('#fullRoot').innerHTML = `<div class="muted">SAFE MODE: live cloud view is disabled.</div>`;
+      $('#fullLast').textContent = "Last update: -";
+      $('#ayptStatus').textContent = "SAFE MODE: cloud disabled.";
+      showCloudStatus("SAFE MODE: cloud blocked.", true);
+    }else{
+      // re-enable timers and allow manual refresh buttons
+      startFullAuto();
+    }
+  });
+
+  refreshSafeUI();
+
   const last = localStorage.getItem("TD_ACTIVE_TAB");
   if(last) setTab(last);
 
@@ -1781,13 +1890,19 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   // Wire chart score entry + click winner
   wireBracketChartEditing();
 
-  // Restore full zoom + start auto
+  // Restore full zoom
   const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
   setFullZoomPercent(isFinite(z) ? z : 100);
-  startFullAuto();
 
-  // Prime live view once (cloud)
-  renderFullBracket();
+  // Auto refresh only when SAFE MODE is off
+  if(!TD_SAFE_MODE){
+    startFullAuto();
+    renderFullBracket();
+  }else{
+    stopFullAuto();
+    $('#fullRoot').innerHTML = `<div class="muted">SAFE MODE: live cloud view is disabled.</div>`;
+    $('#ayptStatus').textContent = "SAFE MODE: cloud disabled.";
+  }
 });
 </script>
 </body>
