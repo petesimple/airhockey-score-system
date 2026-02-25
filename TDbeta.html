@@ -1,11 +1,8 @@
 <!-- =====================
-TD.html - Tournament Director (Integrated)
-v2.1 - TD + AYPT viewer + Brackets + Full Bracket Live (cloud) + Results export
-- Keeps match link/QR/match log + cloud queue + IP editor + PIN gate + logo upload
-- Tabs: AYPT, Brackets, Full Bracket (live), Results
-- Brackets now publish/load from the "Brackets" sheet via Apps Script JSONP:
-  action=bracketSave, action=bracketGet
-  Headers required: tournamentId, updatedAt, bracketJson
+TDbeta.html - Tournament Director (Integrated)
+v2.2 - Bracket chart score entry restored (inline) + click-to-set-winner
+- Brackets tab: edit scores directly in the chart + click a player row to set winner (Shift-click clears)
+- Full Bracket Live: stays read-only
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -144,6 +141,24 @@ v2.1 - TD + AYPT viewer + Brackets + Full Bracket Live (cloud) + Results export
     border:1px solid rgba(255,255,255,.10);
     color:#fff; font-weight:900;
   }
+
+  /* NEW - editable score boxes (Brackets tab only) */
+  .scoreInput{
+    width:44px;
+    text-align:center;
+    padding:8px 6px;
+    border-radius:10px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    color:#fff;
+    font-weight:900;
+    outline:none;
+  }
+  .scoreInput:focus{
+    border-color: rgba(0,234,255,.7);
+    box-shadow: 0 0 0 2px rgba(0,234,255,.15);
+  }
+
   .slot.win{ border-color: rgba(61,220,132,.55); box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset; }
   .slot.lose{ opacity:.78; }
 
@@ -335,6 +350,7 @@ v2.1 - TD + AYPT viewer + Brackets + Full Bracket Live (cloud) + Results export
           <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
         </div>
         <div class="mini">Tip - Double-elim is the default. BYEs auto-fill.</div>
+        <div class="mini" style="margin-top:6px;">Tip - click a player row in the chart to set winner. Shift-click to clear.</div>
       </div>
     </div>
 
@@ -425,8 +441,6 @@ const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4Yjm
 const AYPT_SIGNUPS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
 // Brackets endpoint - MUST support action=bracketGet and action=bracketSave (JSONP)
-// If your Brackets API is in the same Apps Script as signups, keep this as-is.
-// Otherwise set BRACKETS_ENDPOINT to that script's /exec URL.
 const BRACKETS_ENDPOINT = AYPT_SIGNUPS_ENDPOINT;
 
 // Bracket state key (shared by Brackets + Full Live)
@@ -864,7 +878,7 @@ async function cloudLoadBracket(){
   return state;
 }
 
-/* Debounced publish so Advance Winner does not spam */
+/* Debounced publish so score typing does not spam */
 let publishTimer = null;
 function schedulePublish(){
   clearTimeout(publishTimer);
@@ -875,7 +889,7 @@ function schedulePublish(){
       console.warn(e);
       $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
     }
-  }, 600);
+  }, 700);
 }
 
 /* Bracket generation helpers */
@@ -947,7 +961,7 @@ function newBracketFromEntrants(){
     winnersRounds,
     losersRounds: Lrounds,
     grandFinal,
-    notes: "Simple DE skeleton. Advance winners using selector."
+    notes: "Simple DE skeleton. Advance winners using selector or click a row."
   };
 
   BRACKET_STATE.winnersRounds[0].forEach((m)=>{
@@ -1106,9 +1120,9 @@ function resetBracket(){
 }
 
 /* =========================================================
-  BRACKET RENDER (shared)
+  BRACKET RENDER (shared) - UPDATED
 ========================================================= */
-function renderMatchCard(match, lane){
+function renderMatchCard(match, lane, editable=false){
   const card = document.createElement("div");
   card.className = "match";
   const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
@@ -1119,11 +1133,12 @@ function renderMatchCard(match, lane){
       <div class="tag">${tagText}</div>
     </div>
   `;
-  card.appendChild(renderSlot(match,"p1"));
-  card.appendChild(renderSlot(match,"p2"));
+  card.appendChild(renderSlot(match, lane, "p1", editable));
+  card.appendChild(renderSlot(match, lane, "p2", editable));
   return card;
 }
-function renderSlot(match, which){
+
+function renderSlot(match, lane, which, editable){
   const slot = document.createElement("div");
   slot.className = "slot";
   if(match.winner === which) slot.classList.add("win");
@@ -1133,14 +1148,44 @@ function renderSlot(match, which){
   const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
   const id = match.id || "";
 
+  const canEdit =
+    editable &&
+    name !== "TBD" &&
+    name !== "BYE";
+
   slot.innerHTML = `
     <div>
       <div class="name">${esc(name)}</div>
       <div class="seed">${esc(id)} - ${which.toUpperCase()}</div>
     </div>
-    <div class="scoreBox">${esc(score)}</div>
+
+    ${
+      canEdit
+        ? `<input
+             class="scoreInput"
+             inputmode="numeric"
+             pattern="[0-9]*"
+             placeholder="-"
+             value="${esc(score)}"
+             data-lane="${esc(lane)}"
+             data-id="${esc(id)}"
+             data-which="${esc(which)}"
+           />`
+        : `<div class="scoreBox">${esc(score)}</div>`
+    }
+
     <div></div>
   `;
+
+  // Click-to-set-winner for editable bracket view
+  if(canEdit){
+    slot.style.cursor = "pointer";
+    slot.setAttribute("data-action", "pickWinner");
+    slot.setAttribute("data-lane", lane);
+    slot.setAttribute("data-id", id);
+    slot.setAttribute("data-which", which);
+  }
+
   return slot;
 }
 
@@ -1157,7 +1202,7 @@ function renderBracket(){
     const col = document.createElement("div");
     col.className = "col";
     col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
+    round.forEach(m => col.appendChild(renderMatchCard(m,"W", true))); /* editable */
     bracketEl.appendChild(col);
   });
 
@@ -1165,18 +1210,73 @@ function renderBracket(){
     const col = document.createElement("div");
     col.className = "col";
     col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
+    round.forEach(m => col.appendChild(renderMatchCard(m,"L", true))); /* editable */
     bracketEl.appendChild(col);
   });
 
   const gfCol = document.createElement("div");
   gfCol.className = "col";
   gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
+  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", true))); /* editable */
   bracketEl.appendChild(gfCol);
 
   root.innerHTML = "";
   root.appendChild(bracketEl);
+}
+
+/* NEW - inline score entry + click-to-set-winner in chart */
+function wireBracketChartEditing(){
+  const root = document.getElementById("bracketRoot");
+  if(!root) return;
+
+  // Save score edits
+  root.addEventListener("input", (e)=>{
+    const inp = e.target.closest(".scoreInput");
+    if(!inp || !BRACKET_STATE) return;
+
+    const lane = inp.getAttribute("data-lane");
+    const id = inp.getAttribute("data-id");
+    const which = inp.getAttribute("data-which");
+    const m = findMatch(lane, id);
+    if(!m) return;
+
+    const v = (inp.value || "").replace(/[^\d]/g, "");
+    inp.value = v;
+
+    if(which === "p1") m.s1 = v;
+    else m.s2 = v;
+
+    saveBracketState();
+    schedulePublish();
+  });
+
+  // Click row to set winner (Shift-click clears)
+  root.addEventListener("click", (e)=>{
+    const slot = e.target.closest('.slot[data-action="pickWinner"]');
+    if(!slot || !BRACKET_STATE) return;
+
+    if(e.target.closest(".scoreInput")) return;
+
+    const lane = slot.getAttribute("data-lane");
+    const id = slot.getAttribute("data-id");
+    const which = slot.getAttribute("data-which");
+    const m = findMatch(lane, id);
+    if(!m) return;
+
+    if(e.shiftKey){
+      m.winner = "";
+      m.loser = "";
+    }else{
+      m.winner = which;
+      m.loser = (which === "p1") ? "p2" : "p1";
+    }
+
+    propagateWinners();
+    saveBracketState();
+    renderBracket();
+    buildMatchPicker();
+    schedulePublish();
+  });
 }
 
 /* =========================================================
@@ -1241,7 +1341,7 @@ async function renderFullBracket(){
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"W")));
+      round.forEach(m => col.appendChild(renderMatchCard(m,"W", false))); /* read-only */
       bracketEl.appendChild(col);
     });
 
@@ -1249,14 +1349,14 @@ async function renderFullBracket(){
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"L")));
+      round.forEach(m => col.appendChild(renderMatchCard(m,"L", false))); /* read-only */
       bracketEl.appendChild(col);
     });
 
     const gfCol = document.createElement("div");
     gfCol.className = "col";
     gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF")));
+    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false))); /* read-only */
     bracketEl.appendChild(gfCol);
 
     root.innerHTML = "";
@@ -1677,6 +1777,9 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     renderBracket();
     buildMatchPicker();
   }
+
+  // Wire chart score entry + click winner
+  wireBracketChartEditing();
 
   // Restore full zoom + start auto
   const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
