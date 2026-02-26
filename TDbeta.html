@@ -1,12 +1,14 @@
 <!-- =====================
 TDbeta.html - Tournament Director (Integrated)
-v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
-- Brackets tab: click a player row to set winner (only changes once)
-  - Tap same winner again = no-op
-  - Tap the *other* player to flip winner = allowed
-  - Shift-click winner clears ONLY if downstream matches that depend on it have not started
-- Losers bracket now "rocks back" on corrections: unstarted Losers matches get reset to TBD and re-seeded each propagate
-- TD Safe Mode toggle (default ON) blocks ALL sheet writes (match log POST, AYPT updates, bracket publish)
+v2.4 - First beta + local archive tab
+- Match correction rules + Losers rollback fix + TD Safe Mode toggle
+- New Archive tab:
+  - Save current bracket snapshot to local archive
+  - Load archived tournaments back into app
+  - Delete archived tournaments
+  - Export one archive item JSON
+  - Export full archive JSON
+  - Import archive JSON
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +57,6 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   .pill{ padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); font-size:12px; color:rgba(255,255,255,.75); }
   .spacer{ height: 10px; }
 
-  /* Tabs */
   .tabs{ max-width:980px; margin:0 auto 10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .tabbtn{
     background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
@@ -68,7 +69,6 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   .tabpane{ display:none; }
   .tabpane.active{ display:block; }
 
-  /* TD PIN gate */
   #tdGate {
     position: fixed; inset: 0; z-index: 99999;
     display: none;
@@ -93,7 +93,6 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
   .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
 
-  /* Tables */
   table{ width:100%; border-collapse: collapse; }
   th, td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align: top; }
   th{ position:sticky; top:0; background:#141415; z-index:2; text-align:left; font-size: 12px; color: rgba(255,255,255,.75); letter-spacing:.3px; text-transform: uppercase; }
@@ -103,7 +102,6 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   .ok{ color: var(--ok); font-weight: 900; }
   .bad{ color: var(--bad); font-weight: 900; }
 
-  /* Bracket Viewer */
   .viewer{
     overflow:auto;
     border-radius:14px;
@@ -191,11 +189,18 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   }
   .safeOn{ color:#ffd54f; font-weight:900; }
   .safeOff{ color:#3ddc84; font-weight:900; }
+
+  .archiveItem{
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;
+    padding:12px;
+    background:rgba(255,255,255,.03);
+    margin-bottom:10px;
+  }
 </style>
 </head>
 
 <body>
-<!-- TD PIN gate -->
 <div id="tdGate">
   <div class="td-gate-inner">
     <div class="td-gate-title">Tournament Director - Locked</div>
@@ -207,15 +212,13 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   </div>
 </div>
 
-<!-- Header -->
 <div class="row" style="margin-top:6px;">
   <img id="logo" src="TDlogo.png" alt="Logo" style="height:160px; cursor: pointer;" draggable="false" unselectable="on" />
 </div>
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results</div>
+<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive</div>
 
-<!-- Safe Mode -->
 <div class="row" style="margin-top:10px;">
   <span class="safeBadge">
     <label class="chk" style="margin:0;">
@@ -227,18 +230,17 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish.</span>
 </div>
 
-<!-- Tabs -->
 <div class="tabs" id="tabs">
   <button class="tabbtn active" data-tab="tabMatch">Match Links</button>
   <button class="tabbtn" data-tab="tabAYPT">AYPT Signups</button>
   <button class="tabbtn" data-tab="tabBrackets">Brackets</button>
   <button class="tabbtn" data-tab="tabFull">Full Bracket Live</button>
   <button class="tabbtn" data-tab="tabResults">Results</button>
+  <button class="tabbtn" data-tab="tabArchive">Archive</button>
 </div>
 
 <!-- TAB: Match Links -->
 <div id="tabMatch" class="tabpane active">
-
   <details class="block">
     <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
     <div style="margin-top: 10px; line-height: 1.5;">
@@ -304,7 +306,7 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   </details>
 </div>
 
-<!-- TAB: AYPT Signups -->
+<!-- TAB: AYPT -->
 <div id="tabAYPT" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -330,7 +332,7 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
             <th>Admin Notes</th>
           </tr>
         </thead>
-        <tbody><!-- injected --></tbody>
+        <tbody></tbody>
       </table>
     </div>
   </div>
@@ -395,7 +397,7 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
   </div>
 </div>
 
-<!-- TAB: Full Bracket Live -->
+<!-- TAB: Full Live -->
 <div id="tabFull" class="tabpane">
   <div class="card">
     <div class="ctrlbar">
@@ -444,9 +446,30 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
             <th>Note</th>
           </tr>
         </thead>
-        <tbody><!-- injected --></tbody>
+        <tbody></tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- TAB: Archive -->
+<div id="tabArchive" class="tabpane">
+  <div class="card">
+    <div class="row-left">
+      <button class="btnTiny primary" id="btnArchiveSaveCurrent">Save Current Bracket to Archive</button>
+      <button class="btnTiny" id="btnArchiveExportAll">Export Full Archive JSON</button>
+      <button class="btnTiny" id="btnArchiveImport">Import Archive JSON</button>
+      <input id="archiveImportFile" type="file" accept="application/json" style="display:none">
+      <div class="muted" id="archiveStatus">-</div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="mini" style="margin-bottom:10px;">
+      Archive keeps local snapshots of brackets on this device/browser. You can reload old tournaments into the app any time.
+    </div>
+
+    <div id="archiveList"></div>
   </div>
 </div>
 
@@ -459,12 +482,12 @@ v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 const BRACKETS_ENDPOINT      = AYPT_SIGNUPS_ENDPOINT;
-
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
+const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
 
 /* =========================================================
-  SMALL UTILS
+  UTILS
 ========================================================= */
 const $ = (sel, root=document) => root.querySelector(sel);
 function esc(s){
@@ -501,14 +524,8 @@ function refreshSafeModeUI(){
   const pub = $('#btnPublishBracket');
   if(pub) pub.disabled = on;
 
-  const adv = $('#btnAdvanceSelected');
-  if(adv) adv.disabled = false; // advancing local is fine, publish is blocked
-
-  const paidToggles = document.querySelectorAll('.paid-toggle');
-  paidToggles.forEach(el => el.disabled = on);
-
-  const notes = document.querySelectorAll('.admin-note');
-  notes.forEach(el => el.disabled = on);
+  document.querySelectorAll('.paid-toggle').forEach(el => el.disabled = on);
+  document.querySelectorAll('.admin-note').forEach(el => el.disabled = on);
 }
 
 /* JSONP helper */
@@ -606,7 +623,6 @@ function generateMatchLink() {
   }, function (error) { if (error) console.error(error); });
 
   const readableMatch = `${p1Raw} vs ${p2Raw} - Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
-
   addToMatchLog(readableMatch, generatedUrl);
 
   const payload = {
@@ -768,7 +784,7 @@ function saveToAYPTMatchLog(payload){
 }
 
 /* =========================================================
-  AYPT SIGNUPS (list + optional update)
+  AYPT SIGNUPS
 ========================================================= */
 let AYPT_ROWS = [];
 
@@ -900,7 +916,6 @@ function loadBracketState(){
   }
 }
 
-/* Tournament Id helpers */
 function defaultTournamentId(){
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -919,9 +934,6 @@ function setTournamentId(v){
   localStorage.setItem("TD_TOURNAMENT_ID", v || "");
 }
 
-/* =========================================================
-  MATCH START / RESET HELPERS (for correction rules)
-========================================================= */
 function hasMatchStarted(m){
   if(!m) return false;
   const s1 = String(m.s1 || "").trim();
@@ -937,7 +949,6 @@ function clearMatchResult(m){
   m.loser = "";
 }
 
-/* Cloud bracket save/load (Brackets sheet) */
 async function cloudSaveBracket(state){
   if(isSafeMode()){
     $('#bracketStatus').textContent = "Safe Mode: publish blocked.";
@@ -968,7 +979,6 @@ async function cloudLoadBracket(){
   return state;
 }
 
-/* Debounced publish so score typing does not spam */
 let publishTimer = null;
 function schedulePublish(){
   if(isSafeMode()) return;
@@ -983,7 +993,6 @@ function schedulePublish(){
   }, 700);
 }
 
-/* Bracket generation helpers */
 function nextPow2(n){
   let p=1; while(p<n) p*=2; return p;
 }
@@ -1071,15 +1080,11 @@ function newBracketFromEntrants(){
   schedulePublish();
 }
 
-/* =========================================================
-  PROPAGATION (UPDATED) - Losers rollback fix + feed map
-========================================================= */
 function propagateWinners(){
   if(!BRACKET_STATE) return;
 
   BRACKET_STATE.feeds = {};
 
-  // Reset unstarted Losers matches so corrections can "rock back"
   (BRACKET_STATE.losersRounds || []).forEach(round => {
     round.forEach(m => {
       if(!hasMatchStarted(m)){
@@ -1093,14 +1098,12 @@ function propagateWinners(){
     });
   });
 
-  // Reset GF p2 before reassigning loser champ (only if GF1 not started)
   if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
     BRACKET_STATE.grandFinal[0].p2 = "TBD";
   }
 
   const WR = BRACKET_STATE.winnersRounds;
 
-  // Winners feed forward
   for(let r=0;r<WR.length-1;r++){
     const round = WR[r];
     const next = WR[r+1];
@@ -1112,7 +1115,6 @@ function propagateWinners(){
       const winnerName = m.winner ? (m.winner==="p1"?m.p1:m.p2) : "TBD";
       if(target) target[slot] = winnerName || "TBD";
 
-      // Record dependency: W|<id>|winner -> next match slot
       if(target){
         BRACKET_STATE.feeds[`W|${m.id}|p1`] = { lane:"W", id: target.id, which: slot };
         BRACKET_STATE.feeds[`W|${m.id}|p2`] = { lane:"W", id: target.id, which: slot };
@@ -1120,14 +1122,12 @@ function propagateWinners(){
     }
   }
 
-  // Winners champ to GF p1
   const lastW = WR[WR.length-1][0];
   if(lastW){
     const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
     BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
   }
 
-  // Collect losers from winners results
   const losers = [];
   WR.forEach((round)=>{
     round.forEach((m)=>{
@@ -1138,7 +1138,6 @@ function propagateWinners(){
     });
   });
 
-  // Seed losers into empty TBD slots (only fills because we reset unstarted matches above)
   const LR = BRACKET_STATE.losersRounds;
   let idx=0;
   for(let r=0;r<LR.length;r++){
@@ -1149,7 +1148,6 @@ function propagateWinners(){
     }
   }
 
-  // Losers champ to GF p2 (only if GF1 not started)
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
   const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
@@ -1210,7 +1208,6 @@ function findMatch(lane,id){
   return null;
 }
 
-/* Downstream-start check: blocks clearing if any later match containing this fed winner has started */
 function canClearWinner(lane, id, which){
   const m = findMatch(lane,id);
   if(!m) return false;
@@ -1218,7 +1215,6 @@ function canClearWinner(lane, id, which){
   const winnerName = (which==="p1" ? m.p1 : m.p2);
   if(!winnerName || winnerName==="TBD" || winnerName==="BYE") return false;
 
-  // If we have a known direct feed (W bracket), check the immediate target match first
   const feedKey = `${lane}|${id}|${which}`;
   const feed = (BRACKET_STATE && BRACKET_STATE.feeds) ? BRACKET_STATE.feeds[feedKey] : null;
   if(feed){
@@ -1226,7 +1222,6 @@ function canClearWinner(lane, id, which){
     if(t && hasMatchStarted(t)) return false;
   }
 
-  // Conservative scan: if any match (other than current) that includes this name has started, block clearing
   const all = listAllMatches();
   for(const item of all){
     const mm = item.m;
@@ -1251,7 +1246,6 @@ function advanceWinner(){
   const w = $('#selWinner').value;
   if(!w) return alert("Pick winner.");
 
-  // If already set to same winner, do nothing
   if(m.winner === w){
     msg.innerHTML = `<span class="muted">No change - already set.</span>`;
     return;
@@ -1274,6 +1268,166 @@ function advanceWinner(){
   schedulePublish();
 }
 
+/* =========================================================
+  ARCHIVE
+========================================================= */
+function loadArchive(){
+  try{
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{
+    return [];
+  }
+}
+function saveArchive(arr){
+  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arr));
+}
+function renderArchive(){
+  const list = $('#archiveList');
+  const status = $('#archiveStatus');
+  const items = loadArchive().sort((a,b)=> new Date(b.savedAt) - new Date(a.savedAt));
+
+  list.innerHTML = '';
+  status.textContent = `${items.length} archived tournament${items.length===1?'':'s'} stored locally`;
+
+  if(!items.length){
+    list.innerHTML = `<div class="muted">No archived tournaments yet.</div>`;
+    return;
+  }
+
+  items.forEach(item=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'archiveItem';
+    const entrants = item.state?.entrants?.length || 0;
+
+    wrap.innerHTML = `
+      <div class="row-left" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:900;font-size:1.05em;">${esc(item.title || item.tournamentId || 'Untitled Tournament')}</div>
+          <div class="mini">Tournament ID: ${esc(item.tournamentId || '')}</div>
+          <div class="mini">Saved: ${esc(fmtLocal(item.savedAt))}</div>
+          <div class="mini">Entrants: ${esc(entrants)}</div>
+        </div>
+        <div class="row-left">
+          <button class="btnTiny primary" data-arch-load="${esc(item.id)}">Load</button>
+          <button class="btnTiny" data-arch-export="${esc(item.id)}">Export JSON</button>
+          <button class="btnTiny danger" data-arch-delete="${esc(item.id)}">Delete</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(wrap);
+  });
+}
+function saveCurrentBracketToArchive(){
+  if(!BRACKET_STATE){
+    alert("No current bracket to archive.");
+    return;
+  }
+  const archive = loadArchive();
+  const id = `arch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const tournamentId = getTournamentId();
+  const title = tournamentId || `Tournament ${new Date().toLocaleDateString()}`;
+
+  archive.push({
+    id,
+    title,
+    tournamentId,
+    savedAt: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(BRACKET_STATE))
+  });
+
+  saveArchive(archive);
+  renderArchive();
+  $('#archiveStatus').textContent = `Saved current bracket to archive: ${title}`;
+}
+function loadArchiveItem(id){
+  const archive = loadArchive();
+  const item = archive.find(x => x.id === id);
+  if(!item) return alert("Archive item not found.");
+
+  BRACKET_STATE = JSON.parse(JSON.stringify(item.state));
+  saveBracketState();
+  setTournamentId(item.tournamentId || defaultTournamentId());
+  propagateWinners();
+  renderBracket();
+  buildMatchPicker();
+  renderResults();
+  $('#bracketStatus').textContent = `Loaded archived bracket: ${item.title}`;
+  setTab('tabBrackets');
+}
+function deleteArchiveItem(id){
+  const archive = loadArchive();
+  const next = archive.filter(x => x.id !== id);
+  saveArchive(next);
+  renderArchive();
+}
+function exportArchiveItem(id){
+  const archive = loadArchive();
+  const item = archive.find(x => x.id === id);
+  if(!item) return alert("Archive item not found.");
+  const blob = new Blob([JSON.stringify(item, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(item.tournamentId || "archive").replace(/[^a-z0-9_-]/gi,'_')}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function exportFullArchive(){
+  const archive = loadArchive();
+  const blob = new Blob([JSON.stringify(archive, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `TD_Archive_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importArchiveFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      let incoming = [];
+
+      if(Array.isArray(parsed)){
+        incoming = parsed;
+      }else if(parsed && parsed.id && parsed.state){
+        incoming = [parsed];
+      }else{
+        throw new Error("Invalid archive JSON");
+      }
+
+      const current = loadArchive();
+      const merged = [...current];
+
+      incoming.forEach(item=>{
+        const clone = JSON.parse(JSON.stringify(item));
+        if(!clone.id) clone.id = `arch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+        if(!clone.savedAt) clone.savedAt = new Date().toISOString();
+        if(!clone.title) clone.title = clone.tournamentId || "Imported Tournament";
+        if(!clone.state || !clone.state.winnersRounds) return;
+        merged.push(clone);
+      });
+
+      saveArchive(merged);
+      renderArchive();
+      $('#archiveStatus').textContent = `Imported ${incoming.length} archive item${incoming.length===1?'':'s'}.`;
+    }catch(e){
+      alert("Archive import failed: " + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* =========================================================
+  RESET / RENDER
+========================================================= */
 function resetBracket(){
   if(!confirm("Reset bracket state?")) return;
   localStorage.removeItem(STATE_KEY);
@@ -1285,9 +1439,6 @@ function resetBracket(){
   $('#resultsStatus').textContent = "-";
 }
 
-/* =========================================================
-  BRACKET RENDER
-========================================================= */
 function renderMatchCard(match, lane, editable=false){
   const card = document.createElement("div");
   card.className = "match";
@@ -1314,10 +1465,7 @@ function renderSlot(match, lane, which, editable){
   const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
   const id = match.id || "";
 
-  const canEdit =
-    editable &&
-    name !== "TBD" &&
-    name !== "BYE";
+  const canEdit = editable && name !== "TBD" && name !== "BYE";
 
   slot.innerHTML = `
     <div>
@@ -1390,13 +1538,37 @@ function renderBracket(){
 }
 
 /* =========================================================
-  INLINE SCORE ENTRY + CLICK WINNER (UPDATED RULES)
+  CLICK WINNER + SCORE EDITING
 ========================================================= */
+function canClearWinner(lane, id, which){
+  const m = findMatch(lane,id);
+  if(!m) return false;
+
+  const winnerName = (which==="p1" ? m.p1 : m.p2);
+  if(!winnerName || winnerName==="TBD" || winnerName==="BYE") return false;
+
+  const feedKey = `${lane}|${id}|${which}`;
+  const feed = (BRACKET_STATE && BRACKET_STATE.feeds) ? BRACKET_STATE.feeds[feedKey] : null;
+  if(feed){
+    const t = findMatch(feed.lane, feed.id);
+    if(t && hasMatchStarted(t)) return false;
+  }
+
+  const all = listAllMatches();
+  for(const item of all){
+    const mm = item.m;
+    if(mm === m) continue;
+    if(mm.p1 === winnerName || mm.p2 === winnerName){
+      if(hasMatchStarted(mm)) return false;
+    }
+  }
+  return true;
+}
+
 function wireBracketChartEditing(){
   const root = document.getElementById("bracketRoot");
   if(!root) return;
 
-  // Save score edits
   root.addEventListener("input", (e)=>{
     const inp = e.target.closest(".scoreInput");
     if(!inp || !BRACKET_STATE) return;
@@ -1417,11 +1589,9 @@ function wireBracketChartEditing(){
     schedulePublish();
   });
 
-  // Click row to set winner (Shift-click clears if downstream not started)
   root.addEventListener("click", (e)=>{
     const slot = e.target.closest('.slot[data-action="pickWinner"]');
     if(!slot || !BRACKET_STATE) return;
-
     if(e.target.closest(".scoreInput")) return;
 
     const lane = slot.getAttribute("data-lane");
@@ -1430,12 +1600,8 @@ function wireBracketChartEditing(){
     const m = findMatch(lane, id);
     if(!m) return;
 
-    // Shift-click attempts to clear
     if(e.shiftKey){
-      if(!m.winner){
-        return; // nothing to clear
-      }
-      // only allow clearing if downstream not started
+      if(!m.winner) return;
       const currentWinnerWhich = m.winner;
       if(!canClearWinner(lane, id, currentWinnerWhich)){
         $('#bracketStatus').textContent = "Cannot clear - downstream match already started.";
@@ -1452,13 +1618,10 @@ function wireBracketChartEditing(){
       return;
     }
 
-    // Normal click: set winner rules
-    // - If clicked same winner again: do nothing
     if(m.winner === which){
       return;
     }
 
-    // - If match already has a winner and you click the other player: flip winner (allowed)
     m.winner = which;
     m.loser = (which === "p1") ? "p2" : "p1";
 
@@ -1471,7 +1634,7 @@ function wireBracketChartEditing(){
 }
 
 /* =========================================================
-  FULL BRACKET LIVE (cloud pull + auto refresh + zoom)
+  FULL BRACKET LIVE
 ========================================================= */
 let fullZoom = 1;
 let fullTimer = null;
@@ -1521,7 +1684,6 @@ async function renderFullBracket(){
     }
 
     const state = JSON.parse(data.row.bracketJson);
-
     const saved = BRACKET_STATE;
     BRACKET_STATE = state;
 
@@ -1575,7 +1737,7 @@ function stopFullAuto(){
 }
 
 /* =========================================================
-  RESULTS (placements + export)
+  RESULTS
 ========================================================= */
 let RESULTS = [];
 
@@ -1694,7 +1856,7 @@ function exportResultsJSON(){
 }
 
 /* =========================================================
-  EXPORT/IMPORT BRACKET JSON
+  BRACKET EXPORT / IMPORT
 ========================================================= */
 function exportBracketJSON(){
   const state = loadBracketState();
@@ -1719,7 +1881,6 @@ function importBracketJSONFile(file){
       renderBracket();
       buildMatchPicker();
       $('#bracketStatus').textContent = "Imported bracket JSON.";
-
       schedulePublish();
     }catch(e){
       alert("Import failed: " + e.message);
@@ -1729,7 +1890,7 @@ function importBracketJSONFile(file){
 }
 
 /* =========================================================
-  LOGO upload + storage
+  LOGO
 ========================================================= */
 const logo = document.getElementById('logo');
 const uploader = document.getElementById('logoUploader');
@@ -1757,7 +1918,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
 
 /* =========================================================
-  TD PIN gate logic
+  TD PIN
 ========================================================= */
 (function initTDGate(){
   const PIN = '2580';
@@ -1784,12 +1945,6 @@ function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo
     }
   };
 
-  window.lockTD = function lockTD(){
-    sessionStorage.removeItem('TD_UNLOCK');
-    showGate(true);
-    setTimeout(()=> pinEl && pinEl.focus(), 50);
-  };
-
   if (already || urlCode === PIN) {
     showGate(false);
   } else {
@@ -1803,7 +1958,7 @@ function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo
 })();
 
 /* =========================================================
-  IP storage & curl builder
+  TABLE IPs / CURL
 ========================================================= */
 const LS_KEY_IPS = "AH_TD_TABLE_IPS";
 const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
@@ -1893,7 +2048,7 @@ function copyCurlCommand() {
 }
 
 /* =========================================================
-  SW registration
+  SW
 ========================================================= */
 const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
 if ('serviceWorker' in navigator && !SW_OFF) {
@@ -1905,10 +2060,9 @@ if ('serviceWorker' in navigator && !SW_OFF) {
 }
 
 /* =========================================================
-  INIT / WIRE BUTTONS
+  INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async ()=>{
-  // Safe Mode default ON unless explicitly turned off before
   if(localStorage.getItem(LS_SAFE_MODE) === null){
     localStorage.setItem(LS_SAFE_MODE, "1");
   }
@@ -1921,16 +2075,13 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   renderMatchLog();
   flushCloudQueue();
 
-  // TournamentId restore
   setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || defaultTournamentId());
   $('#tournamentId').addEventListener("change", ()=> setTournamentId(getTournamentId()));
 
-  // AYPT
   wireAYPTTable();
   $('#btnAYPTRefresh').addEventListener("click", loadAYPT);
   $('#btnUseAYPTToSeed').addEventListener("click", useAYPTToSeed);
 
-  // Brackets
   $('#btnNewBracket').addEventListener("click", newBracketFromEntrants);
   $('#btnResetBracket').addEventListener("click", resetBracket);
   $('#btnAdvanceSelected').addEventListener("click", advanceWinner);
@@ -1938,7 +2089,6 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
   $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
 
-  // Publish/load cloud
   $('#btnPublishBracket').addEventListener("click", async ()=>{
     if(isSafeMode()) return alert("Safe Mode is ON - publish is blocked.");
     if(!BRACKET_STATE) return alert("No bracket to publish.");
@@ -1950,42 +2100,54 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     catch(e){ alert("Load failed: " + (e.message || e)); }
   });
 
-  // Full Live
   $('#btnFullRefresh').addEventListener("click", renderFullBracket);
   $('#btnFullZoomIn').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)+10));
   $('#btnFullZoomOut').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)-10));
   $('#rngFullZoom').addEventListener("input", ()=> setFullZoomPercent(parseInt($('#rngFullZoom').value,10) || 100));
   $('#btnFullFit').addEventListener("click", fullFit);
 
-  // Results
   $('#btnBuildResults').addEventListener("click", renderResults);
   $('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
   $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
 
-  // Curl button
+  $('#btnArchiveSaveCurrent').addEventListener("click", saveCurrentBracketToArchive);
+  $('#btnArchiveExportAll').addEventListener("click", exportFullArchive);
+  $('#btnArchiveImport').addEventListener("click", ()=> $('#archiveImportFile').click());
+  $('#archiveImportFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importArchiveFile(e.target.files[0]); });
+
+  $('#archiveList').addEventListener('click', (e)=>{
+    const loadId = e.target.getAttribute('data-arch-load');
+    const delId = e.target.getAttribute('data-arch-delete');
+    const expId = e.target.getAttribute('data-arch-export');
+
+    if(loadId) return loadArchiveItem(loadId);
+    if(expId) return exportArchiveItem(expId);
+    if(delId){
+      if(confirm("Delete this archived tournament?")){
+        deleteArchiveItem(delId);
+      }
+    }
+  });
+
   const curlBtn = document.getElementById("copyCurlBtn");
   if (curlBtn) curlBtn.addEventListener("click", copyCurlCommand);
 
-  // IP editor
   renderIpEditor();
 
-  // Load bracket if present locally
   BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
-    propagateWinners(); // ensures losers can be re-seeded cleanly on load
+    propagateWinners();
     renderBracket();
     buildMatchPicker();
   }
 
-  // Wire chart score entry + click winner
   wireBracketChartEditing();
+  renderArchive();
 
-  // Restore full zoom + start auto
   const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
   setFullZoomPercent(isFinite(z) ? z : 100);
   startFullAuto();
 
-  // Prime live view once (cloud)
   renderFullBracket();
 });
 </script>
