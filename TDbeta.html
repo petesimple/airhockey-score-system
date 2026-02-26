@@ -1,16 +1,12 @@
 <!-- =====================
-TD.html — Tournament Director (Integrated)
-v2.3.0
-Includes:
-- TD PIN gate
-- Match link + QR + local match log + AYPT match log post
-- AYPT signups viewer (and paid/admin note updates if your script supports them)
-- Brackets builder (local storage)
-- Brackets cloud toggle (Safe Mode) to prevent accidental timestamp spam
-- Match correction clicks:
-  - Click once advances winner once
-  - Click same winner again clears only if downstream match has not started
-  - Shift click forces clear
+TDbeta.html - Tournament Director (Integrated)
+v2.3 - Match correction rules + Losers rollback fix + TD Safe Mode toggle
+- Brackets tab: click a player row to set winner (only changes once)
+  - Tap same winner again = no-op
+  - Tap the *other* player to flip winner = allowed
+  - Shift-click winner clears ONLY if downstream matches that depend on it have not started
+- Losers bracket now "rocks back" on corrections: unstarted Losers matches get reset to TBD and re-seeded each propagate
+- TD Safe Mode toggle (default ON) blocks ALL sheet writes (match log POST, AYPT updates, bracket publish)
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -35,329 +31,175 @@ Includes:
     --bad:#ff5a5a;
     --teamA:#d32f2f;
     --teamB:#1976d2;
-    --radius:14px;
+    --radius:12px;
   }
-  body{
-    font-family: Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding: 16px;
-    text-align: center;
-  }
-  input, select, button, textarea{
-    padding: 10px;
-    margin: 10px;
-    font-size: 1em;
-    border-radius: 10px;
-    border: none;
-  }
-  input, textarea{
-    background:#0f0f10;
-    color:#fff;
-    border:1px solid #333;
-  }
-  input{ width: 180px; }
-  textarea{ width:100%; max-width:760px; }
-  button{
-    background: var(--accent);
-    color: #000;
-    cursor: pointer;
-    font-weight: 900;
-  }
-  button.secondary{ background:#333; color:#0f0; font-weight:900; }
-  button.danger{ background:#333; color:#f66; font-weight:900; border:1px solid rgba(255,255,255,.12); }
-  button:disabled{ opacity:.55; cursor:not-allowed; }
-  a{ color:#00eaff; }
-  .muted{ color:var(--muted); font-size:.92em; }
-  .card{
-    max-width: 1020px;
-    margin: 14px auto;
-    background: var(--panel);
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: var(--radius);
-    padding: 14px;
-    text-align:left;
-  }
-  .row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:center;
-  }
-  .row-left{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:flex-start;
-  }
+  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); padding: 16px; text-align: center; }
+  input, select, button, textarea { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
+  input, textarea { background:#0f0f10; color:#fff; border:1px solid #333; }
+  input { width: 180px; }
+  textarea{ width:100%; max-width:700px; }
+  button { background: var(--accent); color: #000; cursor: pointer; font-weight: 800; }
+  button.secondary{ background:#333; color:#0f0; font-weight:700; }
+  button.danger{ background:#444; color:#f66; font-weight:800; }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+  #result, #qrcode { margin-top: 20px; }
+  a { color: #00eaff; }
+  #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
+  #copyBtn.copied { background: #0f0; color: #000; }
+  .muted { color:var(--muted); font-size:0.9em }
+  details.block { margin: 20px auto; max-width: 900px; background: var(--panel2); color: var(--text); padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
+  summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff; }
+  .card{ max-width: 980px; margin: 14px auto; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align:left; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; }
+  .row-left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
+  .pill{ padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); font-size:12px; color:rgba(255,255,255,.75); }
   .spacer{ height: 10px; }
 
-  details.block{
-    margin: 16px auto;
-    max-width: 1020px;
-    background: var(--panel2);
-    color: var(--text);
-    padding: 14px;
-    border-radius: var(--radius);
-    border: 1px solid rgba(255,255,255,.12);
-    text-align: left;
-  }
-  summary.clicky{
-    cursor: pointer;
-    font-weight: 900;
-    font-size: 1.05em;
-    color: #00eaff;
-  }
-
-  .tabs{
-    max-width:1020px;
-    margin: 0 auto 10px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    justify-content:center;
-  }
+  /* Tabs */
+  .tabs{ max-width:980px; margin:0 auto 10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .tabbtn{
-    background:#1f1f1f;
-    color:#fff;
-    border:1px solid rgba(255,255,255,.14);
-    padding:10px 12px;
-    border-radius: 14px;
-    font-weight: 900;
-    cursor:pointer;
+    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
+    padding:10px 12px; border-radius: 12px; font-weight:900; cursor:pointer;
   }
   .tabbtn.active{
     background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000;
-    border:none;
+    color:#000; border:none;
   }
   .tabpane{ display:none; }
   .tabpane.active{ display:block; }
 
-  .pill{
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.05);
-    font-size: 12px;
-    color: rgba(255,255,255,.75);
-  }
-  .ok{ color: var(--ok); font-weight: 900; }
-  .bad{ color: var(--bad); font-weight: 900; }
-
-  table{ width:100%; border-collapse: collapse; }
-  th, td{
-    padding:10px;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    vertical-align: top;
-  }
-  th{
-    position:sticky;
-    top:0;
-    background:#141415;
-    z-index:2;
-    text-align:left;
-    font-size: 12px;
-    color: rgba(255,255,255,.75);
-    letter-spacing:.3px;
-    text-transform: uppercase;
-  }
-  tr:hover td{ background: rgba(255,255,255,.03); }
-
-  .viewer{
-    overflow:auto;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.18);
-    padding: 10px;
-  }
-  .zoomStage{
-    transform-origin: top left;
-    display:inline-block;
-  }
-  .bracket{
-    min-width: 920px;
-    display:flex;
-    gap: 22px;
-    padding: 10px 6px 6px;
-    align-items:flex-start;
-  }
-  .col{
-    display:flex;
-    flex-direction:column;
-    gap: 14px;
-    min-width: 270px;
-  }
-  .col-title{
-    font-size: 12px;
-    color: rgba(255,255,255,.7);
-    letter-spacing: .4px;
-    text-transform: uppercase;
-    margin-left: 6px;
-  }
-  .match{
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 14px;
-    padding: 10px;
-  }
-  .match-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-    color: rgba(255,255,255,.75);
-    font-size: 12px;
-  }
-  .match-head .tag{
-    padding:4px 8px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.05);
-    font-weight: 900;
-    color:#fff;
-    font-size: 11px;
-    letter-spacing:.2px;
-  }
-  .slot{
-    display:grid;
-    grid-template-columns: 1fr 50px;
-    gap: 10px;
-    align-items:center;
-    margin-bottom: 8px;
-    padding: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.20);
-    user-select:none;
-  }
-  .slot:last-child{ margin-bottom:0; }
-  .name{
-    font-weight: 900;
-    font-size: 13px;
-    line-height: 1.1;
-  }
-  .seed{
-    font-size: 11px;
-    color: rgba(255,255,255,.55);
-    margin-top: 3px;
-  }
-  .scoreInput{
-    width: 50px;
-    text-align:center;
-    padding: 10px 6px;
-    border-radius: 10px;
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.10);
-    color:#fff;
-    font-weight: 900;
-    outline: none;
-  }
-  .scoreInput:focus{
-    border-color: rgba(0,234,255,.75);
-    box-shadow: 0 0 0 2px rgba(0,234,255,.16);
-  }
-  .slot.win{
-    border-color: rgba(61,220,132,.60);
-    box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset;
-  }
-  .slot.lose{ opacity:.78; }
-
-  .btnTiny{
-    padding: 8px 10px;
-    margin: 0;
-    border-radius: 12px;
-    font-size: 12px;
-    background:#1f1f1f;
-    color:#fff;
-    border: 1px solid rgba(255,255,255,.14);
-    cursor:pointer;
-    font-weight: 900;
-  }
-  .btnTiny.primary{
-    background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000;
-    border:none;
-  }
-  .chk{
-    display:flex;
-    align-items:center;
-    gap: 8px;
-    font-size: 13px;
-    color: rgba(255,255,255,.85);
-    user-select:none;
-  }
-  .chk input{ transform: scale(1.12); }
-  .mini{ font-size: 12px; color: rgba(255,255,255,.72); }
-
-  .saved-dot{
-    display:inline-block;
-    width: 8px;
-    height: 8px;
-    margin-left: .4rem;
-    border-radius: 50%;
-    background: var(--ok);
-    opacity: 0;
-    transition: opacity .2s ease;
-  }
-  .saved-dot.show{ opacity: 1; }
-
-  /* TD Gate */
-  #tdGate{
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
+  /* TD PIN gate */
+  #tdGate {
+    position: fixed; inset: 0; z-index: 99999;
     display: none;
     background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
     color: #fff;
   }
-  .td-gate-inner{
-    max-width: 360px;
-    margin: 15vh auto 0;
-    text-align: center;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 14px;
-    padding: 22px;
+  .td-gate-inner {
+    max-width: 360px; margin: 15vh auto 0; text-align: center;
+    background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
     box-shadow: 0 12px 40px rgba(0,0,0,.5);
   }
-  .td-gate-title{ font-weight: 900; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
-  .td-gate-sub{ color:#bbb; font-size:.95em; margin-bottom: 12px; }
-  .td-pin{
-    width: 160px;
-    text-align: center;
-    letter-spacing: .2em;
-    padding: 10px;
-    font-size: 1.1em;
-    border-radius: 10px;
-    border: 1px solid #444;
-    background:#111;
+  .td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
+  .td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
+  .td-pin {
+    width: 160px; text-align: center; letter-spacing: .2em;
+    padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
+  }
+  .td-gate-btn {
+    margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
+    background:#00bcd4; color:#000; cursor: pointer; font-weight:900;
+  }
+  .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
+  .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
+
+  /* Tables */
+  table{ width:100%; border-collapse: collapse; }
+  th, td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align: top; }
+  th{ position:sticky; top:0; background:#141415; z-index:2; text-align:left; font-size: 12px; color: rgba(255,255,255,.75); letter-spacing:.3px; text-transform: uppercase; }
+  tr:hover td{ background: rgba(255,255,255,.03); }
+
+  .mini{ font-size: 12px; color: rgba(255,255,255,.7); }
+  .ok{ color: var(--ok); font-weight: 900; }
+  .bad{ color: var(--bad); font-weight: 900; }
+
+  /* Bracket Viewer */
+  .viewer{
+    overflow:auto;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.18);
+    padding:10px;
+  }
+  .zoomStage{ transform-origin: top left; display:inline-block; }
+  .bracket{ min-width:900px; display:flex; gap:22px; padding:10px 6px 6px; align-items:flex-start; }
+  .col{ display:flex; flex-direction:column; gap:14px; min-width:260px; }
+  .col-title{ font-size:12px; color:rgba(255,255,255,.7); letter-spacing:.4px; text-transform:uppercase; margin-left:6px; }
+  .match{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:10px;
+  }
+  .match-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-bottom:10px; color:rgba(255,255,255,.75); font-size:12px;
+  }
+  .match-head .tag{
+    padding:4px 8px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    font-weight:800; color:#fff; font-size:11px; letter-spacing:.2px;
+  }
+  .slot{
+    display:grid; grid-template-columns: 1fr 44px 44px; gap:8px; align-items:center;
+    margin-bottom:8px; padding:8px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.20);
+  }
+  .slot:last-child{ margin-bottom:0; }
+  .name{ font-weight:900; font-size:13px; line-height:1.1; }
+  .seed{ font-size:11px; color:rgba(255,255,255,.55); margin-top:2px; }
+  .scoreBox{
+    width:44px; text-align:center; padding:8px 6px; border-radius:10px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    color:#fff; font-weight:900;
+  }
+  .scoreInput{
+    width:44px;
+    text-align:center;
+    padding:8px 6px;
+    border-radius:10px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
     color:#fff;
+    font-weight:900;
+    outline:none;
   }
-  .td-gate-btn{
-    margin-top: 10px;
-    padding: 10px 14px;
-    font-size: 1em;
-    border-radius: 10px;
-    border: 1px solid #00bcd4;
-    background:#00bcd4;
-    color:#000;
-    cursor: pointer;
-    font-weight: 900;
+  .scoreInput:focus{
+    border-color: rgba(0,234,255,.7);
+    box-shadow: 0 0 0 2px rgba(0,234,255,.15);
   }
-  .td-gate-msg{ height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
-  .td-hint{ margin-top: 10px; font-size:.85em; color:#888; }
+
+  .slot.win{ border-color: rgba(61,220,132,.55); box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset; }
+  .slot.lose{ opacity:.78; }
+
+  .ctrlbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
+  .chk{ display:flex; align-items:center; gap:8px; font-size:13px; color:rgba(255,255,255,.85); user-select:none; }
+  .chk input{ transform: scale(1.15); }
+  input[type="range"]{ width:190px; }
+
+  .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:var(--ok); opacity:0; transition:opacity .2s ease; }
+  .saved-dot.show{ opacity:1; }
+
+  .btnTiny{
+    padding:6px 10px; margin:0; border-radius:10px; font-size:12px;
+    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
+    cursor:pointer; font-weight:900;
+  }
+  .btnTiny.primary{
+    background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
+    color:#000; border:none;
+  }
+
+  .safeBadge{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.25);
+    font-size:12px;
+  }
+  .safeOn{ color:#ffd54f; font-weight:900; }
+  .safeOff{ color:#3ddc84; font-weight:900; }
 </style>
 </head>
 
 <body>
+<!-- TD PIN gate -->
 <div id="tdGate">
   <div class="td-gate-inner">
-    <div class="td-gate-title">Tournament Director Locked</div>
-    <div class="td-gate-sub">Enter 4 digit code to continue</div>
+    <div class="td-gate-title">Tournament Director - Locked</div>
+    <div class="td-gate-sub">Enter 4-digit code to continue</div>
     <input id="tdPin" class="td-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autofocus />
     <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
     <div id="tdGateMsg" class="td-gate-msg"></div>
@@ -365,13 +207,27 @@ Includes:
   </div>
 </div>
 
+<!-- Header -->
 <div class="row" style="margin-top:6px;">
-  <img id="logo" src="TDlogo.png" alt="Logo" style="height:160px; cursor:pointer;" draggable="false" />
+  <img id="logo" src="TDlogo.png" alt="Logo" style="height:160px; cursor: pointer;" draggable="false" unselectable="on" />
 </div>
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-<div class="muted" style="margin-top:6px;">TD Integrated build</div>
+<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results</div>
 
+<!-- Safe Mode -->
+<div class="row" style="margin-top:10px;">
+  <span class="safeBadge">
+    <label class="chk" style="margin:0;">
+      <input type="checkbox" id="chkSafeMode">
+      TD Safe Mode
+    </label>
+    <span id="safeModeStatus" class="safeOn">NO SHEET WRITES</span>
+  </span>
+  <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish.</span>
+</div>
+
+<!-- Tabs -->
 <div class="tabs" id="tabs">
   <button class="tabbtn active" data-tab="tabMatch">Match Links</button>
   <button class="tabbtn" data-tab="tabAYPT">AYPT Signups</button>
@@ -380,17 +236,17 @@ Includes:
   <button class="tabbtn" data-tab="tabResults">Results</button>
 </div>
 
-<!-- ===================== MATCH LINKS ===================== -->
+<!-- TAB: Match Links -->
 <div id="tabMatch" class="tabpane active">
 
   <details class="block">
-    <summary class="clicky">How to Use This Page Quick TD Guide</summary>
-    <div style="margin-top:10px; line-height:1.55;">
-      <p><strong>1</strong> Enter Player 1 and Player 2</p>
-      <p><strong>2</strong> Optional table number and referee</p>
-      <p><strong>3</strong> Pick best of 3 5 or 7</p>
-      <p><strong>4</strong> Generate link to scoreboard plus QR and match sheet link</p>
-      <p><strong>5</strong> Match log saves locally and posts to AYPT match log</p>
+    <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
+    <div style="margin-top: 10px; line-height: 1.5;">
+      <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
+      <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
+      <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
+      <p><strong>5. Match Log.</strong> Saves locally and (if Safe Mode is OFF) posts to AYPT - Match Log.</p>
     </div>
   </details>
 
@@ -406,130 +262,126 @@ Includes:
         <option value="4">Best of 7</option>
       </select>
       <button onclick="generateMatchLink()">Generate Match Link</button>
-      <button id="copyCurlBtn" style="display:none;" class="secondary">Copy Curl</button>
+      <button id="copyCurlBtn" style="display:none;" class="secondary">Copy Curl Command</button>
     </div>
 
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top:10px; color:#0f0; text-decoration:underline;">Generate Match Sheet</a>
-    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Sync status</div>
+    <details class="block" style="max-width:900px;margin:14px auto">
+      <summary class="clicky">Table IPs (edit and save)</summary>
+      <div style="margin-top:10px">
+        <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
+        <div style="margin-top:10px" class="row-left">
+          <button id="addRowBtn" type="button">Add Table</button>
+          <button id="saveIPsBtn" type="button">Save IPs</button>
+          <button id="testIPsBtn" type="button">Test All</button>
+        </div>
+        <div id="ipMsg" class="muted" style="margin-top:8px"></div>
+      </div>
+    </details>
 
-    <div id="result" style="margin-top:10px;"></div>
+    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
+    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
+
+    <div id="result"></div>
     <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
-    <div style="margin-top:10px;">
-      <canvas id="qrcode"></canvas>
-    </div>
+    <canvas id="qrcode"></canvas>
   </div>
 
-  <details id="matchLog" class="block">
+  <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
     <summary class="clicky">Show Match Log</summary>
-    <input type="text" id="searchLog" placeholder="Search matches..." style="width:92%; padding:8px; font-size:1em; margin:10px 0; border-radius:14px;" oninput="renderMatchLog()">
-
-    <div id="paginationControls" class="row-left" style="margin:10px 0;">
+    <input type="text" id="searchLog" placeholder="Search matches..." style="width: 92%; padding: 8px; font-size: 1em; margin: 10px 0; border-radius: 10px;" oninput="renderMatchLog()">
+    <div id="paginationControls" style="margin: 10px 0;" class="row-left">
       <button onclick="prevPage()">Prev</button>
-      <span id="pageInfo" style="font-size:0.9em;"></span>
+      <span id="pageInfo" style="font-size: 0.9em;"></span>
       <button onclick="nextPage()">Next</button>
     </div>
-
-    <ul id="logList" style="margin-top:10px; text-align:left; padding-left:20px;"></ul>
-
-    <div class="row-left" style="margin-top:10px;">
+    <ul id="logList" style="margin-top: 10px; text-align: left; padding-left: 20px;"></ul>
+    <div class="row-left">
       <button onclick="clearMatchLog()" class="danger">Clear Log</button>
-      <button onclick="exportMatchLogCSV()" style="background:#0f0; color:#000;">Export CSV</button>
-      <button onclick="resetLogo()" style="background:#666; color:#fff;">Reset Logo</button>
+      <button onclick="exportMatchLogCSV()" style="background:#0f0;color:#000;">Export as CSV</button>
+      <button onclick="resetLogo()" style="background:#666;color:#fff;">Reset Logo</button>
       <button onclick="document.getElementById('logoUploader').click()">Upload Logo</button>
     </div>
   </details>
-
 </div>
 
-<!-- ===================== AYPT ===================== -->
+<!-- TAB: AYPT Signups -->
 <div id="tabAYPT" class="tabpane">
   <div class="card">
     <div class="row-left">
-      <div class="pill">Source AYPT sheet</div>
+      <div class="pill">Source: AYPT Sheet</div>
       <button class="btnTiny primary" id="btnAYPTRefresh">Refresh</button>
-      <button class="btnTiny" id="btnUseAYPTToSeed">Use AYPT list to seed bracket</button>
+      <button class="btnTiny" id="btnUseAYPTToSeed">Use AYPT List to Seed Bracket</button>
       <div class="muted" id="ayptStatus">-</div>
     </div>
 
     <div class="spacer"></div>
 
-    <div style="overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.10);">
+    <div style="overflow:auto; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
       <table id="ayptTable">
         <thead>
           <tr>
             <th>#</th>
-            <th>First</th>
-            <th>Last</th>
-            <th>Cell</th>
-            <th>Notes</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Cell Number</th>
+            <th>Player Notes</th>
             <th>Timestamp</th>
             <th>Paid</th>
             <th>Admin Notes</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody><!-- injected --></tbody>
       </table>
-    </div>
-
-    <div class="muted" style="margin-top:10px;">
-      Paid and Admin Notes updates only work if your Apps Script supports update=1
     </div>
   </div>
 </div>
 
-<!-- ===================== BRACKETS ===================== -->
+<!-- TAB: Brackets -->
 <div id="tabBrackets" class="tabpane">
   <div class="card">
     <div class="row-left">
-      <div class="pill">Bracket state localStorage</div>
+      <div class="pill">Storage: localStorage + Brackets Sheet</div>
 
       <input id="tournamentId" placeholder="Tournament ID" style="width:220px" />
 
-      <label class="chk" title="Safe Mode ON blocks all bracket cloud calls">
-        <input type="checkbox" id="chkSafeMode" checked>
-        Safe Mode
-      </label>
-
-      <button class="btnTiny primary" id="btnNewBracket">New bracket from entrants</button>
-      <button class="btnTiny" id="btnResetBracket">Reset bracket</button>
+      <button class="btnTiny primary" id="btnNewBracket">New Bracket from Entrants</button>
+      <button class="btnTiny" id="btnResetBracket">Reset Bracket</button>
 
       <button class="btnTiny primary" id="btnPublishBracket">Publish to TVs</button>
-      <button class="btnTiny" id="btnLoadBracketCloud">Load from cloud</button>
+      <button class="btnTiny" id="btnLoadBracketCloud">Load from Cloud</button>
 
-      <button class="btnTiny" id="btnExportBracketJSON">Export bracket JSON</button>
-      <button class="btnTiny" id="btnImportBracketJSON">Import bracket JSON</button>
+      <button class="btnTiny" id="btnExportBracketJSON">Export Bracket JSON</button>
+      <button class="btnTiny" id="btnImportBracketJSON">Import Bracket JSON</button>
+
       <input id="importBracketFile" type="file" accept="application/json" style="display:none">
-
-      <div class="muted" id="bracketStatus">Safe Mode is on so no bracket cloud calls will happen</div>
+      <div class="muted" id="bracketStatus">-</div>
     </div>
 
     <div class="spacer"></div>
 
     <div class="row-left" style="gap:12px;">
-      <div style="min-width:320px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants one per line</div>
+      <div style="min-width:280px;">
+        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click "Use AYPT List..." in AYPT tab</div>
         <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
       </div>
 
-      <div style="min-width:320px;">
+      <div style="min-width:260px;">
         <div class="mini" style="margin-bottom:6px;">Bracket options</div>
         <div class="row-left">
-          <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double elim</label>
-          <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle entrants</label>
+          <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
+          <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
         </div>
-        <div class="mini" style="margin-top:8px;">
-          Click a player name to set winner. Click same winner again to undo if the next match has not started.
-          Shift click forces clear.
-        </div>
+        <div class="mini">Tip - Double-elim is the default. BYEs auto-fill.</div>
+        <div class="mini" style="margin-top:6px;">Tip - click a player row in the chart to set winner. Shift-click clears (if downstream not started).</div>
       </div>
     </div>
 
     <div class="spacer"></div>
 
     <div class="row-left">
-      <button class="btnTiny primary" id="btnAdvanceSelected">Advance winner</button>
-      <select id="selMatch" style="min-width:420px;"></select>
-      <select id="selWinner" style="min-width:240px;"></select>
+      <button class="btnTiny primary" id="btnAdvanceSelected">Advance Winner</button>
+      <select id="selMatch" style="min-width:360px;"></select>
+      <select id="selWinner" style="min-width:220px;"></select>
       <span class="muted" id="advanceMsg"></span>
     </div>
 
@@ -537,23 +389,17 @@ Includes:
 
     <div class="viewer" id="bracketViewer">
       <div class="zoomStage" id="bracketZoomStage">
-        <div id="bracketRoot" class="muted">No bracket loaded yet</div>
+        <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===================== FULL BRACKET LIVE ===================== -->
+<!-- TAB: Full Bracket Live -->
 <div id="tabFull" class="tabpane">
   <div class="card">
-    <div class="row-left" style="gap:12px;">
-      <div class="pill">Live view</div>
-
-      <label class="chk">
-        <input type="checkbox" id="chkAutoFull" checked>
-        Auto refresh
-      </label>
-
+    <div class="ctrlbar">
+      <label class="chk"><input type="checkbox" id="chkAutoFull" checked> Auto-refresh (20s)</label>
       <button class="btnTiny primary" id="btnFullRefresh">Refresh now</button>
 
       <span class="mini">Zoom</span>
@@ -562,32 +408,32 @@ Includes:
       <button class="btnTiny" id="btnFullZoomIn">+</button>
       <button class="btnTiny primary" id="btnFullFit">Fit</button>
 
-      <span class="muted" id="fullLast">Last update never</span>
+      <span class="muted" id="fullLast">Last update: -</span>
     </div>
 
     <div class="spacer"></div>
 
     <div class="viewer" id="fullViewer">
       <div class="zoomStage" id="fullZoomStage">
-        <div id="fullRoot" class="muted">Live bracket view will use cloud only when Safe Mode is off</div>
+        <div id="fullRoot" class="muted">No bracket loaded yet.</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===================== RESULTS ===================== -->
+<!-- TAB: Results -->
 <div id="tabResults" class="tabpane">
   <div class="card">
     <div class="row-left">
-      <button class="btnTiny primary" id="btnBuildResults">Build results</button>
-      <button class="btnTiny" id="btnExportResultsCSV">Export results CSV</button>
-      <button class="btnTiny" id="btnExportResultsJSON">Export results JSON</button>
+      <button class="btnTiny primary" id="btnBuildResults">Build Results</button>
+      <button class="btnTiny" id="btnExportResultsCSV">Export Results CSV</button>
+      <button class="btnTiny" id="btnExportResultsJSON">Export Results JSON</button>
       <div class="muted" id="resultsStatus">-</div>
     </div>
 
     <div class="spacer"></div>
 
-    <div style="overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.10);">
+    <div style="overflow:auto; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
       <table id="resultsTable">
         <thead>
           <tr>
@@ -598,7 +444,7 @@ Includes:
             <th>Note</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody><!-- injected --></tbody>
       </table>
     </div>
   </div>
@@ -612,20 +458,15 @@ Includes:
 ========================================================= */
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
-
-/*
-Brackets endpoint must be a dedicated Apps Script for bracketGet and bracketSave.
-If you leave this blank, cloud features will be unavailable even when Safe Mode is off.
-*/
-const BRACKETS_ENDPOINT = ""; // set your dedicated brackets script URL here
+const BRACKETS_ENDPOINT      = AYPT_SIGNUPS_ENDPOINT;
 
 const STATE_KEY = "ahss_brackets_state";
+const LS_SAFE_MODE = "TD_SAFE_MODE";
 
 /* =========================================================
-  UTILS
+  SMALL UTILS
 ========================================================= */
 const $ = (sel, root=document) => root.querySelector(sel);
-
 function esc(s){
   return String(s ?? "")
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -640,7 +481,37 @@ function csvCell(v){
   if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
   return s;
 }
+function isSafeMode(){
+  return localStorage.getItem(LS_SAFE_MODE) !== "0";
+}
+function setSafeMode(on){
+  localStorage.setItem(LS_SAFE_MODE, on ? "1" : "0");
+  refreshSafeModeUI();
+}
+function refreshSafeModeUI(){
+  const chk = $('#chkSafeMode');
+  const lab = $('#safeModeStatus');
+  const on = isSafeMode();
+  if(chk) chk.checked = on;
+  if(lab){
+    lab.textContent = on ? "NO SHEET WRITES" : "WRITES ENABLED";
+    lab.classList.toggle("safeOn", on);
+    lab.classList.toggle("safeOff", !on);
+  }
+  const pub = $('#btnPublishBracket');
+  if(pub) pub.disabled = on;
 
+  const adv = $('#btnAdvanceSelected');
+  if(adv) adv.disabled = false; // advancing local is fine, publish is blocked
+
+  const paidToggles = document.querySelectorAll('.paid-toggle');
+  paidToggles.forEach(el => el.disabled = on);
+
+  const notes = document.querySelectorAll('.admin-note');
+  notes.forEach(el => el.disabled = on);
+}
+
+/* JSONP helper */
 function jsonp(url, params = {}, timeoutMs = 12000){
   return new Promise((resolve, reject) => {
     const cb = "TD_CB_" + Math.random().toString(36).slice(2);
@@ -649,7 +520,7 @@ function jsonp(url, params = {}, timeoutMs = 12000){
 
     const s = document.createElement("script");
     s.src = `${url}?${qs}`;
-    s.id = cb;
+    s.id  = cb;
 
     const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
     window[cb] = (data) => { cleanup(); resolve(data); };
@@ -662,12 +533,6 @@ function jsonp(url, params = {}, timeoutMs = 12000){
     }
     document.body.appendChild(s);
   });
-}
-
-function clampInt(v, min, max){
-  const n = parseInt(v, 10);
-  if(!isFinite(n)) return min;
-  return Math.max(min, Math.min(max, n));
 }
 
 /* =========================================================
@@ -685,78 +550,23 @@ document.addEventListener("click", (e)=>{
 });
 
 /* =========================================================
-  TD SAFE MODE TOGGLE (bracket cloud gate)
-========================================================= */
-function getSafeMode(){
-  const saved = localStorage.getItem("TD_SAFE_MODE");
-  if(saved === null) return true;
-  return saved === "1";
-}
-function setSafeMode(on){
-  localStorage.setItem("TD_SAFE_MODE", on ? "1" : "0");
-  const el = $("#chkSafeMode");
-  if(el) el.checked = !!on;
-  updateBracketCloudUi();
-}
-function bracketCloudAllowed(){
-  if(getSafeMode()) return false;
-  if(!BRACKETS_ENDPOINT) return false;
-
-  // hard guard: never allow using AYPT endpoint as brackets endpoint
-  if(BRACKETS_ENDPOINT === AYPT_SIGNUPS_ENDPOINT) return false;
-
-  return true;
-}
-function updateBracketCloudUi(){
-  const allowed = bracketCloudAllowed();
-  const status = $("#bracketStatus");
-  const btnPub = $("#btnPublishBracket");
-  const btnLoad = $("#btnLoadBracketCloud");
-
-  if(getSafeMode()){
-    status.textContent = "Safe Mode is on. Bracket cloud calls are blocked.";
-    btnPub.disabled = true;
-    btnLoad.disabled = true;
-    return;
-  }
-
-  if(!BRACKETS_ENDPOINT){
-    status.innerHTML = `<span class="bad">Safe Mode is off</span>. Brackets endpoint is blank, so cloud is unavailable.`;
-    btnPub.disabled = true;
-    btnLoad.disabled = true;
-    return;
-  }
-
-  if(BRACKETS_ENDPOINT === AYPT_SIGNUPS_ENDPOINT){
-    status.innerHTML = `<span class="bad">Blocked</span>. Brackets endpoint is pointing at AYPT. That can cause timestamp spam. Use a dedicated brackets script.`;
-    btnPub.disabled = true;
-    btnLoad.disabled = true;
-    return;
-  }
-
-  status.innerHTML = `<span class="ok">Safe Mode is off</span>. Bracket cloud is enabled.`;
-  btnPub.disabled = !BRACKET_STATE;
-  btnLoad.disabled = false;
-}
-
-/* =========================================================
   MATCH LINK / QR
 ========================================================= */
-let generatedUrl = "";
+let generatedUrl = '';
 let currentPage = 1;
 const pageSize = 25;
 
 function generateMatchLink() {
-  const p1Raw = $("#player1").value.trim();
-  const p2Raw = $("#player2").value.trim();
+  const p1Raw = $('#player1').value.trim();
+  const p2Raw = $('#player2').value.trim();
   const p1 = encodeURIComponent(p1Raw);
   const p2 = encodeURIComponent(p2Raw);
-  const match = $("#matchLength").value;
-  const table = $("#tableNumber").value.trim();
-  const refRaw = $("#refName").value.trim();
+  const match = $('#matchLength').value;
+  const table = $('#tableNumber').value.trim();
+  const refRaw = $('#refName').value.trim();
   const ref = encodeURIComponent(refRaw);
 
-  const baseUrl = window.location.origin + "/airhockey-score-system/";
+  const baseUrl = window.location.origin + '/airhockey-score-system/';
 
   const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
   const yyyymmdd = new Date().toISOString().slice(0,10);
@@ -764,63 +574,67 @@ function generateMatchLink() {
 
   generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
   if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
-  if (refRaw) generatedUrl += `&ref=${ref}`;
+  if (ref) generatedUrl += `&ref=${ref}`;
 
-  const matchSheetBase = "https://petesimple.github.io/AHMS/";
+  const matchSheetBase = 'https://petesimple.github.io/AHMS/';
   const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
-
-  const matchSheetLink = $("#matchSheetLink");
+  const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
-  matchSheetLink.style.display = "inline-block";
+  matchSheetLink.style.display = 'inline-block';
 
   const extraNote = `
-    ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ""}
-    ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ""}
+    ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
+    ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ''}
     <p><strong>Match ID:</strong> ${esc(matchId)}</p>
   `;
 
-  $("#result").innerHTML = `
-    <p><strong>Match Link</strong></p>
+  $('#result').innerHTML = `
+    <p><strong>Match Link:</strong></p>
     <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
     ${extraNote}
   `;
 
-  $("#copyBtn").style.display = "inline-block";
-  $("#copyBtn").classList.remove("copied");
-  $("#copyBtn").innerText = "Copy to Clipboard";
+  $('#copyBtn').style.display = 'inline-block';
+  const curlBtn = $('#copyCurlBtn');
+  if (curlBtn) curlBtn.style.display = 'inline-block';
+  $('#copyBtn').classList.remove('copied');
+  $('#copyBtn').innerText = 'Copy to Clipboard';
 
-  const curlBtn = $("#copyCurlBtn");
-  curlBtn.style.display = "inline-block";
-
-  QRCode.toCanvas($("#qrcode"), generatedUrl, {
+  QRCode.toCanvas($('#qrcode'), generatedUrl, {
     width: 220,
-    color: { dark: "#ffffff", light: "#111111" }
+    color: { dark: '#ffffff', light: '#111111' }
   }, function (error) { if (error) console.error(error); });
 
-  const readableMatch = `${p1Raw} vs ${p2Raw} - Best of ${match}${table ? ` @ Table ${table}` : ""}${refRaw ? ` [Ref: ${refRaw}]` : ""}`;
+  const readableMatch = `${p1Raw} vs ${p2Raw} - Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
+
   addToMatchLog(readableMatch, generatedUrl);
 
   const payload = {
     timestamp: new Date().toISOString(),
-    source: "TD",
+    source: 'TD',
     matchId,
     p1: p1Raw,
     p2: p2Raw,
     matchType: `Best of ${match}`,
-    table: table || "",
-    referee: refRaw || "",
+    table: table || '',
+    referee: refRaw || '',
     scoreboardUrl: generatedUrl,
     matchSheetUrl: matchSheetUrl
   };
-  saveToAYPTMatchLog(payload);
+
+  if(isSafeMode()){
+    showCloudStatus("Safe Mode: match log not posted.", true);
+  }else{
+    saveToAYPTMatchLog(payload);
+  }
 }
 
 function copyLink() {
   navigator.clipboard.writeText(generatedUrl).then(() => {
-    const btn = $("#copyBtn");
-    btn.classList.add("copied");
-    btn.innerText = "Copied!";
-    setTimeout(() => { btn.classList.remove("copied"); btn.innerText = "Copy to Clipboard"; }, 2000);
+    const btn = $('#copyBtn');
+    btn.classList.add('copied');
+    btn.innerText = 'Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
   });
 }
 
@@ -829,136 +643,139 @@ function copyLink() {
 ========================================================= */
 function addToMatchLog(text, url) {
   const now = new Date();
-  const logItem = { text, url, time: now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), date: now.toLocaleDateString() };
-  const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
+  const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   log.unshift(logItem);
-  localStorage.setItem("matchLog", JSON.stringify(log));
+  localStorage.setItem('matchLog', JSON.stringify(log));
   renderMatchLog();
 }
 
 function renderMatchLog() {
-  const searchQuery = ($("#searchLog")?.value || "").toLowerCase();
-  const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
+  const searchQuery = $('#searchLog')?.value.toLowerCase() || '';
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
   const totalPages = Math.ceil(filtered.length / pageSize);
   if (currentPage > totalPages) currentPage = totalPages || 1;
-
   const start = (currentPage - 1) * pageSize;
   const visible = filtered.slice(start, start + pageSize);
-  const logList = $("#logList");
-  logList.innerHTML = "";
-
+  const logList = $('#logList');
+  logList.innerHTML = '';
   visible.forEach(item => {
-    const li = document.createElement("li");
-    li.innerHTML = `<a href="${item.url}" target="_blank">${esc(item.text)}</a> <span class="muted">(${esc(item.date)}, ${esc(item.time)})</span>`;
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="${item.url}" target="_blank">${esc(item.text)}</a> <span style="color: #888; font-size: 0.85em;">(${esc(item.date)}, ${esc(item.time)})</span>`;
     logList.appendChild(li);
   });
-
-  const pageInfo = $("#pageInfo");
+  const pageInfo = $('#pageInfo');
   if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
 }
 
 function clearMatchLog() {
-  if (confirm("Are you sure you want to clear the match log?")) {
-    localStorage.removeItem("matchLog");
+  if (confirm('Are you sure you want to clear the match log?')) {
+    localStorage.removeItem('matchLog');
     renderMatchLog();
   }
 }
 
 function exportMatchLogCSV() {
-  const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
-  if (log.length === 0) { alert("No matches to export."); return; }
-  const headers = ["Date","Time","Match Info","Link"];
+  const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+  if (log.length === 0) { alert('No matches to export.'); return; }
+  const headers = ['Date', 'Time', 'Match Info', 'Link'];
   const rows = log.map(item => [item.date, item.time, item.text, item.url]);
-  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv" });
+  const csvContent = [headers, ...rows].map(e => e.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  const link = document.createElement('a');
   link.href = url;
-  link.download = `MatchLog_${new Date().toISOString().split("T")[0]}.csv`;
+  link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
-function nextPage(){ currentPage++; renderMatchLog(); }
-function prevPage(){ if(currentPage>1){ currentPage--; renderMatchLog(); } }
+function nextPage() { currentPage++; renderMatchLog(); }
+function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
 
 /* =========================================================
-  CLOUD SYNC AYPT MATCH LOG
+  CLOUD SYNC - AYPT MATCH LOG
 ========================================================= */
-const QUEUE_KEY = "matchLogCloudQueue";
+const QUEUE_KEY = 'matchLogCloudQueue';
 
 function showCloudStatus(msg, temp=false) {
-  const el = $("#cloudSyncStatus");
+  const el = $('#cloudSyncStatus');
   if (!el) return;
   el.textContent = msg;
-  el.style.display = "block";
-  if (temp) setTimeout(() => { el.style.display = "none"; }, 2500);
+  el.style.display = 'block';
+  if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
 }
 
 function enqueue(payload) {
-  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   q.push(payload);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-  showCloudStatus(`Saved offline (${q.length} pending)`, true);
+  showCloudStatus(`Saved offline (${q.length} pending)...`, true);
 }
 
 async function flushCloudQueue() {
-  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+  if(isSafeMode()) return;
+  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   if (!q.length) return;
-  showCloudStatus(`Syncing ${q.length} pending`);
+  showCloudStatus(`Syncing ${q.length} pending...`);
   const remaining = [];
   for (const item of q) {
     const ok = await postToAYPTMatchLog(item);
     if (!ok) remaining.push(item);
   }
   localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-  showCloudStatus(remaining.length ? `${remaining.length} still pending` : "All synced", true);
+  showCloudStatus(remaining.length ? `${remaining.length} still pending...` : 'All synced!', true);
 }
 
 function postToAYPTMatchLog(payload) {
+  if(isSafeMode()) return Promise.resolve(true);
   try {
     const body = new URLSearchParams({
-      action: "appendMatchLog",
+      action: 'appendMatchLog',
       payload: JSON.stringify(payload)
     });
     return fetch(AYPT_MATCHLOG_ENDPOINT, {
-      method: "POST",
-      cache: "no-store",
+      method: 'POST',
+      cache: 'no-store',
       body
     }).then(async (resp) => {
       if (!resp.ok) {
-        await fetch(AYPT_MATCHLOG_ENDPOINT, { method: "POST", mode: "no-cors", body });
+        await fetch(AYPT_MATCHLOG_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
         return true;
       }
       const text = await resp.text();
       try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-    }).catch(() => false);
-  } catch {
+    }).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
+  } catch (e) {
+    console.warn('AYPT post failed, will queue:', e);
     return Promise.resolve(false);
   }
 }
 
 function saveToAYPTMatchLog(payload){
+  if(isSafeMode()){
+    showCloudStatus("Safe Mode: match log not posted.", true);
+    return Promise.resolve(true);
+  }
   return postToAYPTMatchLog(payload).then(ok => {
-    if(!ok) enqueue(payload);
-    else showCloudStatus("Saved to AYPT ✓", true);
+    if (!ok) enqueue(payload);
+    else showCloudStatus('Saved to AYPT ✓', true);
     return ok;
   });
 }
 
 /* =========================================================
-  AYPT SIGNUPS
+  AYPT SIGNUPS (list + optional update)
 ========================================================= */
 let AYPT_ROWS = [];
 
 async function loadAYPT(){
-  const statusEl = $("#ayptStatus");
-  const tbody = $("#ayptTable tbody");
-  statusEl.textContent = "Loading";
+  const statusEl = $('#ayptStatus');
+  const tbody = $('#ayptTable tbody');
+  statusEl.textContent = "Loading...";
   tbody.innerHTML = "";
 
   try{
@@ -970,8 +787,6 @@ async function loadAYPT(){
     rows.forEach((r, idx) => {
       const tr = document.createElement("tr");
       const paidChecked = r.paid ? "checked" : "";
-      const id = (r.id ?? idx);
-
       tr.innerHTML = `
         <td class="mini">${idx+1}</td>
         <td>${esc(r.firstName || "")}</td>
@@ -980,32 +795,37 @@ async function loadAYPT(){
         <td>${esc(r.notes || r.playerNotes || "")}</td>
         <td>${esc(fmtLocal(r.timestamp || r.time || ""))}</td>
         <td style="text-align:center">
-          <input type="checkbox" class="paid-toggle" data-id="${esc(id)}" ${paidChecked}>
+          <input type="checkbox" class="paid-toggle" data-id="${esc(r.id ?? idx)}" ${paidChecked}>
         </td>
         <td>
-          <textarea class="admin-note" data-id="${esc(id)}" rows="2" placeholder="Admin Notes">${esc(r.adminNotes || r.adminNote || "")}</textarea>
-          <span class="saved-dot" id="saved-${esc(id)}" title="Saved"></span>
+          <textarea class="admin-note" data-id="${esc(r.id ?? idx)}" rows="2" placeholder="Admin Notes">${esc(r.adminNotes || r.adminNote || "")}</textarea>
+          <span class="saved-dot" id="saved-${esc(r.id ?? idx)}" title="Saved"></span>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
     statusEl.textContent = `${rows.length} signups loaded`;
+    refreshSafeModeUI();
   }catch(e){
     console.warn(e);
-    statusEl.textContent = "Failed to load AYPT";
+    statusEl.textContent = "Failed to load AYPT.";
   }
 }
 
 function pulseSaved(id){
   const dot = document.getElementById(`saved-${id}`);
-  if(dot){
+  if (dot) {
     dot.classList.add("show");
     setTimeout(()=>dot.classList.remove("show"), 900);
   }
 }
 
 async function ayptUpdate(id, fields){
+  if(isSafeMode()){
+    pulseSaved(id);
+    return true;
+  }
   try{
     await jsonp(AYPT_SIGNUPS_ENDPOINT, Object.assign({ update:"1", id }, fields));
     pulseSaved(id);
@@ -1017,28 +837,34 @@ async function ayptUpdate(id, fields){
 }
 
 function wireAYPTTable(){
-  const tbody = $("#ayptTable tbody");
+  const tbody = $('#ayptTable tbody');
   if(!tbody) return;
 
   let noteTimer = null;
 
   tbody.addEventListener("change", async (e)=>{
     if(e.target.classList.contains("paid-toggle")){
+      if(isSafeMode()){
+        e.target.checked = !e.target.checked;
+        alert("Safe Mode is ON - Paid updates are disabled.");
+        return;
+      }
       const id = e.target.getAttribute("data-id");
       const paid = e.target.checked ? "1" : "0";
       const ok = await ayptUpdate(id, { paid });
-      if(!ok) alert("Paid update failed");
+      if(!ok) alert("Paid update failed (endpoint may not support update=1).");
     }
   });
 
   tbody.addEventListener("input", (e)=>{
     if(e.target.classList.contains("admin-note")){
+      if(isSafeMode()) return;
       const id = e.target.getAttribute("data-id");
       const v = e.target.value;
       clearTimeout(noteTimer);
       noteTimer = setTimeout(async ()=>{
         await ayptUpdate(id, { adminNote: v });
-      }, 450);
+      }, 400);
     }
   });
 }
@@ -1048,13 +874,13 @@ function useAYPTToSeed(){
     .map(r => `${(r.firstName||"").trim()} ${(r.lastName||"").trim()}`.trim())
     .filter(n => n && n.toLowerCase() !== "bye");
 
-  $("#entrantsBox").value = names.join("\n");
+  $('#entrantsBox').value = names.join("\n");
   setTab("tabBrackets");
-  $("#bracketStatus").textContent = `Loaded ${names.length} entrants from AYPT. Click New bracket from entrants.`;
+  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click "New Bracket..."`;
 }
 
 /* =========================================================
-  BRACKETS STATE
+  BRACKETS - LOCAL STATE
 ========================================================= */
 let BRACKET_STATE = null;
 
@@ -1074,6 +900,7 @@ function loadBracketState(){
   }
 }
 
+/* Tournament Id helpers */
 function defaultTournamentId(){
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -1082,15 +909,84 @@ function defaultTournamentId(){
   return `weekly${yyyy}${mm}${dd}`;
 }
 function getTournamentId(){
-  return ($("#tournamentId")?.value || "").trim() || defaultTournamentId();
+  const el = $('#tournamentId');
+  const v = (el?.value || "").trim();
+  return v || defaultTournamentId();
 }
 function setTournamentId(v){
-  const el = $("#tournamentId");
+  const el = $('#tournamentId');
   if(el) el.value = v || "";
   localStorage.setItem("TD_TOURNAMENT_ID", v || "");
 }
 
-function nextPow2(n){ let p=1; while(p<n) p*=2; return p; }
+/* =========================================================
+  MATCH START / RESET HELPERS (for correction rules)
+========================================================= */
+function hasMatchStarted(m){
+  if(!m) return false;
+  const s1 = String(m.s1 || "").trim();
+  const s2 = String(m.s2 || "").trim();
+  const w  = String(m.winner || "").trim();
+  return !!(s1 || s2 || w);
+}
+function clearMatchResult(m){
+  if(!m) return;
+  m.s1 = "";
+  m.s2 = "";
+  m.winner = "";
+  m.loser = "";
+}
+
+/* Cloud bracket save/load (Brackets sheet) */
+async function cloudSaveBracket(state){
+  if(isSafeMode()){
+    $('#bracketStatus').textContent = "Safe Mode: publish blocked.";
+    return { ok:true, safe:true };
+  }
+  const tid = getTournamentId();
+  const bracketJson = JSON.stringify(state);
+  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tournamentId: tid, bracketJson });
+  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud save failed");
+  $('#bracketStatus').textContent = `Published ✓ (${tid}) @ ${new Date().toLocaleTimeString()}`;
+  return data;
+}
+async function cloudLoadBracket(){
+  const tid = getTournamentId();
+  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud load failed");
+  if(!data.row || !data.row.bracketJson){
+    $('#bracketStatus').textContent = `No cloud bracket found for ${tid}.`;
+    return null;
+  }
+  const state = JSON.parse(data.row.bracketJson);
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  BRACKET_STATE = state;
+  renderBracket();
+  renderFullBracket();
+  buildMatchPicker();
+  $('#bracketStatus').textContent = `Loaded from cloud ✓ (${tid})`;
+  return state;
+}
+
+/* Debounced publish so score typing does not spam */
+let publishTimer = null;
+function schedulePublish(){
+  if(isSafeMode()) return;
+  clearTimeout(publishTimer);
+  publishTimer = setTimeout(async ()=>{
+    try{
+      if(BRACKET_STATE) await cloudSaveBracket(BRACKET_STATE);
+    }catch(e){
+      console.warn(e);
+      $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
+    }
+  }, 700);
+}
+
+/* Bracket generation helpers */
+function nextPow2(n){
+  let p=1; while(p<n) p*=2; return p;
+}
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -1103,11 +999,11 @@ function makeMatch(id,label,p1,p2){
 }
 
 function newBracketFromEntrants(){
-  const raw = ($("#entrantsBox").value || "").split("\n").map(s=>s.trim()).filter(Boolean);
+  const raw = ($('#entrantsBox').value || "").split("\n").map(s=>s.trim()).filter(Boolean);
   if(raw.length < 2) return alert("Need at least 2 entrants.");
 
   let entrants = raw.slice();
-  if($("#chkShuffle").checked) entrants = shuffle(entrants);
+  if($('#chkShuffle').checked) entrants = shuffle(entrants);
 
   const size = nextPow2(entrants.length);
   while(entrants.length < size) entrants.push("BYE");
@@ -1128,7 +1024,8 @@ function newBracketFromEntrants(){
     winnersRounds.push(round);
     roundSize = roundSize/2;
     r++;
-    if(roundSize <= 1) break;
+    if(roundSize === 0) break;
+    if(roundSize === 1) break;
   }
 
   const Lrounds = [];
@@ -1145,7 +1042,7 @@ function newBracketFromEntrants(){
 
   const grandFinal = [
     makeMatch("GF-1","Grand Final 1","TBD","TBD"),
-    makeMatch("GF-2","Grand Final 2 if needed","TBD","TBD")
+    makeMatch("GF-2","Grand Final 2 (if needed)","TBD","TBD")
   ];
 
   BRACKET_STATE = {
@@ -1155,11 +1052,10 @@ function newBracketFromEntrants(){
     winnersRounds,
     losersRounds: Lrounds,
     grandFinal,
-    notes: "TD bracket state",
-    feeds: {} // filled by propagateWinners
+    notes: "Simple DE skeleton. Advance winners using selector or click a row.",
+    feeds: {}
   };
 
-  // auto resolve BYEs in Winners R1
   BRACKET_STATE.winnersRounds[0].forEach((m)=>{
     if(m.p1 === "BYE" && m.p2 !== "BYE"){ m.winner="p2"; m.loser="p1"; }
     if(m.p2 === "BYE" && m.p1 !== "BYE"){ m.winner="p1"; m.loser="p2"; }
@@ -1170,28 +1066,41 @@ function newBracketFromEntrants(){
   saveBracketState();
   renderBracket();
   buildMatchPicker();
-  $("#bracketStatus").textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
-  updateBracketCloudUi();
+  $('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
+
+  schedulePublish();
 }
 
-function setFeed(fromLane, fromId, toLane, toId, slot){
-  const key = `${fromLane}|${fromId}`;
-  if(!BRACKET_STATE.feeds) BRACKET_STATE.feeds = {};
-  if(!BRACKET_STATE.feeds[key]) BRACKET_STATE.feeds[key] = [];
-  const arr = BRACKET_STATE.feeds[key];
-
-  const exists = arr.some(x => x.toLane===toLane && x.toId===toId && x.slot===slot);
-  if(!exists) arr.push({ toLane, toId, slot });
-}
-
+/* =========================================================
+  PROPAGATION (UPDATED) - Losers rollback fix + feed map
+========================================================= */
 function propagateWinners(){
   if(!BRACKET_STATE) return;
 
   BRACKET_STATE.feeds = {};
 
+  // Reset unstarted Losers matches so corrections can "rock back"
+  (BRACKET_STATE.losersRounds || []).forEach(round => {
+    round.forEach(m => {
+      if(!hasMatchStarted(m)){
+        m.p1 = "TBD";
+        m.p2 = "TBD";
+        m.s1 = "";
+        m.s2 = "";
+        m.winner = "";
+        m.loser = "";
+      }
+    });
+  });
+
+  // Reset GF p2 before reassigning loser champ (only if GF1 not started)
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
+    BRACKET_STATE.grandFinal[0].p2 = "TBD";
+  }
+
   const WR = BRACKET_STATE.winnersRounds;
 
-  // winners feed forward
+  // Winners feed forward
   for(let r=0;r<WR.length-1;r++){
     const round = WR[r];
     const next = WR[r+1];
@@ -1199,23 +1108,26 @@ function propagateWinners(){
       const m = round[i];
       const target = next[Math.floor(i/2)];
       const slot = (i%2===0) ? "p1" : "p2";
+
       const winnerName = m.winner ? (m.winner==="p1"?m.p1:m.p2) : "TBD";
+      if(target) target[slot] = winnerName || "TBD";
+
+      // Record dependency: W|<id>|winner -> next match slot
       if(target){
-        target[slot] = winnerName || "TBD";
-        setFeed("W", m.id, "W", target.id, slot);
+        BRACKET_STATE.feeds[`W|${m.id}|p1`] = { lane:"W", id: target.id, which: slot };
+        BRACKET_STATE.feeds[`W|${m.id}|p2`] = { lane:"W", id: target.id, which: slot };
       }
     }
   }
 
-  // winners champ to GF p1
+  // Winners champ to GF p1
   const lastW = WR[WR.length-1][0];
   if(lastW){
     const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
     BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
-    setFeed("W", lastW.id, "GF", "GF-1", "p1");
   }
 
-  // basic losers seeding (not full accurate DE mapping, but enough for tonight)
+  // Collect losers from winners results
   const losers = [];
   WR.forEach((round)=>{
     round.forEach((m)=>{
@@ -1226,6 +1138,7 @@ function propagateWinners(){
     });
   });
 
+  // Seed losers into empty TBD slots (only fills because we reset unstarted matches above)
   const LR = BRACKET_STATE.losersRounds;
   let idx=0;
   for(let r=0;r<LR.length;r++){
@@ -1236,11 +1149,13 @@ function propagateWinners(){
     }
   }
 
+  // Losers champ to GF p2 (only if GF1 not started)
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
   const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
-  BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
-  if(lastL) setFeed("L", lastL.id, "GF", "GF-1", "p2");
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
+    BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
+  }
 }
 
 function listAllMatches(){
@@ -1250,6 +1165,35 @@ function listAllMatches(){
   BRACKET_STATE.losersRounds.forEach(r => r.forEach(m => out.push({ lane:"L", m })));
   BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m }));
   return out;
+}
+
+function buildMatchPicker(){
+  const sel = $('#selMatch');
+  const selW = $('#selWinner');
+  sel.innerHTML = '';
+  selW.innerHTML = '';
+
+  const matches = listAllMatches().filter(x => x.m.p1 && x.m.p2 && x.m.p1!=="TBD" && x.m.p2!=="TBD");
+  matches.forEach(({lane,m})=>{
+    const opt = document.createElement("option");
+    opt.value = `${lane}|${m.id}`;
+    const done = m.winner ? " ✓" : "";
+    opt.textContent = `[${lane}] ${m.label || m.id} - ${m.p1} vs ${m.p2}${done}`;
+    sel.appendChild(opt);
+  });
+
+  function refreshWinners(){
+    selW.innerHTML = '';
+    const v = sel.value || '';
+    const [lane,id] = v.split("|");
+    const match = findMatch(lane,id);
+    if(!match) return;
+    const o1 = document.createElement("option"); o1.value="p1"; o1.textContent = match.p1;
+    const o2 = document.createElement("option"); o2.value="p2"; o2.textContent = match.p2;
+    selW.appendChild(o1); selW.appendChild(o2);
+  }
+  sel.addEventListener("change", refreshWinners);
+  refreshWinners();
 }
 
 function findMatch(lane,id){
@@ -1266,52 +1210,52 @@ function findMatch(lane,id){
   return null;
 }
 
-function buildMatchPicker(){
-  const sel = $("#selMatch");
-  const selW = $("#selWinner");
-  sel.innerHTML = "";
-  selW.innerHTML = "";
+/* Downstream-start check: blocks clearing if any later match containing this fed winner has started */
+function canClearWinner(lane, id, which){
+  const m = findMatch(lane,id);
+  if(!m) return false;
 
-  const matches = listAllMatches()
-    .filter(x => x.m.p1 && x.m.p2 && x.m.p1!=="TBD" && x.m.p2!=="TBD" && x.m.p1!=="BYE" && x.m.p2!=="BYE");
+  const winnerName = (which==="p1" ? m.p1 : m.p2);
+  if(!winnerName || winnerName==="TBD" || winnerName==="BYE") return false;
 
-  matches.forEach(({lane,m})=>{
-    const opt = document.createElement("option");
-    opt.value = `${lane}|${m.id}`;
-    const done = m.winner ? " ✓" : "";
-    opt.textContent = `[${lane}] ${m.label || m.id} - ${m.p1} vs ${m.p2}${done}`;
-    sel.appendChild(opt);
-  });
-
-  function refreshWinners(){
-    selW.innerHTML = "";
-    const v = sel.value || "";
-    const [lane,id] = v.split("|");
-    const match = findMatch(lane,id);
-    if(!match) return;
-
-    const o1 = document.createElement("option"); o1.value="p1"; o1.textContent = match.p1;
-    const o2 = document.createElement("option"); o2.value="p2"; o2.textContent = match.p2;
-    selW.appendChild(o1);
-    selW.appendChild(o2);
+  // If we have a known direct feed (W bracket), check the immediate target match first
+  const feedKey = `${lane}|${id}|${which}`;
+  const feed = (BRACKET_STATE && BRACKET_STATE.feeds) ? BRACKET_STATE.feeds[feedKey] : null;
+  if(feed){
+    const t = findMatch(feed.lane, feed.id);
+    if(t && hasMatchStarted(t)) return false;
   }
 
-  sel.addEventListener("change", refreshWinners);
-  refreshWinners();
+  // Conservative scan: if any match (other than current) that includes this name has started, block clearing
+  const all = listAllMatches();
+  for(const item of all){
+    const mm = item.m;
+    if(mm === m) continue;
+    if(mm.p1 === winnerName || mm.p2 === winnerName){
+      if(hasMatchStarted(mm)) return false;
+    }
+  }
+  return true;
 }
 
 function advanceWinner(){
-  const msg = $("#advanceMsg");
-  msg.textContent = "";
+  const msg = $('#advanceMsg');
+  msg.textContent = '';
   if(!BRACKET_STATE) return alert("No bracket loaded.");
-  const val = $("#selMatch").value;
+  const val = $('#selMatch').value;
   if(!val) return alert("Pick a match.");
   const [lane,id] = val.split("|");
   const m = findMatch(lane,id);
   if(!m) return alert("Match not found.");
 
-  const w = $("#selWinner").value;
+  const w = $('#selWinner').value;
   if(!w) return alert("Pick winner.");
+
+  // If already set to same winner, do nothing
+  if(m.winner === w){
+    msg.innerHTML = `<span class="muted">No change - already set.</span>`;
+    return;
+  }
 
   m.winner = w;
   m.loser = (w==="p1") ? "p2" : "p1";
@@ -1326,23 +1270,23 @@ function advanceWinner(){
   renderBracket();
   buildMatchPicker();
   msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
-  updateBracketCloudUi();
+
+  schedulePublish();
 }
 
 function resetBracket(){
   if(!confirm("Reset bracket state?")) return;
   localStorage.removeItem(STATE_KEY);
   BRACKET_STATE = null;
-  $("#bracketRoot").textContent = "No bracket loaded yet";
-  $("#fullRoot").textContent = "Live bracket view will use cloud only when Safe Mode is off";
-  $("#bracketStatus").textContent = "Bracket reset";
-  $("#resultsTable tbody").innerHTML = "";
-  $("#resultsStatus").textContent = "-";
-  updateBracketCloudUi();
+  $('#bracketRoot').textContent = "No bracket loaded yet.";
+  $('#fullRoot').textContent = "No bracket loaded yet.";
+  $('#bracketStatus').textContent = "Bracket reset.";
+  $('#resultsTable tbody').innerHTML = "";
+  $('#resultsStatus').textContent = "-";
 }
 
 /* =========================================================
-  RENDER BRACKET
+  BRACKET RENDER
 ========================================================= */
 function renderMatchCard(match, lane, editable=false){
   const card = document.createElement("div");
@@ -1355,7 +1299,6 @@ function renderMatchCard(match, lane, editable=false){
       <div class="tag">${tagText}</div>
     </div>
   `;
-
   card.appendChild(renderSlot(match, lane, "p1", editable));
   card.appendChild(renderSlot(match, lane, "p2", editable));
   return card;
@@ -1371,7 +1314,34 @@ function renderSlot(match, lane, which, editable){
   const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
   const id = match.id || "";
 
-  const canEdit = editable && name !== "TBD" && name !== "BYE";
+  const canEdit =
+    editable &&
+    name !== "TBD" &&
+    name !== "BYE";
+
+  slot.innerHTML = `
+    <div>
+      <div class="name">${esc(name)}</div>
+      <div class="seed">${esc(id)} - ${which.toUpperCase()}</div>
+    </div>
+
+    ${
+      canEdit
+        ? `<input
+             class="scoreInput"
+             inputmode="numeric"
+             pattern="[0-9]*"
+             placeholder="-"
+             value="${esc(score)}"
+             data-lane="${esc(lane)}"
+             data-id="${esc(id)}"
+             data-which="${esc(which)}"
+           />`
+        : `<div class="scoreBox">${esc(score)}</div>`
+    }
+
+    <div></div>
+  `;
 
   if(canEdit){
     slot.style.cursor = "pointer";
@@ -1381,31 +1351,13 @@ function renderSlot(match, lane, which, editable){
     slot.setAttribute("data-which", which);
   }
 
-  slot.innerHTML = `
-    <div>
-      <div class="name">${esc(name)}</div>
-      <div class="seed">${esc(id)} - ${which.toUpperCase()}</div>
-    </div>
-    <input
-      class="scoreInput"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      placeholder="-"
-      value="${esc(score)}"
-      data-lane="${esc(lane)}"
-      data-id="${esc(id)}"
-      data-which="${esc(which)}"
-      ${canEdit ? "" : "disabled"}
-    />
-  `;
-
   return slot;
 }
 
 function renderBracket(){
-  const root = $("#bracketRoot");
+  const root = $('#bracketRoot');
   if(!BRACKET_STATE){
-    root.textContent = "No bracket loaded yet";
+    root.textContent = "No bracket loaded yet.";
     return;
   }
   const bracketEl = document.createElement("div");
@@ -1414,7 +1366,7 @@ function renderBracket(){
   (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
     const col = document.createElement("div");
     col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
+    col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
     round.forEach(m => col.appendChild(renderMatchCard(m,"W", true)));
     bracketEl.appendChild(col);
   });
@@ -1422,7 +1374,7 @@ function renderBracket(){
   (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
     const col = document.createElement("div");
     col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
+    col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
     round.forEach(m => col.appendChild(renderMatchCard(m,"L", true)));
     bracketEl.appendChild(col);
   });
@@ -1438,38 +1390,13 @@ function renderBracket(){
 }
 
 /* =========================================================
-  MATCH CORRECTION CLICK LOGIC
-  - click winner once: set
-  - click same winner again: clear only if downstream match has not started
-  - shift click: force clear
+  INLINE SCORE ENTRY + CLICK WINNER (UPDATED RULES)
 ========================================================= */
-let clickLock = new Map();
-
-function matchHasStarted(m){
-  if(!m) return false;
-  const s1 = String(m.s1 || "").trim();
-  const s2 = String(m.s2 || "").trim();
-  const w  = String(m.winner || "").trim();
-  return !!(s1 || s2 || w);
-}
-
-function downstreamHasStarted(fromLane, fromId){
-  const key = `${fromLane}|${fromId}`;
-  const feeds = (BRACKET_STATE && BRACKET_STATE.feeds && BRACKET_STATE.feeds[key]) ? BRACKET_STATE.feeds[key] : null;
-  if(!feeds || !feeds.length) return false;
-
-  for(const f of feeds){
-    const next = findMatch(f.toLane, f.toId);
-    if(matchHasStarted(next)) return true;
-  }
-  return false;
-}
-
-function wireBracketEditing(){
+function wireBracketChartEditing(){
   const root = document.getElementById("bracketRoot");
   if(!root) return;
 
-  // score typing
+  // Save score edits
   root.addEventListener("input", (e)=>{
     const inp = e.target.closest(".scoreInput");
     if(!inp || !BRACKET_STATE) return;
@@ -1487,15 +1414,15 @@ function wireBracketEditing(){
     else m.s2 = v;
 
     saveBracketState();
+    schedulePublish();
   });
 
-  // winner clicking
+  // Click row to set winner (Shift-click clears if downstream not started)
   root.addEventListener("click", (e)=>{
     const slot = e.target.closest('.slot[data-action="pickWinner"]');
     if(!slot || !BRACKET_STATE) return;
 
-    // do not treat clicking inside score input as winner pick
-    if(e.target.classList.contains("scoreInput")) return;
+    if(e.target.closest(".scoreInput")) return;
 
     const lane = slot.getAttribute("data-lane");
     const id = slot.getAttribute("data-id");
@@ -1503,215 +1430,152 @@ function wireBracketEditing(){
     const m = findMatch(lane, id);
     if(!m) return;
 
-    const lockKey = `${lane}|${id}`;
-    const now = Date.now();
-    const last = clickLock.get(lockKey) || 0;
-
-    // 250ms debounce prevents double tap from firing twice
-    if(now - last < 250) return;
-    clickLock.set(lockKey, now);
-
-    const currentWinner = m.winner || "";
-    const tapped = which;
-
-    const setWinner = () => {
-      m.winner = tapped;
-      m.loser = (tapped === "p1") ? "p2" : "p1";
-    };
-
-    const clearWinner = () => {
-      m.winner = "";
-      m.loser = "";
-    };
-
+    // Shift-click attempts to clear
     if(e.shiftKey){
-      clearWinner();
-    } else if(currentWinner !== tapped){
-      setWinner();
-    } else {
-      // tapped same winner again
-      // only clear if the next match that received this winner has not started
-      const blocked = downstreamHasStarted(lane, id);
-      if(blocked){
-        // keep it
+      if(!m.winner){
+        return; // nothing to clear
+      }
+      // only allow clearing if downstream not started
+      const currentWinnerWhich = m.winner;
+      if(!canClearWinner(lane, id, currentWinnerWhich)){
+        $('#bracketStatus').textContent = "Cannot clear - downstream match already started.";
         return;
       }
-      clearWinner();
+
+      clearMatchResult(m);
+      propagateWinners();
+      saveBracketState();
+      renderBracket();
+      buildMatchPicker();
+      schedulePublish();
+      $('#bracketStatus').textContent = "Cleared result (downstream not started).";
+      return;
     }
+
+    // Normal click: set winner rules
+    // - If clicked same winner again: do nothing
+    if(m.winner === which){
+      return;
+    }
+
+    // - If match already has a winner and you click the other player: flip winner (allowed)
+    m.winner = which;
+    m.loser = (which === "p1") ? "p2" : "p1";
 
     propagateWinners();
     saveBracketState();
     renderBracket();
     buildMatchPicker();
-    updateBracketCloudUi();
+    schedulePublish();
   });
 }
 
 /* =========================================================
-  BRACKET CLOUD
-========================================================= */
-async function cloudSaveBracket(){
-  if(!bracketCloudAllowed()) throw new Error("Bracket cloud blocked");
-  const tid = getTournamentId();
-  const payload = JSON.stringify(BRACKET_STATE);
-
-  // bracketSave action
-  return jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tid, payload }, 15000);
-}
-
-async function cloudLoadBracket(){
-  if(!bracketCloudAllowed()) throw new Error("Bracket cloud blocked");
-  const tid = getTournamentId();
-
-  // bracketGet action
-  return jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tid }, 15000);
-}
-
-async function publishBracket(){
-  if(!BRACKET_STATE) return alert("No bracket loaded.");
-  try{
-    const res = await cloudSaveBracket();
-    $("#bracketStatus").innerHTML = `<span class="ok">Published</span> ${esc(getTournamentId())}`;
-    return res;
-  }catch(e){
-    console.warn(e);
-    alert("Publish failed. Check Safe Mode and Brackets endpoint.");
-  }
-}
-
-async function loadBracketFromCloud(){
-  try{
-    const data = await cloudLoadBracket();
-    if(!data || !data.ok || !data.payload) throw new Error("No payload");
-    const state = typeof data.payload === "string" ? JSON.parse(data.payload) : data.payload;
-    if(!state || !state.winnersRounds) throw new Error("Bad bracket payload");
-
-    BRACKET_STATE = state;
-    propagateWinners(); // rebuild feeds and forward links
-    saveBracketState();
-    renderBracket();
-    buildMatchPicker();
-    $("#bracketStatus").innerHTML = `<span class="ok">Loaded</span> ${esc(getTournamentId())}`;
-    updateBracketCloudUi();
-  }catch(e){
-    console.warn(e);
-    alert("Load failed. Check Safe Mode and Brackets endpoint.");
-  }
-}
-
-/* =========================================================
-  FULL BRACKET LIVE
+  FULL BRACKET LIVE (cloud pull + auto refresh + zoom)
 ========================================================= */
 let fullZoom = 1;
 let fullTimer = null;
 
-function applyFullZoom(){
-  const stage = document.getElementById("fullZoomStage");
-  if(stage) stage.style.transform = `scale(${fullZoom})`;
+function setFullZoomPercent(pct){
+  fullZoom = Math.max(0.5, Math.min(2.0, pct/100));
+  $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
+  $('#rngFullZoom').value = String(Math.round(fullZoom*100));
   localStorage.setItem("TD_FULL_ZOOM", String(Math.round(fullZoom*100)));
 }
 
-function setFullZoomPct(pct){
-  fullZoom = clampInt(pct, 50, 200) / 100;
-  $("#rngFullZoom").value = String(clampInt(pct,50,200));
-  applyFullZoom();
-}
+function fullFit(){
+  const viewer = $('#fullViewer');
+  const content = $('#fullRoot .bracket');
+  if(!viewer || !content) return;
 
-function fitFull(){
-  const viewer = document.getElementById("fullViewer");
-  const stage = document.getElementById("fullZoomStage");
-  if(!viewer || !stage) return;
+  const prev = fullZoom;
+  fullZoom = 1;
+  $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
 
-  const content = stage.getBoundingClientRect();
-  const box = viewer.getBoundingClientRect();
-  if(content.width < 10) return;
-
-  const scale = Math.max(0.5, Math.min(2.0, (box.width - 40) / content.width));
-  fullZoom = scale;
-  $("#rngFullZoom").value = String(Math.round(scale*100));
-  applyFullZoom();
-}
-
-function renderFullFromState(state){
-  const root = document.getElementById("fullRoot");
-  if(!state){
-    root.textContent = "No bracket available";
-    return;
+  const vw = viewer.clientWidth - 24;
+  const cw = content.scrollWidth;
+  if(cw>0){
+    const target = Math.max(0.5, Math.min(2.0, vw/cw));
+    fullZoom = target;
+    $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
+    $('#rngFullZoom').value = String(Math.round(fullZoom*100));
+    localStorage.setItem("TD_FULL_ZOOM", String(Math.round(fullZoom*100)));
+  }else{
+    fullZoom = prev;
+    $('#fullZoomStage').style.transform = `scale(${fullZoom})`;
   }
-  // reuse bracket renderer by temporarily swapping, but without mutating current
-  const prev = BRACKET_STATE;
-  BRACKET_STATE = state;
-  propagateWinners();
-  const tempWrap = document.createElement("div");
-  tempWrap.id = "tempFull";
-  const savedRoot = document.getElementById("bracketRoot");
-
-  // build bracket DOM
-  const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
-
-  (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W", false)));
-    bracketEl.appendChild(col);
-  });
-
-  (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L", false)));
-    bracketEl.appendChild(col);
-  });
-
-  const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
-  bracketEl.appendChild(gfCol);
-
-  root.innerHTML = "";
-  root.appendChild(bracketEl);
-
-  // restore
-  BRACKET_STATE = prev;
-  if(savedRoot && prev) renderBracket();
 }
 
-async function refreshFull(){
-  const elLast = $("#fullLast");
-
-  if(!bracketCloudAllowed()){
-    // fallback to local
-    const local = loadBracketState();
-    renderFullFromState(local);
-    elLast.textContent = "Last update local";
-    return;
-  }
+async function renderFullBracket(){
+  const root = $('#fullRoot');
+  const tid = getTournamentId();
 
   try{
-    const data = await cloudLoadBracket();
-    if(!data || !data.ok || !data.payload) throw new Error("No payload");
-    const state = typeof data.payload === "string" ? JSON.parse(data.payload) : data.payload;
-    renderFullFromState(state);
-    elLast.textContent = "Last update " + new Date().toLocaleTimeString();
+    const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+    if(!data || !data.ok) throw new Error((data && data.message) || "Cloud fetch failed");
+
+    if(!data.row || !data.row.bracketJson){
+      root.innerHTML = `<div class="muted">No bracket published yet for <b>${esc(tid)}</b>.</div>`;
+      $('#fullLast').textContent = "Last update: -";
+      return;
+    }
+
+    const state = JSON.parse(data.row.bracketJson);
+
+    const saved = BRACKET_STATE;
+    BRACKET_STATE = state;
+
+    const bracketEl = document.createElement("div");
+    bracketEl.className = "bracket";
+
+    (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
+      const col = document.createElement("div");
+      col.className = "col";
+      col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+      round.forEach(m => col.appendChild(renderMatchCard(m,"W", false)));
+      bracketEl.appendChild(col);
+    });
+
+    (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
+      const col = document.createElement("div");
+      col.className = "col";
+      col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+      round.forEach(m => col.appendChild(renderMatchCard(m,"L", false)));
+      bracketEl.appendChild(col);
+    });
+
+    const gfCol = document.createElement("div");
+    gfCol.className = "col";
+    gfCol.innerHTML = `<div class="col-title">Finals</div>`;
+    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
+    bracketEl.appendChild(gfCol);
+
+    root.innerHTML = "";
+    root.appendChild(bracketEl);
+
+    BRACKET_STATE = saved;
+    $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
   }catch(e){
     console.warn(e);
-    elLast.textContent = "Last update failed";
+    root.innerHTML = `<div class="muted">Live load failed: ${esc(e.message || e)}</div>`;
   }
 }
 
 function startFullAuto(){
-  if(fullTimer) clearInterval(fullTimer);
+  stopFullAuto();
   fullTimer = setInterval(()=>{
-    if($("#chkAutoFull").checked) refreshFull();
-  }, 5000);
+    if($('#chkAutoFull').checked){
+      renderFullBracket();
+    }
+  }, 20000);
+}
+function stopFullAuto(){
+  if(fullTimer) clearInterval(fullTimer);
+  fullTimer = null;
 }
 
 /* =========================================================
-  RESULTS
+  RESULTS (placements + export)
 ========================================================= */
 let RESULTS = [];
 
@@ -1774,11 +1638,11 @@ function buildPlacements(state){
 function renderResults(){
   const state = loadBracketState();
   if(!state){
-    $("#resultsStatus").textContent = "No bracket state.";
+    $('#resultsStatus').textContent = "No bracket state.";
     return;
   }
   RESULTS = buildPlacements(state);
-  const tbody = $("#resultsTable tbody");
+  const tbody = $('#resultsTable tbody');
   tbody.innerHTML = "";
   RESULTS.forEach(r=>{
     const tr = document.createElement("tr");
@@ -1791,7 +1655,7 @@ function renderResults(){
     `;
     tbody.appendChild(tr);
   });
-  $("#resultsStatus").textContent = `Built results for ${RESULTS.length} players.`;
+  $('#resultsStatus').textContent = `Built results for ${RESULTS.length} players.`;
 }
 
 function exportResultsCSV(){
@@ -1830,7 +1694,7 @@ function exportResultsJSON(){
 }
 
 /* =========================================================
-  BRACKET JSON EXPORT IMPORT
+  EXPORT/IMPORT BRACKET JSON
 ========================================================= */
 function exportBracketJSON(){
   const state = loadBracketState();
@@ -1850,13 +1714,13 @@ function importBracketJSONFile(file){
     try{
       const state = JSON.parse(reader.result);
       if(!state || !state.winnersRounds) throw new Error("Invalid bracket JSON");
+      localStorage.setItem(STATE_KEY, JSON.stringify(state));
       BRACKET_STATE = state;
-      propagateWinners();
-      saveBracketState();
       renderBracket();
       buildMatchPicker();
-      $("#bracketStatus").textContent = "Imported bracket JSON.";
-      updateBracketCloudUi();
+      $('#bracketStatus').textContent = "Imported bracket JSON.";
+
+      schedulePublish();
     }catch(e){
       alert("Import failed: " + e.message);
     }
@@ -1867,172 +1731,262 @@ function importBracketJSONFile(file){
 /* =========================================================
   LOGO upload + storage
 ========================================================= */
-const logo = document.getElementById("logo");
-const uploader = document.getElementById("logoUploader");
-
+const logo = document.getElementById('logo');
+const uploader = document.getElementById('logoUploader');
 let pressTimer;
-logo.addEventListener("dragstart", (e) => e.preventDefault());
-logo.addEventListener("selectstart", (e) => e.preventDefault());
-logo.addEventListener("mousedown", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-logo.addEventListener("mouseup", () => clearTimeout(pressTimer));
-logo.addEventListener("mouseleave", () => clearTimeout(pressTimer));
-logo.addEventListener("touchstart", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-logo.addEventListener("touchend", () => clearTimeout(pressTimer));
-logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
-
-uploader.addEventListener("change", (e) => {
+logo.addEventListener('dragstart', (e) => e.preventDefault());
+logo.addEventListener('selectstart', (e) => e.preventDefault());
+logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener('touchend', () => clearTimeout(pressTimer));
+logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+uploader.addEventListener('change', (e) => {
   const file = e.target.files[0];
-  if (file && file.type.startsWith("image/")) {
+  if (file && file.type.startsWith('image/')) {
     const reader = new FileReader();
-    reader.onload = function (evt) {
-      logo.src = evt.target.result;
-      localStorage.setItem("customLogo", evt.target.result);
-    };
+    reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
     reader.readAsDataURL(file);
   }
 });
-
-window.addEventListener("DOMContentLoaded", () => {
-  const savedLogo = localStorage.getItem("customLogo");
+window.addEventListener('DOMContentLoaded', () => {
+  const savedLogo = localStorage.getItem('customLogo');
   if (savedLogo) logo.src = savedLogo;
 });
-
-function resetLogo(){
-  localStorage.removeItem("customLogo");
-  logo.src = "TDlogo.png";
-}
+function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
 
 /* =========================================================
   TD PIN gate logic
 ========================================================= */
 (function initTDGate(){
-  const PIN = "2580";
-  const gate = document.getElementById("tdGate");
-  const pinEl = document.getElementById("tdPin");
-  const msgEl = document.getElementById("tdGateMsg");
+  const PIN = '2580';
+  const gate = document.getElementById('tdGate');
+  const pinEl = document.getElementById('tdPin');
+  const msgEl = document.getElementById('tdGateMsg');
 
   const qp = new URL(location.href).searchParams;
-  const urlCode = qp.get("code");
-  const already = sessionStorage.getItem("TD_UNLOCK") === "1";
+  const urlCode = qp.get('code');
+  const already = sessionStorage.getItem('TD_UNLOCK') === '1';
 
-  function showGate(show){ gate.style.display = show ? "block" : "none"; }
+  function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
 
   window.unlockTD = function unlockTD(){
-    const val = (pinEl.value || "").trim();
-    if(val === PIN || urlCode === PIN){
-      sessionStorage.setItem("TD_UNLOCK", "1");
+    const val = (pinEl.value || '').trim();
+    if (val === PIN || urlCode === PIN) {
+      sessionStorage.setItem('TD_UNLOCK', '1');
       showGate(false);
-      msgEl.textContent = "";
-    }else{
-      msgEl.textContent = "Incorrect code. Try again.";
-      pinEl.value = "";
+      msgEl.textContent = '';
+    } else {
+      msgEl.textContent = 'Incorrect code. Try again.';
+      pinEl.value = '';
       pinEl.focus();
     }
   };
 
-  if(already || urlCode === PIN){
+  window.lockTD = function lockTD(){
+    sessionStorage.removeItem('TD_UNLOCK');
+    showGate(true);
+    setTimeout(()=> pinEl && pinEl.focus(), 50);
+  };
+
+  if (already || urlCode === PIN) {
     showGate(false);
-  }else{
+  } else {
     showGate(true);
     setTimeout(()=> pinEl && pinEl.focus(), 50);
   }
 
-  pinEl && pinEl.addEventListener("keydown", (e)=>{
-    if(e.key === "Enter") unlockTD();
+  pinEl && pinEl.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter') unlockTD();
   });
 })();
 
 /* =========================================================
-  CURL helper (optional)
+  IP storage & curl builder
 ========================================================= */
-const LISTENER_PORT = 7070;
-const AUTH_TOKEN = "changeme-123";
 const LS_KEY_IPS = "AH_TD_TABLE_IPS";
 const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
+const LISTENER_PORT = 7070;
+const AUTH_TOKEN    = "changeme-123";
 
 function loadTableIPs(){
   try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
   catch { return {...DEFAULT_TABLE_IPS}; }
 }
-
-function buildCurlCommand(url, table){
-  const map = loadTableIPs();
-  const ip = map[String(table)] || "<TABLE_IP_HERE>";
-  return `curl -X POST "http://${ip}:${LISTENER_PORT}/open" -H "Content-Type: application/json" -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+function msg(text){
+  const m = document.getElementById("ipMsg");
+  if (m) { m.textContent = text; m.style.display = "block"; }
 }
-
-function copyCurlCommand(){
-  const table = document.getElementById("tableNumber").value.trim();
-  if(!table) return alert("Enter a Table # first.");
-  if(!generatedUrl) return alert("Generate the match link first.");
+function addRow(tableVal, ipVal){
+  const wrap = document.getElementById("ipEditor");
+  const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
+  const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
+  const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
+  const row = document.createElement("div"); row.style.display = "contents";
+  rm.onclick = () => row.remove();
+  row.appendChild(t); row.appendChild(i); row.appendChild(rm);
+  wrap.appendChild(row);
+}
+function renderIpEditor(){
+  const wrap = document.getElementById("ipEditor");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const map = loadTableIPs();
+  Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
+  document.getElementById("addRowBtn").onclick  = () => addRow("", "");
+  document.getElementById("saveIPsBtn").onclick = saveFromEditor;
+  document.getElementById("testIPsBtn").onclick = testAll;
+}
+function saveFromEditor(){
+  const wrap = document.getElementById("ipEditor");
+  const inputs = Array.from(wrap.querySelectorAll("input"));
+  const map = {};
+  for (let k=0; k<inputs.length; k+=2){
+    const table = (inputs[k].value||"").trim();
+    const ip    = (inputs[k+1].value||"").trim();
+    if (table && ip) map[table] = ip;
+  }
+  saveTableIPs(map);
+  msg("Saved IPs.");
+}
+async function testAll(){
+  const entries = Object.entries(loadTableIPs());
+  if (!entries.length) return msg("No tables configured.");
+  msg("Testing...");
+  const results = [];
+  for (const [tbl, ip] of entries){
+    try {
+      const r = await Promise.race([
+        fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
+        new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
+      ]);
+      results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
+    } catch {
+      results.push(`${tbl}: fail (${ip})`);
+    }
+  }
+  if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
+    results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
+  }
+  msg(results.join(" | "));
+}
+function buildCurlCommand(url, table) {
+  const map = loadTableIPs();
+  const ip  = map[String(table)] || "<TABLE_IP_HERE>";
+  const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
+  -H "Content-Type: application/json" \\
+  -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+  return cmd;
+}
+function copyCurlCommand() {
+  const table = document.getElementById('tableNumber').value.trim();
+  if (!table) return alert("Enter a Table # first.");
+  if (!generatedUrl) return alert("Generate the match link first.");
   const cmd = buildCurlCommand(generatedUrl, table);
   navigator.clipboard.writeText(cmd).then(() => {
-    const btn = document.getElementById("copyCurlBtn");
+    const btn = document.getElementById('copyCurlBtn');
     btn.innerText = "Copied!";
-    setTimeout(() => (btn.innerText = "Copy Curl"), 1800);
+    setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
   });
 }
 
 /* =========================================================
-  INIT
+  SW registration
+========================================================= */
+const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
+if ('serviceWorker' in navigator && !SW_OFF) {
+  navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
+    .then(() => console.log('TD Service Worker registered!'))
+    .catch(() => console.log('SW registration failed (ignored).'));
+} else {
+  console.log('SW disabled for this session.');
+}
+
+/* =========================================================
+  INIT / WIRE BUTTONS
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async ()=>{
+  // Safe Mode default ON unless explicitly turned off before
+  if(localStorage.getItem(LS_SAFE_MODE) === null){
+    localStorage.setItem(LS_SAFE_MODE, "1");
+  }
+  $('#chkSafeMode').addEventListener("change", (e)=> setSafeMode(!!e.target.checked));
+  refreshSafeModeUI();
+
   const last = localStorage.getItem("TD_ACTIVE_TAB");
   if(last) setTab(last);
 
   renderMatchLog();
   flushCloudQueue();
 
-  wireAYPTTable();
-  document.getElementById("btnAYPTRefresh").addEventListener("click", loadAYPT);
-  document.getElementById("btnUseAYPTToSeed").addEventListener("click", useAYPTToSeed);
-
+  // TournamentId restore
   setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || defaultTournamentId());
-  document.getElementById("tournamentId").addEventListener("change", ()=> setTournamentId(getTournamentId()));
+  $('#tournamentId').addEventListener("change", ()=> setTournamentId(getTournamentId()));
 
-  const safe = getSafeMode();
-  document.getElementById("chkSafeMode").checked = safe;
-  document.getElementById("chkSafeMode").addEventListener("change", (e)=> setSafeMode(e.target.checked));
+  // AYPT
+  wireAYPTTable();
+  $('#btnAYPTRefresh').addEventListener("click", loadAYPT);
+  $('#btnUseAYPTToSeed').addEventListener("click", useAYPTToSeed);
 
-  document.getElementById("btnNewBracket").addEventListener("click", newBracketFromEntrants);
-  document.getElementById("btnResetBracket").addEventListener("click", resetBracket);
-  document.getElementById("btnAdvanceSelected").addEventListener("click", advanceWinner);
+  // Brackets
+  $('#btnNewBracket').addEventListener("click", newBracketFromEntrants);
+  $('#btnResetBracket').addEventListener("click", resetBracket);
+  $('#btnAdvanceSelected').addEventListener("click", advanceWinner);
+  $('#btnExportBracketJSON').addEventListener("click", exportBracketJSON);
+  $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
+  $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
 
-  document.getElementById("btnPublishBracket").addEventListener("click", publishBracket);
-  document.getElementById("btnLoadBracketCloud").addEventListener("click", loadBracketFromCloud);
+  // Publish/load cloud
+  $('#btnPublishBracket').addEventListener("click", async ()=>{
+    if(isSafeMode()) return alert("Safe Mode is ON - publish is blocked.");
+    if(!BRACKET_STATE) return alert("No bracket to publish.");
+    try{ await cloudSaveBracket(BRACKET_STATE); }
+    catch(e){ alert("Publish failed: " + (e.message || e)); }
+  });
+  $('#btnLoadBracketCloud').addEventListener("click", async ()=>{
+    try{ await cloudLoadBracket(); }
+    catch(e){ alert("Load failed: " + (e.message || e)); }
+  });
 
-  document.getElementById("btnExportBracketJSON").addEventListener("click", exportBracketJSON);
-  document.getElementById("btnImportBracketJSON").addEventListener("click", ()=> document.getElementById("importBracketFile").click());
-  document.getElementById("importBracketFile").addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
+  // Full Live
+  $('#btnFullRefresh').addEventListener("click", renderFullBracket);
+  $('#btnFullZoomIn').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)+10));
+  $('#btnFullZoomOut').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)-10));
+  $('#rngFullZoom').addEventListener("input", ()=> setFullZoomPercent(parseInt($('#rngFullZoom').value,10) || 100));
+  $('#btnFullFit').addEventListener("click", fullFit);
 
-  document.getElementById("btnBuildResults").addEventListener("click", renderResults);
-  document.getElementById("btnExportResultsCSV").addEventListener("click", exportResultsCSV);
-  document.getElementById("btnExportResultsJSON").addEventListener("click", exportResultsJSON);
+  // Results
+  $('#btnBuildResults').addEventListener("click", renderResults);
+  $('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
+  $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
 
-  document.getElementById("copyCurlBtn").addEventListener("click", copyCurlCommand);
+  // Curl button
+  const curlBtn = document.getElementById("copyCurlBtn");
+  if (curlBtn) curlBtn.addEventListener("click", copyCurlCommand);
 
-  // Full view controls
-  const savedZoomPct = clampInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 50, 200);
-  setFullZoomPct(savedZoomPct);
+  // IP editor
+  renderIpEditor();
 
-  document.getElementById("btnFullZoomOut").addEventListener("click", ()=> setFullZoomPct(clampInt(Math.round(fullZoom*100)-10,50,200)));
-  document.getElementById("btnFullZoomIn").addEventListener("click", ()=> setFullZoomPct(clampInt(Math.round(fullZoom*100)+10,50,200)));
-  document.getElementById("rngFullZoom").addEventListener("input", (e)=> setFullZoomPct(e.target.value));
-  document.getElementById("btnFullFit").addEventListener("click", fitFull);
-  document.getElementById("btnFullRefresh").addEventListener("click", refreshFull);
-
-  startFullAuto();
-
-  // load existing bracket
+  // Load bracket if present locally
   BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
-    propagateWinners();
+    propagateWinners(); // ensures losers can be re-seeded cleanly on load
     renderBracket();
     buildMatchPicker();
   }
 
-  wireBracketEditing();
-  updateBracketCloudUi();
+  // Wire chart score entry + click winner
+  wireBracketChartEditing();
+
+  // Restore full zoom + start auto
+  const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
+  setFullZoomPercent(isFinite(z) ? z : 100);
+  startFullAuto();
+
+  // Prime live view once (cloud)
+  renderFullBracket();
 });
 </script>
 </body>
