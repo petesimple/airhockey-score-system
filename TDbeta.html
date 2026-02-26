@@ -1,14 +1,11 @@
 <!-- =====================
 TDbeta.html - Tournament Director (Integrated)
-v2.4 - First beta + local archive tab
-- Match correction rules + Losers rollback fix + TD Safe Mode toggle
-- New Archive tab:
-  - Save current bracket snapshot to local archive
-  - Load archived tournaments back into app
-  - Delete archived tournaments
-  - Export one archive item JSON
-  - Export full archive JSON
-  - Import archive JSON
+v2.4.1 - Local archive beta + bracket cloud hard-disabled
+- Fixes random timestamp writes to AYPT by disabling all bracket cloud traffic
+- AYPT reads still work
+- Local brackets still work
+- Archive still works
+- Full Bracket Live now shows a placeholder until a real bracket endpoint exists
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -227,7 +224,7 @@ v2.4 - First beta + local archive tab
     </label>
     <span id="safeModeStatus" class="safeOn">NO SHEET WRITES</span>
   </span>
-  <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish.</span>
+  <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish. Bracket cloud is also disabled in this beta.</span>
 </div>
 
 <div class="tabs" id="tabs">
@@ -481,7 +478,15 @@ v2.4 - First beta + local archive tab
 ========================================================= */
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
-const BRACKETS_ENDPOINT      = AYPT_SIGNUPS_ENDPOINT;
+
+/*
+  IMPORTANT:
+  Do NOT point bracket traffic at the AYPT script unless that Apps Script
+  explicitly supports action=bracketGet and action=bracketSave.
+*/
+const BRACKETS_CLOUD_ENABLED = false;
+const BRACKETS_ENDPOINT = "";
+
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
@@ -515,14 +520,26 @@ function refreshSafeModeUI(){
   const chk = $('#chkSafeMode');
   const lab = $('#safeModeStatus');
   const on = isSafeMode();
+
   if(chk) chk.checked = on;
+
   if(lab){
     lab.textContent = on ? "NO SHEET WRITES" : "WRITES ENABLED";
     lab.classList.toggle("safeOn", on);
     lab.classList.toggle("safeOff", !on);
   }
+
   const pub = $('#btnPublishBracket');
-  if(pub) pub.disabled = on;
+  if(pub) pub.disabled = on || !BRACKETS_CLOUD_ENABLED;
+
+  const loadBtn = $('#btnLoadBracketCloud');
+  if(loadBtn) loadBtn.disabled = !BRACKETS_CLOUD_ENABLED;
+
+  const autoFull = $('#chkAutoFull');
+  if(autoFull) autoFull.disabled = !BRACKETS_CLOUD_ENABLED;
+
+  const fullRefresh = $('#btnFullRefresh');
+  if(fullRefresh) fullRefresh.disabled = !BRACKETS_CLOUD_ENABLED;
 
   document.querySelectorAll('.paid-toggle').forEach(el => el.disabled = on);
   document.querySelectorAll('.admin-note').forEach(el => el.disabled = on);
@@ -950,30 +967,46 @@ function clearMatchResult(m){
 }
 
 async function cloudSaveBracket(state){
+  if(!BRACKETS_CLOUD_ENABLED){
+    $('#bracketStatus').textContent = "Bracket cloud save is disabled in this beta.";
+    return { ok:false, disabled:true };
+  }
+
   if(isSafeMode()){
     $('#bracketStatus').textContent = "Safe Mode: publish blocked.";
     return { ok:true, safe:true };
   }
+
   const tid = getTournamentId();
   const bracketJson = JSON.stringify(state);
   const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tournamentId: tid, bracketJson });
+
   if(!data || !data.ok) throw new Error((data && data.message) || "Cloud save failed");
+
   $('#bracketStatus').textContent = `Published ✓ (${tid}) @ ${new Date().toLocaleTimeString()}`;
   return data;
 }
+
 async function cloudLoadBracket(){
+  if(!BRACKETS_CLOUD_ENABLED){
+    $('#bracketStatus').textContent = "Bracket cloud load is disabled in this beta.";
+    return null;
+  }
+
   const tid = getTournamentId();
   const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+
   if(!data || !data.ok) throw new Error((data && data.message) || "Cloud load failed");
+
   if(!data.row || !data.row.bracketJson){
     $('#bracketStatus').textContent = `No cloud bracket found for ${tid}.`;
     return null;
   }
+
   const state = JSON.parse(data.row.bracketJson);
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
   BRACKET_STATE = state;
   renderBracket();
-  renderFullBracket();
   buildMatchPicker();
   $('#bracketStatus').textContent = `Loaded from cloud ✓ (${tid})`;
   return state;
@@ -981,7 +1014,9 @@ async function cloudLoadBracket(){
 
 let publishTimer = null;
 function schedulePublish(){
+  if(!BRACKETS_CLOUD_ENABLED) return;
   if(isSafeMode()) return;
+
   clearTimeout(publishTimer);
   publishTimer = setTimeout(async ()=>{
     try{
@@ -1540,31 +1575,6 @@ function renderBracket(){
 /* =========================================================
   CLICK WINNER + SCORE EDITING
 ========================================================= */
-function canClearWinner(lane, id, which){
-  const m = findMatch(lane,id);
-  if(!m) return false;
-
-  const winnerName = (which==="p1" ? m.p1 : m.p2);
-  if(!winnerName || winnerName==="TBD" || winnerName==="BYE") return false;
-
-  const feedKey = `${lane}|${id}|${which}`;
-  const feed = (BRACKET_STATE && BRACKET_STATE.feeds) ? BRACKET_STATE.feeds[feedKey] : null;
-  if(feed){
-    const t = findMatch(feed.lane, feed.id);
-    if(t && hasMatchStarted(t)) return false;
-  }
-
-  const all = listAllMatches();
-  for(const item of all){
-    const mm = item.m;
-    if(mm === m) continue;
-    if(mm.p1 === winnerName || mm.p2 === winnerName){
-      if(hasMatchStarted(mm)) return false;
-    }
-  }
-  return true;
-}
-
 function wireBracketChartEditing(){
   const root = document.getElementById("bracketRoot");
   if(!root) return;
@@ -1671,6 +1681,13 @@ function fullFit(){
 
 async function renderFullBracket(){
   const root = $('#fullRoot');
+
+  if(!BRACKETS_CLOUD_ENABLED){
+    root.innerHTML = `<div class="muted">Full Bracket Live is disabled until a dedicated bracket cloud endpoint is ready.</div>`;
+    $('#fullLast').textContent = "Last update: local only";
+    return;
+  }
+
   const tid = getTournamentId();
 
   try{
@@ -1684,13 +1701,11 @@ async function renderFullBracket(){
     }
 
     const state = JSON.parse(data.row.bracketJson);
-    const saved = BRACKET_STATE;
-    BRACKET_STATE = state;
 
     const bracketEl = document.createElement("div");
     bracketEl.className = "bracket";
 
-    (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
+    (state.winnersRounds || []).forEach((round, idx)=>{
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
@@ -1698,7 +1713,7 @@ async function renderFullBracket(){
       bracketEl.appendChild(col);
     });
 
-    (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
+    (state.losersRounds || []).forEach((round, idx)=>{
       const col = document.createElement("div");
       col.className = "col";
       col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
@@ -1709,13 +1724,12 @@ async function renderFullBracket(){
     const gfCol = document.createElement("div");
     gfCol.className = "col";
     gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-    (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
+    (state.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
     bracketEl.appendChild(gfCol);
 
     root.innerHTML = "";
     root.appendChild(bracketEl);
 
-    BRACKET_STATE = saved;
     $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
   }catch(e){
     console.warn(e);
@@ -1725,6 +1739,9 @@ async function renderFullBracket(){
 
 function startFullAuto(){
   stopFullAuto();
+
+  if(!BRACKETS_CLOUD_ENABLED) return;
+
   fullTimer = setInterval(()=>{
     if($('#chkAutoFull').checked){
       renderFullBracket();
@@ -2090,12 +2107,15 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
 
   $('#btnPublishBracket').addEventListener("click", async ()=>{
+    if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud publish is disabled in this beta.");
     if(isSafeMode()) return alert("Safe Mode is ON - publish is blocked.");
     if(!BRACKET_STATE) return alert("No bracket to publish.");
     try{ await cloudSaveBracket(BRACKET_STATE); }
     catch(e){ alert("Publish failed: " + (e.message || e)); }
   });
+
   $('#btnLoadBracketCloud').addEventListener("click", async ()=>{
+    if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud load is disabled in this beta.");
     try{ await cloudLoadBracket(); }
     catch(e){ alert("Load failed: " + (e.message || e)); }
   });
