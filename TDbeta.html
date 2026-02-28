@@ -1,11 +1,12 @@
 <!-- =====================
 TDbeta.html - Tournament Director (Integrated)
-v2.4.1 - Local archive beta + bracket cloud hard-disabled
+v2.5 - Local archive beta + late entrant support
 - Fixes random timestamp writes to AYPT by disabling all bracket cloud traffic
 - AYPT reads still work
 - Local brackets still work
 - Archive still works
 - Full Bracket Live now shows a placeholder until a real bracket endpoint exists
+- Adds latecomer insertion into eligible Winners Round 1 BYE slots
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -382,6 +383,14 @@ v2.4.1 - Local archive beta + bracket cloud hard-disabled
       <select id="selMatch" style="min-width:360px;"></select>
       <select id="selWinner" style="min-width:220px;"></select>
       <span class="muted" id="advanceMsg"></span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row-left">
+      <input id="lateEntrantName" placeholder="Late entrant name" style="width:240px" />
+      <button class="btnTiny primary" id="btnAddLateEntrant">Add Latecomer</button>
+      <span class="muted" id="lateAddMsg">Fills eligible Round 1 BYE spots only.</span>
     </div>
 
     <div class="spacer"></div>
@@ -1268,6 +1277,157 @@ function canClearWinner(lane, id, which){
   return true;
 }
 
+/* =========================================================
+  LATE ENTRANTS
+========================================================= */
+function normalizeName(s){
+  return String(s || "").trim().replace(/\s+/g, " ");
+}
+
+function playerExistsInBracket(name){
+  if(!BRACKET_STATE) return false;
+  const n = normalizeName(name).toLowerCase();
+  if(!n) return false;
+
+  const all = listAllMatches();
+  for(const item of all){
+    const m = item.m;
+    if(normalizeName(m.p1).toLowerCase() === n) return true;
+    if(normalizeName(m.p2).toLowerCase() === n) return true;
+  }
+  return false;
+}
+
+function getFeedTargetForWinner(matchId){
+  if(!BRACKET_STATE || !BRACKET_STATE.feeds) return null;
+  return BRACKET_STATE.feeds[`W|${matchId}|p1`] || null;
+}
+
+function getLateAddCandidates(){
+  if(!BRACKET_STATE || !BRACKET_STATE.winnersRounds || !BRACKET_STATE.winnersRounds[0]) return [];
+
+  const out = [];
+  const round1 = BRACKET_STATE.winnersRounds[0];
+
+  for(const m of round1){
+    const p1Bye = m.p1 === "BYE";
+    const p2Bye = m.p2 === "BYE";
+    if(!p1Bye && !p2Bye) continue;
+
+    const feed = getFeedTargetForWinner(m.id);
+    let downstreamStarted = false;
+
+    if(feed){
+      const target = findMatch(feed.lane, feed.id);
+      if(target && hasMatchStarted(target)) downstreamStarted = true;
+    }
+
+    if(downstreamStarted) continue;
+
+    if(p1Bye){
+      out.push({
+        matchId: m.id,
+        slot: "p1",
+        type: p2Bye ? "double-bye" : "single-bye",
+        label: `${m.label} - open ${p2Bye ? "double-BYE" : "BYE"} slot`
+      });
+    }
+
+    if(p2Bye){
+      out.push({
+        matchId: m.id,
+        slot: "p2",
+        type: p1Bye ? "double-bye" : "single-bye",
+        label: `${m.label} - open ${p1Bye ? "double-BYE" : "BYE"} slot`
+      });
+    }
+  }
+
+  return out;
+}
+
+function autoResolveByeMatch(match){
+  if(!match) return;
+
+  clearMatchResult(match);
+
+  const p1Bye = match.p1 === "BYE";
+  const p2Bye = match.p2 === "BYE";
+
+  if(p1Bye && !p2Bye){
+    match.winner = "p2";
+    match.loser = "p1";
+  }else if(p2Bye && !p1Bye){
+    match.winner = "p1";
+    match.loser = "p2";
+  }
+}
+
+function addLateEntrant(){
+  const msg = $('#lateAddMsg');
+  if(msg) msg.textContent = "";
+
+  if(!BRACKET_STATE) return alert("No bracket loaded.");
+
+  const rawName = $('#lateEntrantName').value;
+  const name = normalizeName(rawName);
+
+  if(!name) return alert("Enter the late entrant name first.");
+  if(name.toLowerCase() === "bye" || name.toLowerCase() === "tbd"){
+    return alert("That name is reserved.");
+  }
+  if(playerExistsInBracket(name)){
+    return alert("That player is already somewhere in this bracket.");
+  }
+
+  const candidates = getLateAddCandidates();
+  if(!candidates.length){
+    if(msg) msg.textContent = "No eligible Round 1 BYE slots remain.";
+    return alert("No eligible Round 1 BYE slots remain.");
+  }
+
+  candidates.sort((a,b)=>{
+    const av = a.type === "single-bye" ? 0 : 1;
+    const bv = b.type === "single-bye" ? 0 : 1;
+    return av - bv;
+  });
+
+  const chosen = candidates[0];
+  const match = findMatch("W", chosen.matchId);
+  if(!match) return alert("Eligible match not found.");
+
+  clearMatchResult(match);
+  match[chosen.slot] = name;
+  autoResolveByeMatch(match);
+
+  if(!Array.isArray(BRACKET_STATE.entrants)) BRACKET_STATE.entrants = [];
+  BRACKET_STATE.entrants.push(name);
+
+  propagateWinners();
+  saveBracketState();
+  renderBracket();
+  buildMatchPicker();
+  renderResults();
+  schedulePublish();
+
+  $('#lateEntrantName').value = "";
+
+  const otherSlot = chosen.slot === "p1" ? "p2" : "p1";
+  const otherName = match[otherSlot];
+
+  if(msg){
+    msg.textContent =
+      otherName === "BYE"
+        ? `${name} added to ${match.label} and auto-advanced from the BYE spot.`
+        : `${name} added to ${match.label}. Match now needs to be played.`;
+  }
+
+  $('#bracketStatus').textContent = `Late entrant added: ${name} -> ${match.label} (${chosen.slot.toUpperCase()})`;
+}
+
+/* =========================================================
+  ADVANCE WINNER
+========================================================= */
 function advanceWinner(){
   const msg = $('#advanceMsg');
   msg.textContent = '';
@@ -1472,6 +1632,7 @@ function resetBracket(){
   $('#bracketStatus').textContent = "Bracket reset.";
   $('#resultsTable tbody').innerHTML = "";
   $('#resultsStatus').textContent = "-";
+  $('#lateAddMsg').textContent = "Fills eligible Round 1 BYE spots only.";
 }
 
 function renderMatchCard(match, lane, editable=false){
@@ -2105,6 +2266,11 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   $('#btnExportBracketJSON').addEventListener("click", exportBracketJSON);
   $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
   $('#importBracketFile').addEventListener("change", (e)=>{ if(e.target.files[0]) importBracketJSONFile(e.target.files[0]); });
+
+  $('#btnAddLateEntrant').addEventListener("click", addLateEntrant);
+  $('#lateEntrantName').addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") addLateEntrant();
+  });
 
   $('#btnPublishBracket').addEventListener("click", async ()=>{
     if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud publish is disabled in this beta.");
