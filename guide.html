@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>Tournament Director Guide</title>
+  <style>
+    :root{
+      --bg:#0b0d12;
+      --panel:#121826;
+      --panel2:#0f1420;
+      --line:#26324a;
+      --text:#e9eefb;
+      --muted:#a9b4cc;
+      --accent:#4aa3ff;
+      --accent2:#00d1ff;
+      --ok:#40d98a;
+      --warn:#ffcc66;
+      --danger:#ff6b6b;
+      --chip: rgba(255,255,255,.06);
+      --chipBorder: rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --max: 1100px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; padding:0; background:linear-gradient(180deg,#0b0d12 0%, #0d1320 100%); color:var(--text); font-family:Arial, Helvetica, sans-serif; }
+    a{ color:#8ed8ff; }
+
+    .wrap{ max-width:var(--max); margin:0 auto; padding:24px 18px 80px; }
+
+    .hero{
+      background:linear-gradient(135deg, rgba(74,163,255,.18), rgba(0,209,255,.08));
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      padding:28px;
+      margin-bottom:18px;
+    }
+    .eyebrow{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--chip);
+      border:1px solid var(--chipBorder);
+      color:var(--accent2);
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+      margin-bottom:12px;
+    }
+    h1{ margin:0 0 12px; font-size:clamp(2rem, 3vw, 3rem); line-height:1.05; }
+    .lead{ color:var(--muted); font-size:1.08rem; line-height:1.6; max-width:760px; }
+
+    .quickgrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:14px;
+      margin:18px 0 4px;
+    }
+    .quickcard{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:14px;
+    }
+    .quickcard b{ display:block; margin-bottom:6px; }
+    .quickcard span{ color:var(--muted); font-size:.96rem; line-height:1.45; }
+
+    .nav{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin:18px 0 28px;
+    }
+    .nav a{
+      text-decoration:none;
+      color:var(--text);
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid var(--chipBorder);
+      background:var(--chip);
+      font-weight:700;
+      font-size:.95rem;
+    }
+
+    .section{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:22px;
+      padding:22px;
+      box-shadow:var(--shadow);
+      margin-bottom:18px;
+    }
+    .section h2{ margin:0 0 12px; font-size:1.5rem; }
+    .section p{ color:var(--muted); line-height:1.65; }
+
+    .steps{
+      display:grid;
+      gap:14px;
+      margin-top:14px;
+    }
+    .step{
+      display:grid;
+      grid-template-columns:56px 1fr;
+      gap:14px;
+      align-items:flex-start;
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+    }
+    .num{
+      width:56px;
+      height:56px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      font-size:1.2rem;
+      font-weight:900;
+      color:#001018;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+    }
+    .step h3{ margin:0 0 6px; font-size:1.08rem; }
+    .step p{ margin:0 0 8px; }
+    .step ul{ margin:8px 0 0 18px; color:var(--muted); line-height:1.55; }
+
+    .two{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:16px;
+    }
+    .miniCard{
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+    }
+    .miniCard h3{ margin:0 0 8px; font-size:1.06rem; }
+    .miniCard p, .miniCard li{ color:var(--muted); line-height:1.6; }
+    .miniCard ul{ margin:10px 0 0 18px; }
+
+    .callout{
+      border-left:4px solid var(--warn);
+      background:rgba(255,204,102,.08);
+      border-radius:14px;
+      padding:14px 14px 14px 16px;
+      color:#ffe6a6;
+      margin-top:14px;
+      line-height:1.6;
+    }
+    .callout.ok{
+      border-left-color:var(--ok);
+      background:rgba(64,217,138,.08);
+      color:#bbf2d1;
+    }
+
+    .faq{
+      display:grid;
+      gap:12px;
+      margin-top:12px;
+    }
+    details{
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:14px 16px;
+    }
+    summary{ cursor:pointer; font-weight:800; }
+    details p{ margin:12px 0 0; }
+
+    .footer{
+      color:var(--muted);
+      text-align:center;
+      font-size:.92rem;
+      margin-top:28px;
+    }
+
+    @media (max-width:700px){
+      .hero, .section{ padding:18px; }
+      .step{ grid-template-columns:1fr; }
+      .num{ width:48px; height:48px; border-radius:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Tournament Director Guide</div>
+      <h1>How TDbeta works - and how to run a tournament without summoning bracket demons</h1>
+      <p class="lead">
+        This page is a simple walkthrough for new Tournament Director folks using TDbeta. It explains what each part of the page does, the normal order of operations, and a few practical tips for handling real-world tournament chaos.
+      </p>
+
+      <div class="quickgrid">
+        <div class="quickcard">
+          <b>Best use case</b>
+          <span>Weekly events, local brackets, quick table assignments, late player chaos, and keeping the room moving.</span>
+        </div>
+        <div class="quickcard">
+          <b>Main idea</b>
+          <span>Generate match links, view signups, seed a bracket, advance winners, and keep a local archive on the device.</span>
+        </div>
+        <div class="quickcard">
+          <b>Important note</b>
+          <span>Bracket cloud is disabled in this beta, so think of this as a strong local TD tool with optional sheet reading.</span>
+        </div>
+      </div>
+    </section>
+
+    <nav class="nav">
+      <a href="#overview">Overview</a>
+      <a href="#startup">Before you start</a>
+      <a href="#workflow">Typical workflow</a>
+      <a href="#tabs">What each tab does</a>
+      <a href="#latecomers">Latecomers</a>
+      <a href="#tips">TD tips</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+
+    <section class="section" id="overview">
+      <h2>Overview</h2>
+      <p>
+        TDbeta is the control room page. It helps the Tournament Director create match links for scorekeepers, pull names from AYPT signups, build a local bracket, advance matches, export results, and archive the tournament state for later.
+      </p>
+      <div class="callout ok">
+        The simple mental model is this: <b>signups in, bracket built, matches sent out, winners advanced, results exported.</b>
+      </div>
+    </section>
+
+    <section class="section" id="startup">
+      <h2>Before you start</h2>
+      <div class="two">
+        <div class="miniCard">
+          <h3>1. Unlock the page</h3>
+          <p>There is a TD code gate at the front. Once unlocked for that browser session, you are in.</p>
+        </div>
+        <div class="miniCard">
+          <h3>2. Decide whether Safe Mode stays on</h3>
+          <p>Safe Mode is the default. It blocks writes and publish actions. That is usually the smart starting point while testing.</p>
+        </div>
+        <div class="miniCard">
+          <h3>3. Set your Tournament ID</h3>
+          <p>Use something consistent like the weekly name and date so your archive makes sense later.</p>
+        </div>
+        <div class="miniCard">
+          <h3>4. Check your table IPs if needed</h3>
+          <p>If you are using local tablet/table calls, make sure the IP list is current before the room gets noisy.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="workflow">
+      <h2>Typical workflow</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div>
+            <h3>Load or enter players</h3>
+            <p>Either refresh AYPT signups and use that list for seeding, or paste names into the Entrants box manually.</p>
+            <ul>
+              <li>AYPT is helpful when players signed up ahead of time</li>
+              <li>manual entry is good for casual or last-minute events</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">2</div>
+          <div>
+            <h3>Create the bracket</h3>
+            <p>Click <b>New Bracket from Entrants</b>. The app pads the field to the next power of two using BYEs.</p>
+            <ul>
+              <li>Double elimination is the default</li>
+              <li>Shuffle can randomize order if you want that behavior</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">3</div>
+          <div>
+            <h3>Generate match links as matches are called</h3>
+            <p>Use the Match Links tab to enter Player 1, Player 2, table number, ref, and match length. This creates a scoreboard link and QR code.</p>
+            <ul>
+              <li>use the QR for quick scanning</li>
+              <li>use the Match Sheet link if you also need the sheet workflow</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">4</div>
+          <div>
+            <h3>Advance winners in the Brackets tab</h3>
+            <p>You can advance using the dropdown picker or by clicking directly on the player row in the chart.</p>
+            <ul>
+              <li>click a player row to mark winner</li>
+              <li>Shift-click a winner to clear it if the downstream path has not started</li>
+              <li>enter scores in the score boxes if you want them shown in the bracket</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">5</div>
+          <div>
+            <h3>Build and export results</h3>
+            <p>When the event is done, use the Results tab to build placements and export CSV or JSON.</p>
+            <ul>
+              <li>CSV is useful for records and posting</li>
+              <li>JSON is useful for backup or future tooling</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">6</div>
+          <div>
+            <h3>Archive the bracket</h3>
+            <p>Save the current bracket to Archive so the device keeps a local snapshot of the event.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="tabs">
+      <h2>What each tab does</h2>
+      <div class="two">
+        <div class="miniCard">
+          <h3>Match Links</h3>
+          <p>Create scoreboard links, QR codes, and match sheet links. This is your “send players to the right place” tab.</p>
+        </div>
+        <div class="miniCard">
+          <h3>AYPT Signups</h3>
+          <p>Pulls in the signup list so you can see who said they are coming and optionally use that list to seed a bracket.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Brackets</h3>
+          <p>Local bracket control center. Build bracket, advance winners, edit scores, and handle latecomer insertion into eligible first-round BYE spots.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Full Bracket Live</h3>
+          <p>Placeholder for live display behavior. In this beta, bracket cloud is disabled, so treat this as future-facing scaffolding.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Results</h3>
+          <p>Build placement output from the current bracket state and export it when the tournament is done.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Archive</h3>
+          <p>Local snapshots of brackets on this browser/device. Great for recovery, reference, or “what happened last week again?” moments.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="latecomers">
+      <h2>How latecomers work</h2>
+      <p>
+        TDbeta can place a late-arriving player into an eligible <b>Round 1 BYE</b> path. This helps when somebody shows up after the bracket is already built but before that path has really started feeding forward.
+      </p>
+
+      <div class="two">
+        <div class="miniCard">
+          <h3>When it works</h3>
+          <ul>
+            <li>There is a real BYE in Winners Round 1</li>
+            <li>The downstream match has not started yet</li>
+            <li>The player is not already in the bracket</li>
+          </ul>
+        </div>
+        <div class="miniCard">
+          <h3>How to do it</h3>
+          <ul>
+            <li>Type the player’s name in the <b>Late entrant name</b> box</li>
+            <li>Click <b>Add Latecomer</b></li>
+            <li>The app places them into an eligible Round 1 BYE slot</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout">
+        If you want to increase the odds that a latecomer can be cleanly inserted, starting with an <b>odd number of players</b> usually guarantees at least one first-round BYE somewhere in the bracket.
+      </div>
+    </section>
+
+    <section class="section" id="tips">
+      <h2>Practical TD tips</h2>
+      <div class="two">
+        <div class="miniCard">
+          <h3>Use Safe Mode first</h3>
+          <p>When testing, leave Safe Mode on until you are sure you want writes enabled.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Name things clearly</h3>
+          <p>Consistent Tournament IDs and player names make archive and results way less confusing later.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Do not over-fix in the moment</h3>
+          <p>If a path already started, it is usually better to keep the bracket honest than to force a heroic edit that creates chaos downstream.</p>
+        </div>
+        <div class="miniCard">
+          <h3>Archive before closing</h3>
+          <p>Local archive is your friend. End-of-night brains are not always your friend.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <h2>FAQ</h2>
+      <div class="faq">
+        <details>
+          <summary>What if I already built the bracket and someone shows up late?</summary>
+          <p>Use the late entrant box if there is an eligible Round 1 BYE path and the downstream path has not started.</p>
+        </details>
+        <details>
+          <summary>What if the next round already started?</summary>
+          <p>That BYE path is effectively locked. At that point, the clean thing is usually to leave the bracket alone and handle the player outside the current draw.</p>
+        </details>
+        <details>
+          <summary>Does this beta publish a live bracket to other screens?</summary>
+          <p>Not right now. Bracket cloud is disabled in this beta, so this page is mainly a local TD control tool.</p>
+        </details>
+        <details>
+          <summary>Can I recover a bracket later?</summary>
+          <p>Yes. Use the Archive tab to save local snapshots, then reload them later on the same browser/device.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="footer">
+      Built for real-world tournament directing, where at least one player is late, one table goes weird, and somehow the event still works out.
+    </div>
+  </div>
+</body>
+</html>
