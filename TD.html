@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html — Tournament Director
-v1.1 — CORS-safe Apps Script post + fixed endpoint + offline queue
+v1.2 — Hosted AHMS + Local Pi AHMS link support
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -23,6 +23,29 @@ a { color: #00eaff; }
 .muted { color:#aaa; font-size:0.9em }
 details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
 summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
+.link-row {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.link-row a {
+  display: inline-block;
+  color: #0f0;
+  text-decoration: underline;
+}
+.local-box {
+  margin: 10px auto;
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #181818;
+}
+.local-box input {
+  width: 80%;
+  max-width: 480px;
+}
 
 /* ---- TD PIN gate overlay ---- */
 #tdGate {
@@ -51,7 +74,8 @@ background:#00bcd4; color:#000; cursor: pointer;
 </style>
 </head>
 <body>
-<!-- TD PIN gate (client-side) -->
+
+<!-- TD PIN gate -->
 <div id="tdGate">
 <div class="td-gate-inner">
 <div class="td-gate-title">Tournament Director — Locked</div>
@@ -72,25 +96,44 @@ background:#00bcd4; color:#000; cursor: pointer;
 <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
 <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
 <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-<p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
-<p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> (retries if offline).</p>
+<p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, hosted Match Sheet link, and local Pi AHMS link.</p>
+<p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> when available.</p>
 </div>
 </details>
 
-<div style="display: flex; flex-direction: column; align-items: center; max-width: 300px; margin: 0 auto;">
+<div style="display: flex; flex-direction: column; align-items: center; max-width: 320px; margin: 0 auto;">
 <input type="text" id="player1" placeholder="Player 1" autofocus />
 <input type="text" id="player2" placeholder="Player 2" />
 <input type="text" id="tableNumber" placeholder="Table #" />
 <input type="text" id="refName" placeholder="Referee Name" />
+
 <select id="matchLength">
 <option value="2">Best of 3</option>
 <option value="3">Best of 5</option>
 <option value="4">Best of 7</option>
 </select>
+
 <button onclick="generateMatchLink()">Generate Match Link</button>
 <button id="copyCurlBtn" style="display:none;">Copy Curl Command</button>
 
-    <details class="block" style="max-width:700px;margin:20px auto">
+<details class="block" style="max-width:700px;margin:20px auto">
+  <summary class="clicky">🖨️ Local AHMS on Pi</summary>
+  <div class="local-box">
+    <p class="muted">
+      This should point to the Pi server that serves:
+      <br>
+      <code>/home/airhockeyprint/ahms-ascpos-bridge/index.html</code>
+    </p>
+    <input type="text" id="localAhmsBase" placeholder="http://192.168.1.4:3000/" />
+    <div>
+      <button type="button" onclick="saveLocalAhmsBase()">Save Local AHMS URL</button>
+      <button type="button" onclick="resetLocalAhmsBase()">Reset</button>
+    </div>
+    <div id="localAhmsMsg" class="muted"></div>
+  </div>
+</details>
+
+<details class="block" style="max-width:700px;margin:20px auto">
   <summary class="clicky">🖧 Table IPs (edit & save)</summary>
   <div style="margin-top:10px">
     <div id="ipEditor" style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center"></div>
@@ -103,10 +146,13 @@ background:#00bcd4; color:#000; cursor: pointer;
   </div>
 </details>
 
-<a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">➕ Generate Match Sheet</a>
+<div class="link-row">
+  <a id="matchSheetLink" href="#" target="_blank" style="display:none;">➕ Open Hosted Match Sheet</a>
+  <a id="localMatchSheetLink" href="#" target="_blank" style="display:none;">🖨️ Open Local AHMS on Pi</a>
+</div>
+
 <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
-<!-- Removed endpoint UI; fixed constant is used -->
-    <div class="muted" style="margin-top:4px;">AYPTML endpoint is locked in this build.</div>
+<div class="muted" style="margin-top:4px;">AYPTML endpoint is locked in this build.</div>
 </div>
 
 <div id="result"></div>
@@ -114,27 +160,78 @@ background:#00bcd4; color:#000; cursor: pointer;
 <canvas id="qrcode"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
 <script>
 // ==========================
-// Endpoint (fixed constant)
+// Endpoint constants
 // ==========================
 const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
-let generatedUrl = '';
+const HOSTED_AHMS_BASE = "https://petesimple.github.io/AHMS/";
+const DEFAULT_LOCAL_AHMS_BASE = "http://192.168.1.181:3000/";
+const LOCAL_AHMS_KEY = "AH_TD_LOCAL_AHMS_BASE";
+
+let generatedUrl = "";
+let generatedHostedMatchSheetUrl = "";
+let generatedLocalMatchSheetUrl = "";
 let currentPage = 1;
 const pageSize = 25;
 
+function normalizeBaseUrl(url) {
+  let clean = String(url || "").trim();
+  if (!clean) return "";
+  if (!/^https?:\/\//i.test(clean)) clean = "http://" + clean;
+  if (!clean.endsWith("/")) clean += "/";
+  return clean;
+}
+
+function getLocalAhmsBase() {
+  const saved = localStorage.getItem(LOCAL_AHMS_KEY);
+  return normalizeBaseUrl(saved || DEFAULT_LOCAL_AHMS_BASE);
+}
+
+function saveLocalAhmsBase() {
+  const input = document.getElementById("localAhmsBase");
+  const msg = document.getElementById("localAhmsMsg");
+  const clean = normalizeBaseUrl(input.value);
+  if (!clean) {
+    if (msg) msg.textContent = "Enter a local AHMS URL first.";
+    return;
+  }
+  localStorage.setItem(LOCAL_AHMS_KEY, clean);
+  input.value = clean;
+  if (msg) msg.textContent = "Saved local AHMS URL.";
+}
+
+function resetLocalAhmsBase() {
+  localStorage.removeItem(LOCAL_AHMS_KEY);
+  const input = document.getElementById("localAhmsBase");
+  const msg = document.getElementById("localAhmsMsg");
+  input.value = DEFAULT_LOCAL_AHMS_BASE;
+  if (msg) msg.textContent = "Reset to default local AHMS URL.";
+}
+
+function buildMatchSheetUrl(base, match, table, ref, p1, p2, matchId) {
+  return `${base}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+}
+
 function generateMatchLink() {
-const p1Raw = document.getElementById('player1').value.trim();
-const p2Raw = document.getElementById('player2').value.trim();
+const p1Raw = document.getElementById("player1").value.trim();
+const p2Raw = document.getElementById("player2").value.trim();
+
+if (!p1Raw || !p2Raw) {
+  alert("Enter both player names first.");
+  return;
+}
+
 const p1 = encodeURIComponent(p1Raw);
 const p2 = encodeURIComponent(p2Raw);
-const match = document.getElementById('matchLength').value;
-const table = document.getElementById('tableNumber').value.trim();
-const refRaw = document.getElementById('refName').value.trim();
+const match = document.getElementById("matchLength").value;
+const table = document.getElementById("tableNumber").value.trim();
+const refRaw = document.getElementById("refName").value.trim();
 const ref = encodeURIComponent(refRaw);
 
-const baseUrl = window.location.origin + '/airhockey-score-system/';
+const baseUrl = window.location.origin + "/airhockey-score-system/";
 
 // Unique 4-char ID + Date
 const randomId = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -146,61 +243,75 @@ generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
 if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
 if (ref) generatedUrl += `&ref=${ref}`;
 
-// Match Sheet URL
-const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
-const matchSheetLink = document.getElementById('matchSheetLink');
-matchSheetLink.href = matchSheetUrl;
-matchSheetLink.style.display = 'inline-block';
+// Hosted Match Sheet URL
+generatedHostedMatchSheetUrl = buildMatchSheetUrl(HOSTED_AHMS_BASE, match, table, ref, p1, p2, matchId);
+
+// Local Pi Match Sheet URL
+const localBase = getLocalAhmsBase();
+generatedLocalMatchSheetUrl = buildMatchSheetUrl(localBase, match, table, ref, p1, p2, matchId);
+
+const matchSheetLink = document.getElementById("matchSheetLink");
+matchSheetLink.href = generatedHostedMatchSheetUrl;
+matchSheetLink.style.display = "inline-block";
+
+const localMatchSheetLink = document.getElementById("localMatchSheetLink");
+localMatchSheetLink.href = generatedLocalMatchSheetUrl;
+localMatchSheetLink.style.display = "inline-block";
 
 // Display
 const extraNote = `
-       ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ''}
-       ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ''}
+       ${table ? `<p><strong>Table Assignment:</strong> Table ${table}</p>` : ""}
+       ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ""}
        <p><strong>Match ID:</strong> ${matchId}</p>
+       <p><strong>Hosted AHMS:</strong><br><a href="${generatedHostedMatchSheetUrl}" target="_blank">${generatedHostedMatchSheetUrl}</a></p>
+       <p><strong>Local Pi AHMS:</strong><br><a href="${generatedLocalMatchSheetUrl}" target="_blank">${generatedLocalMatchSheetUrl}</a></p>
      `;
-document.getElementById('result').innerHTML = `
+
+document.getElementById("result").innerHTML = `
        <p><strong>Match Link:</strong></p>
        <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
        ${extraNote}
      `;
 
-document.getElementById('copyBtn').style.display = 'inline-block';
-const curlBtn = document.getElementById('copyCurlBtn');
-if (curlBtn) curlBtn.style.display = 'inline-block';
-document.getElementById('copyBtn').classList.remove('copied');
-document.getElementById('copyBtn').innerText = 'Copy to Clipboard';
+document.getElementById("copyBtn").style.display = "inline-block";
+const curlBtn = document.getElementById("copyCurlBtn");
+if (curlBtn) curlBtn.style.display = "inline-block";
+document.getElementById("copyBtn").classList.remove("copied");
+document.getElementById("copyBtn").innerText = "Copy to Clipboard";
 
-QRCode.toCanvas(document.getElementById('qrcode'), generatedUrl, {
+QRCode.toCanvas(document.getElementById("qrcode"), generatedUrl, {
 width: 220,
-color: { dark: '#ffffff', light: '#111111' }
+color: { dark: "#ffffff", light: "#111111" }
 }, function (error) { if (error) console.error(error); });
 
-const readableMatch = `${p1Raw} vs ${p2Raw} – Best of ${match}${table ? ` @ Table ${table}` : ''}${refRaw ? ` [Ref: ${refRaw}]` : ''}`;
+const readableMatch = `${p1Raw} vs ${p2Raw} - Best of ${match}${table ? ` @ Table ${table}` : ""}${refRaw ? ` [Ref: ${refRaw}]` : ""}`;
 
 // Save locally and push to cloud
 addToMatchLog(readableMatch, generatedUrl);
+
 const payload = {
 timestamp: new Date().toISOString(),
-source: 'TD',
+source: "TD",
 matchId,
 p1: p1Raw,
 p2: p2Raw,
 matchType: `Best of ${match}`,
-table: table || '',
-referee: refRaw || '',
+table: table || "",
+referee: refRaw || "",
 scoreboardUrl: generatedUrl,
-matchSheetUrl: matchSheetUrl
+matchSheetUrl: generatedHostedMatchSheetUrl,
+localMatchSheetUrl: generatedLocalMatchSheetUrl
 };
+
 saveToAYPTMatchLog(payload);
 }
 
 function copyLink() {
 navigator.clipboard.writeText(generatedUrl).then(() => {
-const btn = document.getElementById('copyBtn');
-btn.classList.add('copied');
-btn.innerText = 'Copied!';
-setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
+const btn = document.getElementById("copyBtn");
+btn.classList.add("copied");
+btn.innerText = "Copied!";
+setTimeout(() => { btn.classList.remove("copied"); btn.innerText = "Copy to Clipboard"; }, 2000);
 });
 }
 
@@ -209,50 +320,51 @@ setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clip
 // ==============================
 function addToMatchLog(text, url) {
 const now = new Date();
-const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
-const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+const logItem = { text, url, time: now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), date: now.toLocaleDateString() };
+const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
 log.unshift(logItem);
-localStorage.setItem('matchLog', JSON.stringify(log));
+localStorage.setItem("matchLog", JSON.stringify(log));
 renderMatchLog();
 }
 
 function renderMatchLog() {
-const searchQuery = document.getElementById('searchLog')?.value.toLowerCase() || '';
-const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
+const searchQuery = document.getElementById("searchLog")?.value.toLowerCase() || "";
+const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
 const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
 const totalPages = Math.ceil(filtered.length / pageSize);
 if (currentPage > totalPages) currentPage = totalPages || 1;
 const start = (currentPage - 1) * pageSize;
 const visible = filtered.slice(start, start + pageSize);
-const logList = document.getElementById('logList');
-logList.innerHTML = '';
+const logList = document.getElementById("logList");
+if (!logList) return;
+logList.innerHTML = "";
 visible.forEach(item => {
-const li = document.createElement('li');
+const li = document.createElement("li");
 li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
 logList.appendChild(li);
 });
-const pageInfo = document.getElementById('pageInfo');
+const pageInfo = document.getElementById("pageInfo");
 if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
 }
 
 function clearMatchLog() {
-if (confirm('⚠️ Are you sure you want to clear the match log?')) {
-localStorage.removeItem('matchLog');
+if (confirm("⚠️ Are you sure you want to clear the match log?")) {
+localStorage.removeItem("matchLog");
 renderMatchLog();
 }
 }
 
 function exportMatchLogCSV() {
-const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-if (log.length === 0) { alert('No matches to export.'); return; }
-const headers = ['Date', 'Time', 'Match Info', 'Link'];
+const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
+if (log.length === 0) { alert("No matches to export."); return; }
+const headers = ["Date", "Time", "Match Info", "Link"];
 const rows = log.map(item => [item.date, item.time, item.text, item.url]);
-const csvContent = [headers, ...rows].map(e => e.map(v => `"${v}"`).join(',')).join('\n');
-const blob = new Blob([csvContent], { type: 'text/csv' });
+const csvContent = [headers, ...rows].map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+const blob = new Blob([csvContent], { type: "text/csv" });
 const url = URL.createObjectURL(blob);
-const link = document.createElement('a');
+const link = document.createElement("a");
 link.href = url;
-link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+link.download = `MatchLog_${new Date().toISOString().split("T")[0]}.csv`;
 document.body.appendChild(link);
 link.click();
 document.body.removeChild(link);
@@ -260,77 +372,76 @@ URL.revokeObjectURL(url);
 }
 
 // ==============================
-// Cloud Sync → AYPT (no preflight)
+// Cloud Sync to AYPT
 // ==============================
-const QUEUE_KEY = 'matchLogCloudQueue';
+const QUEUE_KEY = "matchLogCloudQueue";
 
 function showCloudStatus(msg, temp=false) {
-const el = document.getElementById('cloudSyncStatus');
+const el = document.getElementById("cloudSyncStatus");
 if (!el) return;
 el.textContent = msg;
-el.style.display = 'block';
-if (temp) setTimeout(() => { el.style.display = 'none'; }, 2500);
+el.style.display = "block";
+if (temp) setTimeout(() => { el.style.display = "none"; }, 2500);
 }
 
 function enqueue(payload) {
-const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
 q.push(payload);
 localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-showCloudStatus(`Saved offline (${q.length} pending)…`, true);
+showCloudStatus(`Saved offline (${q.length} pending)...`, true);
 }
 
 async function flushCloudQueue() {
-const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
 if (!q.length) return;
-showCloudStatus(`Syncing ${q.length} pending…`);
+showCloudStatus(`Syncing ${q.length} pending...`);
 const remaining = [];
 for (const item of q) {
 const ok = await postToAYPT(item);
 if (!ok) remaining.push(item);
 }
 localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-showCloudStatus(remaining.length ? `${remaining.length} still pending…` : 'All synced!', true);
+showCloudStatus(remaining.length ? `${remaining.length} still pending...` : "All synced!", true);
 }
 
 function postToAYPT(payload) {
 try {
 const body = new URLSearchParams({
-action: 'appendMatchLog',
-// secret: 'change-me-strong', // optional shared secret (also set in Apps Script)
+action: "appendMatchLog",
 payload: JSON.stringify(payload)
 });
 return fetch(AYPT_ENDPOINT, {
-method: 'POST',
-cache: 'no-store',
+method: "POST",
+cache: "no-store",
 body
 }).then(async (resp) => {
 if (!resp.ok) {
-// Attempt fire-and-forget for strict proxies
-await fetch(AYPT_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
+await fetch(AYPT_ENDPOINT, { method: "POST", mode: "no-cors", body });
 return true;
 }
 const text = await resp.text();
 try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-}).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
+}).catch((e) => { console.warn("AYPT post failed, will queue:", e); return false; });
 } catch (e) {
-console.warn('AYPT post failed, will queue:', e);
+console.warn("AYPT post failed, will queue:", e);
 return Promise.resolve(false);
 }
 }
 
-// Wrapper used by generateMatchLink()
 function saveToAYPTMatchLog(payload){
 return postToAYPT(payload).then(ok => {
 if (!ok) {
-enqueue(payload);            // store offline, auto-flushed later
+enqueue(payload);
 } else {
-showCloudStatus('Saved to AYPT ✓', true);
+showCloudStatus("Saved to AYPT ✓", true);
 }
 return ok;
 });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
+const localInput = document.getElementById("localAhmsBase");
+if (localInput) localInput.value = getLocalAhmsBase();
 renderMatchLog();
 flushCloudQueue();
 });
@@ -357,27 +468,34 @@ flushCloudQueue();
 // ==========================
 // Logo long-press + storage
 // ==========================
-const logo = document.getElementById('logo');
-const uploader = document.getElementById('logoUploader');
+const logo = document.getElementById("logo");
+const uploader = document.getElementById("logoUploader");
 let pressTimer;
-logo.addEventListener('dragstart', (e) => e.preventDefault());
-logo.addEventListener('selectstart', (e) => e.preventDefault());
-logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-logo.addEventListener('mouseup', () => clearTimeout(pressTimer));
-logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
-logo.addEventListener('touchend', () => clearTimeout(pressTimer));
-logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
-uploader.addEventListener('change', (e) => {
+
+logo.addEventListener("dragstart", (e) => e.preventDefault());
+logo.addEventListener("selectstart", (e) => e.preventDefault());
+logo.addEventListener("mousedown", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener("mouseup", () => clearTimeout(pressTimer));
+logo.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+logo.addEventListener("touchstart", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+logo.addEventListener("touchend", () => clearTimeout(pressTimer));
+logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
+
+uploader.addEventListener("change", (e) => {
 const file = e.target.files[0];
-if (file && file.type.startsWith('image/')) {
+if (file && file.type.startsWith("image/")) {
 const reader = new FileReader();
-reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
+reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem("customLogo", evt.target.result); };
 reader.readAsDataURL(file);
 }
 });
-window.addEventListener('DOMContentLoaded', () => { const savedLogo = localStorage.getItem('customLogo'); if (savedLogo) logo.src = savedLogo; });
-function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
+
+window.addEventListener("DOMContentLoaded", () => {
+const savedLogo = localStorage.getItem("customLogo");
+if (savedLogo) logo.src = savedLogo;
+});
+
+function resetLogo() { localStorage.removeItem("customLogo"); logo.src = "TDlogo.png"; }
 function nextPage() { currentPage++; renderMatchLog(); }
 function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
 </script>
@@ -387,47 +505,45 @@ function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } 
       Add ?sw=off to disable SW for debugging
  ========================== -->
 <script>
-const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
-if ('serviceWorker' in navigator && !SW_OFF) {
-navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
-.then(() => console.log('TD Service Worker registered!'))
-.catch(() => console.log('SW registration failed (ignored).'));
+const SW_OFF = new URL(location.href).searchParams.get("sw") === "off";
+if ("serviceWorker" in navigator && !SW_OFF) {
+navigator.serviceWorker.register("service-worker-td.js", { scope: "./" })
+.then(() => console.log("TD Service Worker registered!"))
+.catch(() => console.log("SW registration failed (ignored)."));
 } else {
-console.log('SW disabled for this session.');
+console.log("SW disabled for this session.");
 }
 </script>
 
 <script>
 // ---- TD PIN gate logic ----
 (function initTDGate(){
-const PIN = '2580';
-const gate = document.getElementById('tdGate');
-const pinEl = document.getElementById('tdPin');
-const msgEl = document.getElementById('tdGateMsg');
+const PIN = "2580";
+const gate = document.getElementById("tdGate");
+const pinEl = document.getElementById("tdPin");
+const msgEl = document.getElementById("tdGateMsg");
 
-// Auto-unlock if session already validated or code in URL (?code=2580)
 const qp = new URL(location.href).searchParams;
-const urlCode = qp.get('code');
-const already = sessionStorage.getItem('TD_UNLOCK') === '1';
+const urlCode = qp.get("code");
+const already = sessionStorage.getItem("TD_UNLOCK") === "1";
 
-function showGate(show) { gate.style.display = show ? 'block' : 'none'; }
+function showGate(show) { gate.style.display = show ? "block" : "none"; }
 
 window.unlockTD = function unlockTD(){
-const val = (pinEl.value || '').trim();
+const val = (pinEl.value || "").trim();
 if (val === PIN || urlCode === PIN) {
-sessionStorage.setItem('TD_UNLOCK', '1');
+sessionStorage.setItem("TD_UNLOCK", "1");
 showGate(false);
-msgEl.textContent = '';
+msgEl.textContent = "";
 } else {
-msgEl.textContent = 'Incorrect code. Try again.';
-pinEl.value = '';
+msgEl.textContent = "Incorrect code. Try again.";
+pinEl.value = "";
 pinEl.focus();
 }
 };
 
-// Optional: allow manual relock
 window.lockTD = function lockTD(){
-sessionStorage.removeItem('TD_UNLOCK');
+sessionStorage.removeItem("TD_UNLOCK");
 showGate(true);
 setTimeout(()=> pinEl && pinEl.focus(), 50);
 };
@@ -439,115 +555,130 @@ showGate(true);
 setTimeout(()=> pinEl && pinEl.focus(), 50);
 }
 
-pinEl && pinEl.addEventListener('keydown', (e)=>{
-if (e.key === 'Enter') unlockTD();
+pinEl && pinEl.addEventListener("keydown", (e)=>{
+if (e.key === "Enter") unlockTD();
 });
 })();
 
-    // === IP storage & helpers ===
-  const LS_KEY_IPS = "AH_TD_TABLE_IPS";
-  const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
-  const LISTENER_PORT = 7070;           // tablet listener port
-  const AUTH_TOKEN    = "changeme-123"; // must match tablet /config
+// === IP storage & helpers ===
+const LS_KEY_IPS = "AH_TD_TABLE_IPS";
+const DEFAULT_TABLE_IPS = {"1":"10.0.0.53","2":"10.0.0.54","3":"10.0.0.56","4":"10.0.0.57"};
+const LISTENER_PORT = 7070;
+const AUTH_TOKEN = "changeme-123";
 
-  function loadTableIPs(){
-    try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
-    catch { return {...DEFAULT_TABLE_IPS}; }
+function loadTableIPs(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
+  catch { return {...DEFAULT_TABLE_IPS}; }
+}
+
+function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+
+function msg(text){
+  const m = document.getElementById("ipMsg");
+  if (m) { m.textContent = text; m.style.display = "block"; }
+}
+
+function addRow(tableVal, ipVal){
+  const wrap = document.getElementById("ipEditor");
+  const t = document.createElement("input");
+  t.placeholder = "Table #";
+  t.value = tableVal;
+  t.inputMode = "numeric";
+  t.style.textAlign = "center";
+
+  const i = document.createElement("input");
+  i.placeholder = "IP e.g. 10.0.0.53";
+  i.value = ipVal;
+
+  const rm = document.createElement("button");
+  rm.type = "button";
+  rm.textContent = "Remove";
+
+  const row = document.createElement("div");
+  row.style.display = "contents";
+  rm.onclick = () => row.remove();
+
+  row.appendChild(t);
+  row.appendChild(i);
+  row.appendChild(rm);
+  wrap.appendChild(row);
+}
+
+function renderIpEditor(){
+  const wrap = document.getElementById("ipEditor");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const map = loadTableIPs();
+  Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
+
+  document.getElementById("addRowBtn").onclick = () => addRow("", "");
+  document.getElementById("saveIPsBtn").onclick = saveFromEditor;
+  document.getElementById("testIPsBtn").onclick = testAll;
+}
+
+function saveFromEditor(){
+  const wrap = document.getElementById("ipEditor");
+  const inputs = Array.from(wrap.querySelectorAll("input"));
+  const map = {};
+  for (let k=0; k<inputs.length; k+=2){
+    const table = (inputs[k].value || "").trim();
+    const ip = (inputs[k+1].value || "").trim();
+    if (table && ip) map[table] = ip;
   }
-  function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+  saveTableIPs(map);
+  msg("Saved IPs.");
+}
 
-  function msg(text){
-    const m = document.getElementById("ipMsg");
-    if (m) { m.textContent = text; m.style.display = "block"; }
-  }
-
-  function addRow(tableVal, ipVal){
-    const wrap = document.getElementById("ipEditor");
-    const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
-    const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
-    const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
-    const row = document.createElement("div"); row.style.display = "contents";
-    rm.onclick = () => row.remove();
-    row.appendChild(t); row.appendChild(i); row.appendChild(rm);
-    wrap.appendChild(row);
-  }
-
-  function renderIpEditor(){
-    const wrap = document.getElementById("ipEditor");
-    if (!wrap) return;
-    wrap.innerHTML = "";
-    const map = loadTableIPs();
-    Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
-    document.getElementById("addRowBtn").onclick  = () => addRow("", "");
-    document.getElementById("saveIPsBtn").onclick = saveFromEditor;
-    document.getElementById("testIPsBtn").onclick = testAll;
-  }
-
-  function saveFromEditor(){
-    const wrap = document.getElementById("ipEditor");
-    const inputs = Array.from(wrap.querySelectorAll("input"));
-    const map = {};
-    for (let k=0; k<inputs.length; k+=2){
-      const table = (inputs[k].value||"").trim();
-      const ip    = (inputs[k+1].value||"").trim();
-      if (table && ip) map[table] = ip;
+async function testAll(){
+  const entries = Object.entries(loadTableIPs());
+  if (!entries.length) return msg("No tables configured.");
+  msg("Testing...");
+  const results = [];
+  for (const [tbl, ip] of entries){
+    try {
+      const r = await Promise.race([
+        fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
+        new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
+      ]);
+      results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
+    } catch {
+      results.push(`${tbl}: fail (${ip})`);
     }
-    saveTableIPs(map);
-    msg("Saved IPs.");
   }
-
-  async function testAll(){
-    const entries = Object.entries(loadTableIPs());
-    if (!entries.length) return msg("No tables configured.");
-    msg("Testing...");
-    const results = [];
-    for (const [tbl, ip] of entries){
-      try {
-        // NOTE: if TD is served over https://, browser may block these http:// calls (mixed content)
-        const r = await Promise.race([
-          fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
-          new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
-        ]);
-        results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
-      } catch {
-        results.push(`${tbl}: fail (${ip})`);
-      }
-    }
-    if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
-      results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
-    }
-    msg(results.join(" | "));
+  if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
+    results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
   }
+  msg(results.join(" | "));
+}
 
-  // === Curl builder uses the stored IPs ===
-  function buildCurlCommand(url, table) {
-    const map = loadTableIPs();
-    const ip  = map[String(table)] || "<TABLE_IP_HERE>";
-    // Safer: JSON body with POST (no URL-encoding headaches)
-    const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
+// === Curl builder uses the stored IPs ===
+function buildCurlCommand(url, table) {
+  const map = loadTableIPs();
+  const ip = map[String(table)] || "<TABLE_IP_HERE>";
+  const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
   -H "Content-Type: application/json" \\
   -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
-    return cmd;
-  }
+  return cmd;
+}
 
-  function copyCurlCommand() {
-    const table = document.getElementById('tableNumber').value.trim();
-    if (!table) return alert("Enter a Table # first.");
-    if (!generatedUrl) return alert("Generate the match link first.");
-    const cmd = buildCurlCommand(generatedUrl, table);
-    navigator.clipboard.writeText(cmd).then(() => {
-      const btn = document.getElementById('copyCurlBtn');
-      btn.innerText = "Copied!";
-      setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
-    });
-  }
-
-  // Hook up the Copy Curl button after DOM is ready
-  document.addEventListener("DOMContentLoaded", ()=>{
-    renderIpEditor();
+function copyCurlCommand() {
+  const table = document.getElementById("tableNumber").value.trim();
+  if (!table) return alert("Enter a Table # first.");
+  if (!generatedUrl) return alert("Generate the match link first.");
+  const cmd = buildCurlCommand(generatedUrl, table);
+  navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.getElementById("copyCurlBtn");
-    if (btn) btn.addEventListener("click", copyCurlCommand);
+    btn.innerText = "Copied!";
+    setTimeout(() => (btn.innerText = "Copy Curl Command"), 2000);
   });
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  renderIpEditor();
+  const btn = document.getElementById("copyCurlBtn");
+  if (btn) btn.addEventListener("click", copyCurlCommand);
+});
 </script>
+
 </body>
 </html>
