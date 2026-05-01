@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html — Tournament Director
-v1.3 — Hosted AHMS + Local file AHMS link builder
+v1.4 — Hosted AHMS + Copy Local File AHMS link
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -20,6 +20,12 @@ button { background: #00bcd4; color: #000; cursor: pointer; }
 a { color: #00eaff; }
 #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
 #copyBtn.copied { background: #0f0; color: #000; }
+#localMatchSheetBtn {
+  display: none;
+  background: #ffd166;
+  color: #000;
+  text-decoration: none;
+}
 .muted { color:#aaa; font-size:0.9em }
 details.block { margin: 20px auto; max-width: 700px; background: #222; color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
 summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #00eaff; }
@@ -34,9 +40,6 @@ summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #0
   display: inline-block;
   color: #0f0;
   text-decoration: underline;
-}
-#localMatchSheetLink {
-  color: #ffd166;
 }
 .local-box {
   margin: 10px auto;
@@ -104,7 +107,7 @@ background:#00bcd4; color:#000; cursor: pointer;
 <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
 <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
 <p><strong>4. Generate Match Link.</strong> Creates the scoreboard URL, QR code, and hosted Match Sheet link.</p>
-<p><strong>5. Generate Local Link.</strong> Builds the local AHMS file link from the Pi path.</p>
+<p><strong>5. Copy Local AHMS Link.</strong> Copies the local file link so it can be pasted into Chromium on the Pi.</p>
 <p><strong>6. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> when available.</p>
 </div>
 </details>
@@ -156,7 +159,7 @@ background:#00bcd4; color:#000; cursor: pointer;
 
 <div class="link-row">
   <a id="matchSheetLink" href="#" target="_blank" style="display:none;">➕ Open Hosted Match Sheet</a>
-  <a id="localMatchSheetLink" href="#" target="_blank" style="display:none;">➕ Generate Local Link</a>
+  <button id="localMatchSheetBtn" type="button" onclick="copyLocalMatchSheetLink()">➕ Copy Local AHMS Link</button>
 </div>
 
 <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
@@ -277,9 +280,11 @@ const matchSheetLink = document.getElementById("matchSheetLink");
 matchSheetLink.href = generatedHostedMatchSheetUrl;
 matchSheetLink.style.display = "inline-block";
 
-const localMatchSheetLink = document.getElementById("localMatchSheetLink");
-localMatchSheetLink.href = generatedLocalMatchSheetUrl;
-localMatchSheetLink.style.display = "inline-block";
+const localMatchSheetBtn = document.getElementById("localMatchSheetBtn");
+localMatchSheetBtn.style.display = "inline-block";
+localMatchSheetBtn.textContent = "➕ Copy Local AHMS Link";
+localMatchSheetBtn.style.background = "#ffd166";
+localMatchSheetBtn.style.color = "#000";
 
 // Display
 const extraNote = `
@@ -287,7 +292,7 @@ const extraNote = `
        ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ""}
        <p><strong>Match ID:</strong> ${matchId}</p>
        <p><strong>Hosted AHMS:</strong><br><a href="${generatedHostedMatchSheetUrl}" target="_blank">${generatedHostedMatchSheetUrl}</a></p>
-       <p><strong>Local AHMS File:</strong><br><a href="${generatedLocalMatchSheetUrl}" target="_blank">${generatedLocalMatchSheetUrl}</a></p>
+       <p><strong>Local AHMS File:</strong><br><code>${generatedLocalMatchSheetUrl}</code></p>
      `;
 
 document.getElementById("result").innerHTML = `
@@ -338,6 +343,28 @@ btn.classList.add("copied");
 btn.innerText = "Copied!";
 setTimeout(() => { btn.classList.remove("copied"); btn.innerText = "Copy Scoreboard Link to Clipboard"; }, 2000);
 });
+}
+
+function copyLocalMatchSheetLink() {
+  if (!generatedLocalMatchSheetUrl) {
+    alert("Generate the match link first.");
+    return;
+  }
+
+  navigator.clipboard.writeText(generatedLocalMatchSheetUrl).then(() => {
+    const btn = document.getElementById("localMatchSheetBtn");
+    btn.textContent = "Copied Local AHMS Link!";
+    btn.style.background = "#0f0";
+    btn.style.color = "#000";
+
+    setTimeout(() => {
+      btn.textContent = "➕ Copy Local AHMS Link";
+      btn.style.background = "#ffd166";
+      btn.style.color = "#000";
+    }, 2000);
+  }).catch(() => {
+    prompt("Copy this local AHMS link:", generatedLocalMatchSheetUrl);
+  });
 }
 
 // ==============================
@@ -525,7 +552,7 @@ flushCloudQueue();
 
 <script>
 // ==========================
-// Logo long-press + storage
+// Logo long press + storage
 // ==========================
 const logo = document.getElementById("logo");
 const uploader = document.getElementById("logoUploader");
