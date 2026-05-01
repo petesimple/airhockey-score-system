@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html — Tournament Director
-v1.2 — Hosted AHMS + Local Pi AHMS link support
+v1.3 — Hosted AHMS + Local file AHMS link builder
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -35,6 +35,9 @@ summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #0
   color: #0f0;
   text-decoration: underline;
 }
+#localMatchSheetLink {
+  color: #ffd166;
+}
 .local-box {
   margin: 10px auto;
   padding: 12px;
@@ -44,13 +47,17 @@ summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.2em; color: #0
 }
 .local-box input {
   width: 80%;
-  max-width: 480px;
+  max-width: 560px;
+}
+code {
+  color: #ffd166;
+  word-break: break-all;
 }
 
 /* ---- TD PIN gate overlay ---- */
 #tdGate {
 position: fixed; inset: 0; z-index: 99999;
-display: none; /* JS decides visibility */
+display: none;
 background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
 color: #fff; font-family: Arial, sans-serif;
 }
@@ -96,8 +103,9 @@ background:#00bcd4; color:#000; cursor: pointer;
 <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
 <p><strong>2. Table & Ref?</strong> Optional table # and referee name.</p>
 <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-<p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, hosted Match Sheet link, and local Pi AHMS link.</p>
-<p><strong>5. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> when available.</p>
+<p><strong>4. Generate Match Link.</strong> Creates the scoreboard URL, QR code, and hosted Match Sheet link.</p>
+<p><strong>5. Generate Local Link.</strong> Builds the local AHMS file link from the Pi path.</p>
+<p><strong>6. Match Log.</strong> Saves locally and posts to AYPT ➜ <em>Match Log</em> when available.</p>
 </div>
 </details>
 
@@ -117,17 +125,17 @@ background:#00bcd4; color:#000; cursor: pointer;
 <button id="copyCurlBtn" style="display:none;">Copy Curl Command</button>
 
 <details class="block" style="max-width:700px;margin:20px auto">
-  <summary class="clicky">🖨️ Local AHMS on Pi</summary>
+  <summary class="clicky">🖨️ Local AHMS File Link</summary>
   <div class="local-box">
     <p class="muted">
-      This should point to the Pi server that serves:
+      This builds a local file link to:
       <br>
-      <code>/home/airhockeyprint/ahms-ascpos-bridge/index.html</code>
+      <code>/home/airhockeyprint/ahms-escpos-bridge/index.html</code>
     </p>
-    <input type="text" id="localAhmsBase" placeholder="http://192.168.1.4:3000/" />
+    <input type="text" id="localAhmsFileBase" placeholder="file:///home/airhockeyprint/ahms-escpos-bridge/index.html" />
     <div>
-      <button type="button" onclick="saveLocalAhmsBase()">Save Local AHMS URL</button>
-      <button type="button" onclick="resetLocalAhmsBase()">Reset</button>
+      <button type="button" onclick="saveLocalAhmsFileBase()">Save Local File Path</button>
+      <button type="button" onclick="resetLocalAhmsFileBase()">Reset</button>
     </div>
     <div id="localAhmsMsg" class="muted"></div>
   </div>
@@ -148,7 +156,7 @@ background:#00bcd4; color:#000; cursor: pointer;
 
 <div class="link-row">
   <a id="matchSheetLink" href="#" target="_blank" style="display:none;">➕ Open Hosted Match Sheet</a>
-  <a id="localMatchSheetLink" href="#" target="_blank" style="display:none;">🖨️ Open Local AHMS on Pi</a>
+  <a id="localMatchSheetLink" href="#" target="_blank" style="display:none;">➕ Generate Local Link</a>
 </div>
 
 <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT…</div>
@@ -156,7 +164,7 @@ background:#00bcd4; color:#000; cursor: pointer;
 </div>
 
 <div id="result"></div>
-<button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
+<button id="copyBtn" style="display:none;" onclick="copyLink()">Copy Scoreboard Link to Clipboard</button>
 <canvas id="qrcode"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -168,8 +176,8 @@ background:#00bcd4; color:#000; cursor: pointer;
 const AYPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 
 const HOSTED_AHMS_BASE = "https://petesimple.github.io/AHMS/";
-const DEFAULT_LOCAL_AHMS_BASE = "http://192.168.1.181:3000/";
-const LOCAL_AHMS_KEY = "AH_TD_LOCAL_AHMS_BASE";
+const DEFAULT_LOCAL_AHMS_FILE_BASE = "file:///home/airhockeyprint/ahms-escpos-bridge/index.html";
+const LOCAL_AHMS_FILE_KEY = "AH_TD_LOCAL_AHMS_FILE_BASE";
 
 let generatedUrl = "";
 let generatedHostedMatchSheetUrl = "";
@@ -177,38 +185,52 @@ let generatedLocalMatchSheetUrl = "";
 let currentPage = 1;
 const pageSize = 25;
 
-function normalizeBaseUrl(url) {
+function normalizeLocalFileUrl(url) {
   let clean = String(url || "").trim();
+
   if (!clean) return "";
-  if (!/^https?:\/\//i.test(clean)) clean = "http://" + clean;
-  if (!clean.endsWith("/")) clean += "/";
+
+  if (clean.startsWith("/home/")) {
+    clean = "file://" + clean;
+  }
+
+  if (!clean.startsWith("file://")) {
+    clean = "file://" + clean;
+  }
+
   return clean;
 }
 
-function getLocalAhmsBase() {
-  const saved = localStorage.getItem(LOCAL_AHMS_KEY);
-  return normalizeBaseUrl(saved || DEFAULT_LOCAL_AHMS_BASE);
+function getLocalAhmsFileBase() {
+  const saved = localStorage.getItem(LOCAL_AHMS_FILE_KEY);
+  return normalizeLocalFileUrl(saved || DEFAULT_LOCAL_AHMS_FILE_BASE);
 }
 
-function saveLocalAhmsBase() {
-  const input = document.getElementById("localAhmsBase");
+function saveLocalAhmsFileBase() {
+  const input = document.getElementById("localAhmsFileBase");
   const msg = document.getElementById("localAhmsMsg");
-  const clean = normalizeBaseUrl(input.value);
+  const clean = normalizeLocalFileUrl(input.value);
+
   if (!clean) {
-    if (msg) msg.textContent = "Enter a local AHMS URL first.";
+    if (msg) msg.textContent = "Enter a local AHMS file path first.";
     return;
   }
-  localStorage.setItem(LOCAL_AHMS_KEY, clean);
+
+  localStorage.setItem(LOCAL_AHMS_FILE_KEY, clean);
   input.value = clean;
-  if (msg) msg.textContent = "Saved local AHMS URL.";
+
+  if (msg) msg.textContent = "Saved local AHMS file path.";
 }
 
-function resetLocalAhmsBase() {
-  localStorage.removeItem(LOCAL_AHMS_KEY);
-  const input = document.getElementById("localAhmsBase");
+function resetLocalAhmsFileBase() {
+  localStorage.removeItem(LOCAL_AHMS_FILE_KEY);
+
+  const input = document.getElementById("localAhmsFileBase");
   const msg = document.getElementById("localAhmsMsg");
-  input.value = DEFAULT_LOCAL_AHMS_BASE;
-  if (msg) msg.textContent = "Reset to default local AHMS URL.";
+
+  input.value = DEFAULT_LOCAL_AHMS_FILE_BASE;
+
+  if (msg) msg.textContent = "Reset to default local AHMS file path.";
 }
 
 function buildMatchSheetUrl(base, match, table, ref, p1, p2, matchId) {
@@ -240,15 +262,16 @@ const matchId = `weekly${randomId}-${yyyymmdd}`;
 
 // Scoreboard URL
 generatedUrl = `${baseUrl}?p1=${p1}&p2=${p2}&match=${match}&matchid=${matchId}`;
+
 if (table) generatedUrl += `&table=${encodeURIComponent(table)}`;
 if (ref) generatedUrl += `&ref=${ref}`;
 
 // Hosted Match Sheet URL
 generatedHostedMatchSheetUrl = buildMatchSheetUrl(HOSTED_AHMS_BASE, match, table, ref, p1, p2, matchId);
 
-// Local Pi Match Sheet URL
-const localBase = getLocalAhmsBase();
-generatedLocalMatchSheetUrl = buildMatchSheetUrl(localBase, match, table, ref, p1, p2, matchId);
+// Local file AHMS URL
+const localFileBase = getLocalAhmsFileBase();
+generatedLocalMatchSheetUrl = buildMatchSheetUrl(localFileBase, match, table, ref, p1, p2, matchId);
 
 const matchSheetLink = document.getElementById("matchSheetLink");
 matchSheetLink.href = generatedHostedMatchSheetUrl;
@@ -264,7 +287,7 @@ const extraNote = `
        ${refRaw ? `<p><strong>Referee:</strong> ${refRaw}</p>` : ""}
        <p><strong>Match ID:</strong> ${matchId}</p>
        <p><strong>Hosted AHMS:</strong><br><a href="${generatedHostedMatchSheetUrl}" target="_blank">${generatedHostedMatchSheetUrl}</a></p>
-       <p><strong>Local Pi AHMS:</strong><br><a href="${generatedLocalMatchSheetUrl}" target="_blank">${generatedLocalMatchSheetUrl}</a></p>
+       <p><strong>Local AHMS File:</strong><br><a href="${generatedLocalMatchSheetUrl}" target="_blank">${generatedLocalMatchSheetUrl}</a></p>
      `;
 
 document.getElementById("result").innerHTML = `
@@ -274,10 +297,12 @@ document.getElementById("result").innerHTML = `
      `;
 
 document.getElementById("copyBtn").style.display = "inline-block";
+
 const curlBtn = document.getElementById("copyCurlBtn");
 if (curlBtn) curlBtn.style.display = "inline-block";
+
 document.getElementById("copyBtn").classList.remove("copied");
-document.getElementById("copyBtn").innerText = "Copy to Clipboard";
+document.getElementById("copyBtn").innerText = "Copy Scoreboard Link to Clipboard";
 
 QRCode.toCanvas(document.getElementById("qrcode"), generatedUrl, {
 width: 220,
@@ -311,7 +336,7 @@ navigator.clipboard.writeText(generatedUrl).then(() => {
 const btn = document.getElementById("copyBtn");
 btn.classList.add("copied");
 btn.innerText = "Copied!";
-setTimeout(() => { btn.classList.remove("copied"); btn.innerText = "Copy to Clipboard"; }, 2000);
+setTimeout(() => { btn.classList.remove("copied"); btn.innerText = "Copy Scoreboard Link to Clipboard"; }, 2000);
 });
 }
 
@@ -332,17 +357,23 @@ const searchQuery = document.getElementById("searchLog")?.value.toLowerCase() ||
 const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
 const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
 const totalPages = Math.ceil(filtered.length / pageSize);
+
 if (currentPage > totalPages) currentPage = totalPages || 1;
+
 const start = (currentPage - 1) * pageSize;
 const visible = filtered.slice(start, start + pageSize);
 const logList = document.getElementById("logList");
+
 if (!logList) return;
+
 logList.innerHTML = "";
+
 visible.forEach(item => {
 const li = document.createElement("li");
 li.innerHTML = `<a href="${item.url}" target="_blank">${item.text}</a> <span style="color: #888; font-size: 0.85em;">(${item.date}, ${item.time})</span>`;
 logList.appendChild(li);
 });
+
 const pageInfo = document.getElementById("pageInfo");
 if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
 }
@@ -356,15 +387,22 @@ renderMatchLog();
 
 function exportMatchLogCSV() {
 const log = JSON.parse(localStorage.getItem("matchLog") || "[]");
-if (log.length === 0) { alert("No matches to export."); return; }
+
+if (log.length === 0) {
+  alert("No matches to export.");
+  return;
+}
+
 const headers = ["Date", "Time", "Match Info", "Link"];
 const rows = log.map(item => [item.date, item.time, item.text, item.url]);
 const csvContent = [headers, ...rows].map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
 const blob = new Blob([csvContent], { type: "text/csv" });
 const url = URL.createObjectURL(blob);
 const link = document.createElement("a");
+
 link.href = url;
 link.download = `MatchLog_${new Date().toISOString().split("T")[0]}.csv`;
+
 document.body.appendChild(link);
 link.click();
 document.body.removeChild(link);
@@ -378,14 +416,18 @@ const QUEUE_KEY = "matchLogCloudQueue";
 
 function showCloudStatus(msg, temp=false) {
 const el = document.getElementById("cloudSyncStatus");
+
 if (!el) return;
+
 el.textContent = msg;
 el.style.display = "block";
+
 if (temp) setTimeout(() => { el.style.display = "none"; }, 2500);
 }
 
 function enqueue(payload) {
 const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+
 q.push(payload);
 localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
 showCloudStatus(`Saved offline (${q.length} pending)...`, true);
@@ -393,13 +435,18 @@ showCloudStatus(`Saved offline (${q.length} pending)...`, true);
 
 async function flushCloudQueue() {
 const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+
 if (!q.length) return;
+
 showCloudStatus(`Syncing ${q.length} pending...`);
+
 const remaining = [];
+
 for (const item of q) {
 const ok = await postToAYPT(item);
 if (!ok) remaining.push(item);
 }
+
 localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
 showCloudStatus(remaining.length ? `${remaining.length} still pending...` : "All synced!", true);
 }
@@ -410,6 +457,7 @@ const body = new URLSearchParams({
 action: "appendMatchLog",
 payload: JSON.stringify(payload)
 });
+
 return fetch(AYPT_ENDPOINT, {
 method: "POST",
 cache: "no-store",
@@ -419,9 +467,19 @@ if (!resp.ok) {
 await fetch(AYPT_ENDPOINT, { method: "POST", mode: "no-cors", body });
 return true;
 }
+
 const text = await resp.text();
-try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-}).catch((e) => { console.warn("AYPT post failed, will queue:", e); return false; });
+
+try {
+  const j = JSON.parse(text);
+  return !!(j && j.ok);
+} catch {
+  return true;
+}
+}).catch((e) => {
+console.warn("AYPT post failed, will queue:", e);
+return false;
+});
 } catch (e) {
 console.warn("AYPT post failed, will queue:", e);
 return Promise.resolve(false);
@@ -440,8 +498,9 @@ return ok;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-const localInput = document.getElementById("localAhmsBase");
-if (localInput) localInput.value = getLocalAhmsBase();
+const localInput = document.getElementById("localAhmsFileBase");
+if (localInput) localInput.value = getLocalAhmsFileBase();
+
 renderMatchLog();
 flushCloudQueue();
 });
@@ -474,18 +533,36 @@ let pressTimer;
 
 logo.addEventListener("dragstart", (e) => e.preventDefault());
 logo.addEventListener("selectstart", (e) => e.preventDefault());
-logo.addEventListener("mousedown", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+
+logo.addEventListener("mousedown", () => {
+  pressTimer = setTimeout(() => {
+    uploader.click();
+  }, 500);
+});
+
 logo.addEventListener("mouseup", () => clearTimeout(pressTimer));
 logo.addEventListener("mouseleave", () => clearTimeout(pressTimer));
-logo.addEventListener("touchstart", () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
+
+logo.addEventListener("touchstart", () => {
+  pressTimer = setTimeout(() => {
+    uploader.click();
+  }, 500);
+});
+
 logo.addEventListener("touchend", () => clearTimeout(pressTimer));
 logo.addEventListener("touchcancel", () => clearTimeout(pressTimer));
 
 uploader.addEventListener("change", (e) => {
 const file = e.target.files[0];
+
 if (file && file.type.startsWith("image/")) {
 const reader = new FileReader();
-reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem("customLogo", evt.target.result); };
+
+reader.onload = function (evt) {
+  logo.src = evt.target.result;
+  localStorage.setItem("customLogo", evt.target.result);
+};
+
 reader.readAsDataURL(file);
 }
 });
@@ -495,9 +572,22 @@ const savedLogo = localStorage.getItem("customLogo");
 if (savedLogo) logo.src = savedLogo;
 });
 
-function resetLogo() { localStorage.removeItem("customLogo"); logo.src = "TDlogo.png"; }
-function nextPage() { currentPage++; renderMatchLog(); }
-function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
+function resetLogo() {
+  localStorage.removeItem("customLogo");
+  logo.src = "TDlogo.png";
+}
+
+function nextPage() {
+  currentPage++;
+  renderMatchLog();
+}
+
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderMatchLog();
+  }
+}
 </script>
 
 <!-- ==========================
@@ -506,6 +596,7 @@ function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } 
  ========================== -->
 <script>
 const SW_OFF = new URL(location.href).searchParams.get("sw") === "off";
+
 if ("serviceWorker" in navigator && !SW_OFF) {
 navigator.serviceWorker.register("service-worker-td.js", { scope: "./" })
 .then(() => console.log("TD Service Worker registered!"))
@@ -527,10 +618,13 @@ const qp = new URL(location.href).searchParams;
 const urlCode = qp.get("code");
 const already = sessionStorage.getItem("TD_UNLOCK") === "1";
 
-function showGate(show) { gate.style.display = show ? "block" : "none"; }
+function showGate(show) {
+  gate.style.display = show ? "block" : "none";
+}
 
 window.unlockTD = function unlockTD(){
 const val = (pinEl.value || "").trim();
+
 if (val === PIN || urlCode === PIN) {
 sessionStorage.setItem("TD_UNLOCK", "1");
 showGate(false);
@@ -567,19 +661,29 @@ const LISTENER_PORT = 7070;
 const AUTH_TOKEN = "changeme-123";
 
 function loadTableIPs(){
-  try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
-  catch { return {...DEFAULT_TABLE_IPS}; }
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS};
+  } catch {
+    return {...DEFAULT_TABLE_IPS};
+  }
 }
 
-function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+function saveTableIPs(map){
+  localStorage.setItem(LS_KEY_IPS, JSON.stringify(map));
+}
 
 function msg(text){
   const m = document.getElementById("ipMsg");
-  if (m) { m.textContent = text; m.style.display = "block"; }
+
+  if (m) {
+    m.textContent = text;
+    m.style.display = "block";
+  }
 }
 
 function addRow(tableVal, ipVal){
   const wrap = document.getElementById("ipEditor");
+
   const t = document.createElement("input");
   t.placeholder = "Table #";
   t.value = tableVal;
@@ -596,19 +700,25 @@ function addRow(tableVal, ipVal){
 
   const row = document.createElement("div");
   row.style.display = "contents";
+
   rm.onclick = () => row.remove();
 
   row.appendChild(t);
   row.appendChild(i);
   row.appendChild(rm);
+
   wrap.appendChild(row);
 }
 
 function renderIpEditor(){
   const wrap = document.getElementById("ipEditor");
+
   if (!wrap) return;
+
   wrap.innerHTML = "";
+
   const map = loadTableIPs();
+
   Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
 
   document.getElementById("addRowBtn").onclick = () => addRow("", "");
@@ -620,34 +730,44 @@ function saveFromEditor(){
   const wrap = document.getElementById("ipEditor");
   const inputs = Array.from(wrap.querySelectorAll("input"));
   const map = {};
+
   for (let k=0; k<inputs.length; k+=2){
     const table = (inputs[k].value || "").trim();
     const ip = (inputs[k+1].value || "").trim();
+
     if (table && ip) map[table] = ip;
   }
+
   saveTableIPs(map);
   msg("Saved IPs.");
 }
 
 async function testAll(){
   const entries = Object.entries(loadTableIPs());
+
   if (!entries.length) return msg("No tables configured.");
+
   msg("Testing...");
+
   const results = [];
+
   for (const [tbl, ip] of entries){
     try {
       const r = await Promise.race([
         fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
         new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
       ]);
+
       results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
     } catch {
       results.push(`${tbl}: fail (${ip})`);
     }
   }
+
   if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
     results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
   }
+
   msg(results.join(" | "));
 }
 
@@ -655,17 +775,22 @@ async function testAll(){
 function buildCurlCommand(url, table) {
   const map = loadTableIPs();
   const ip = map[String(table)] || "<TABLE_IP_HERE>";
+
   const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
   -H "Content-Type: application/json" \\
   -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+
   return cmd;
 }
 
 function copyCurlCommand() {
   const table = document.getElementById("tableNumber").value.trim();
+
   if (!table) return alert("Enter a Table # first.");
   if (!generatedUrl) return alert("Generate the match link first.");
+
   const cmd = buildCurlCommand(generatedUrl, table);
+
   navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.getElementById("copyCurlBtn");
     btn.innerText = "Copied!";
@@ -675,7 +800,9 @@ function copyCurlCommand() {
 
 document.addEventListener("DOMContentLoaded", ()=>{
   renderIpEditor();
+
   const btn = document.getElementById("copyCurlBtn");
+
   if (btn) btn.addEventListener("click", copyCurlCommand);
 });
 </script>
