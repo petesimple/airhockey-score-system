@@ -241,17 +241,6 @@ v2.5.1 - Local AHMS handoff beta
 
 <!-- TAB: Match Links -->
 <div id="tabMatch" class="tabpane active">
-  <details class="block">
-    <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
-    <div style="margin-top: 10px; line-height: 1.5;">
-      <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
-      <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
-      <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, Match Sheet link, and Local AHMS handoff.</p>
-      <p><strong>5. Match Log.</strong> Saves locally and (if Safe Mode is OFF) posts to AYPT - Match Log.</p>
-    </div>
-  </details>
-
   <div class="card">
     <div class="row">
       <input type="text" id="player1" placeholder="Player 1" autofocus />
@@ -268,6 +257,29 @@ v2.5.1 - Local AHMS handoff beta
       <button id="copyLocalAHMSBtn" style="display:none;" class="secondary">Copy Local AHMS Handoff</button>
     </div>
 
+    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
+    <div id="localAHMSDisplay" class="muted" style="margin-top:8px; display:none;"></div>
+    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
+
+    <div id="result"></div>
+    <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
+    <canvas id="qrcode"></canvas>
+  </div>
+
+  <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
+    <summary class="clicky">Show Match Log, Help, and Table IPs</summary>
+
+    <details class="block" style="max-width:900px;margin:14px auto">
+      <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
+      <div style="margin-top: 10px; line-height: 1.5;">
+        <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
+        <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
+        <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+        <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, Match Sheet link, and Local AHMS handoff.</p>
+        <p><strong>5. Match Log.</strong> Saves locally and (if Safe Mode is OFF) posts to AYPT - Match Log.</p>
+      </div>
+    </details>
+
     <details class="block" style="max-width:900px;margin:14px auto">
       <summary class="clicky">Table IPs (edit and save)</summary>
       <div style="margin-top:10px">
@@ -281,17 +293,6 @@ v2.5.1 - Local AHMS handoff beta
       </div>
     </details>
 
-    <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
-    <div id="localAHMSDisplay" class="muted" style="margin-top:8px; display:none;"></div>
-    <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
-
-    <div id="result"></div>
-    <button id="copyBtn" style="display:none;" onclick="copyLink()">Copy to Clipboard</button>
-    <canvas id="qrcode"></canvas>
-  </div>
-
-  <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">Show Match Log</summary>
     <input type="text" id="searchLog" placeholder="Search matches..." style="width: 92%; padding: 8px; font-size: 1em; margin: 10px 0; border-radius: 10px;" oninput="renderMatchLog()">
     <div id="paginationControls" style="margin: 10px 0;" class="row-left">
       <button onclick="prevPage()">Prev</button>
