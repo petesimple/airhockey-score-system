@@ -8,7 +8,7 @@ v2.5.1 - Local AHMS handoff beta
 - Archive still works
 - Full Bracket Live now shows a placeholder until a real bracket endpoint exists
 - Adds latecomer insertion into eligible Winners Round 1 BYE slots
-- Adds Copy Local AHMS Handoff button for LAN/Pi hosted AHMS handoff
+- Adds Copy Local AHMS Handoff button for Pi local file AHMS handoff
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -217,7 +217,7 @@ v2.5.1 - Local AHMS handoff beta
 </div>
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive + Local AHMS Handoff</div>
+<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
 
 <div class="row" style="margin-top:10px;">
   <span class="safeBadge">
@@ -492,7 +492,7 @@ v2.5.1 - Local AHMS handoff beta
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
-const LOCAL_AHMS_BASE = "http://192.168.1.181:3000/";
+const LOCAL_AHMS_FILE = "file:///home/airhockeyprint/Desktop/Air%20Hockey%20Match%20Sheet.html";
 
 /*
   IMPORTANT:
@@ -631,7 +631,7 @@ function generateMatchLink() {
   const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
 
   generatedMatchSheetUrl = matchSheetUrl;
-  generatedLocalAHMSUrl = `${LOCAL_AHMS_BASE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}`;
+  generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}`;
 
   const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
