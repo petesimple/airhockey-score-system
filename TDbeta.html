@@ -1,12 +1,14 @@
 <!-- =====================
 TDbeta.html - Tournament Director (Integrated)
-v2.5 - Local archive beta + late entrant support
+v2.5.1 - Local AHMS handoff beta
+- Keeps v2.5 local archive beta + late entrant support
 - Fixes random timestamp writes to AYPT by disabling all bracket cloud traffic
 - AYPT reads still work
 - Local brackets still work
 - Archive still works
 - Full Bracket Live now shows a placeholder until a real bracket endpoint exists
 - Adds latecomer insertion into eligible Winners Round 1 BYE slots
+- Adds Copy Local AHMS Handoff button for LAN/Pi hosted AHMS handoff
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -215,7 +217,7 @@ v2.5 - Local archive beta + late entrant support
 </div>
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive</div>
+<div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive + Local AHMS Handoff</div>
 
 <div class="row" style="margin-top:10px;">
   <span class="safeBadge">
@@ -245,7 +247,7 @@ v2.5 - Local archive beta + late entrant support
       <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
       <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
       <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
-      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, and Match Sheet link.</p>
+      <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, Match Sheet link, and Local AHMS handoff.</p>
       <p><strong>5. Match Log.</strong> Saves locally and (if Safe Mode is OFF) posts to AYPT - Match Log.</p>
     </div>
   </details>
@@ -263,6 +265,7 @@ v2.5 - Local archive beta + late entrant support
       </select>
       <button onclick="generateMatchLink()">Generate Match Link</button>
       <button id="copyCurlBtn" style="display:none;" class="secondary">Copy Curl Command</button>
+      <button id="copyLocalAHMSBtn" style="display:none;" class="secondary">Copy Local AHMS Handoff</button>
     </div>
 
     <details class="block" style="max-width:900px;margin:14px auto">
@@ -279,6 +282,7 @@ v2.5 - Local archive beta + late entrant support
     </details>
 
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
+    <div id="localAHMSDisplay" class="muted" style="margin-top:8px; display:none;"></div>
     <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
 
     <div id="result"></div>
@@ -488,6 +492,8 @@ v2.5 - Local archive beta + late entrant support
 const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4YjmRwPqZ9q8rOl3RJx4Qw0s6Wz1xziy-ox10m7hgerQbUQof9BGVFLgcnCWKnl/exec";
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
+const LOCAL_AHMS_BASE = "http://192.168.1.181:3000/";
+
 /*
   IMPORTANT:
   Do NOT point bracket traffic at the AYPT script unless that Apps Script
@@ -596,6 +602,8 @@ document.addEventListener("click", (e)=>{
   MATCH LINK / QR
 ========================================================= */
 let generatedUrl = '';
+let generatedMatchSheetUrl = '';
+let generatedLocalAHMSUrl = '';
 let currentPage = 1;
 const pageSize = 25;
 
@@ -621,9 +629,19 @@ function generateMatchLink() {
 
   const matchSheetBase = 'https://petesimple.github.io/AHMS/';
   const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+
+  generatedMatchSheetUrl = matchSheetUrl;
+  generatedLocalAHMSUrl = `${LOCAL_AHMS_BASE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}`;
+
   const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
   matchSheetLink.style.display = 'inline-block';
+
+  const localDisplay = $('#localAHMSDisplay');
+  if(localDisplay){
+    localDisplay.style.display = 'block';
+    localDisplay.innerHTML = `<strong>Local AHMS Handoff:</strong> ${esc(generatedLocalAHMSUrl)}`;
+  }
 
   const extraNote = `
     ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
@@ -640,6 +658,13 @@ function generateMatchLink() {
   $('#copyBtn').style.display = 'inline-block';
   const curlBtn = $('#copyCurlBtn');
   if (curlBtn) curlBtn.style.display = 'inline-block';
+
+  const localAHMSBtn = $('#copyLocalAHMSBtn');
+  if (localAHMSBtn) {
+    localAHMSBtn.style.display = 'inline-block';
+    localAHMSBtn.innerText = 'Copy Local AHMS Handoff';
+  }
+
   $('#copyBtn').classList.remove('copied');
   $('#copyBtn').innerText = 'Copy to Clipboard';
 
@@ -661,7 +686,8 @@ function generateMatchLink() {
     table: table || '',
     referee: refRaw || '',
     scoreboardUrl: generatedUrl,
-    matchSheetUrl: matchSheetUrl
+    matchSheetUrl: matchSheetUrl,
+    localAHMSUrl: generatedLocalAHMSUrl
   };
 
   if(isSafeMode()){
@@ -677,6 +703,25 @@ function copyLink() {
     btn.classList.add('copied');
     btn.innerText = 'Copied!';
     setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
+  });
+}
+
+function copyLocalAHMSHandoff() {
+  if (!generatedLocalAHMSUrl) {
+    alert("Generate the match link first.");
+    return;
+  }
+
+  navigator.clipboard.writeText(generatedLocalAHMSUrl).then(() => {
+    const btn = $('#copyLocalAHMSBtn');
+    if (!btn) return;
+
+    btn.innerText = "Local AHMS Copied!";
+    setTimeout(() => {
+      btn.innerText = "Copy Local AHMS Handoff";
+    }, 2000);
+  }).catch(() => {
+    prompt("Copy this Local AHMS handoff URL:", generatedLocalAHMSUrl);
   });
 }
 
@@ -2317,6 +2362,9 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   const curlBtn = document.getElementById("copyCurlBtn");
   if (curlBtn) curlBtn.addEventListener("click", copyCurlCommand);
+
+  const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
+  if (localAHMSBtn) localAHMSBtn.addEventListener("click", copyLocalAHMSHandoff);
 
   renderIpEditor();
 
