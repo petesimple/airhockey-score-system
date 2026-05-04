@@ -2374,6 +2374,9 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
   if (localAHMSBtn) localAHMSBtn.addEventListener("click", copyLocalAHMSHandoff);
 
+  const localAHMSDisplayBtn = document.getElementById("copyLocalAHMSDisplayBtn");
+  if (localAHMSDisplayBtn) localAHMSDisplayBtn.addEventListener("click", copyLocalAHMSHandoff);
+
   renderIpEditor();
 
   BRACKET_STATE = loadBracketState();
