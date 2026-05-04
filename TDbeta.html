@@ -250,6 +250,7 @@ v2.5.1 - Local AHMS handoff beta
 
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
     <div id="localAHMSDisplay" class="muted" style="margin-top:8px; display:none;"></div>
+    <button id="copyLocalAHMSDisplayBtn" style="display:none; margin-top:6px;" class="secondary">Copy Local AHMS Link</button>
     <div class="muted" id="cloudSyncStatus" style="margin-top:6px; display:none;">Syncing to AYPT...</div>
 
     <div id="result"></div>
@@ -651,6 +652,12 @@ function generateMatchLink() {
     localDisplay.innerHTML = `<strong>Local AHMS Handoff:</strong> ${esc(generatedLocalAHMSUrl)}`;
   }
 
+  const localDisplayBtn = $('#copyLocalAHMSDisplayBtn');
+  if(localDisplayBtn){
+    localDisplayBtn.style.display = 'inline-block';
+    localDisplayBtn.innerText = 'Copy Local AHMS Link';
+  }
+
   const extraNote = `
     ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
     ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ''}
@@ -722,14 +729,31 @@ function copyLocalAHMSHandoff() {
 
   navigator.clipboard.writeText(generatedLocalAHMSUrl).then(() => {
     const btn = $('#copyLocalAHMSBtn');
-    if (!btn) return;
+    if (btn) btn.innerText = "Local AHMS Copied!";
 
-    btn.innerText = "Local AHMS Copied!";
     setTimeout(() => {
-      btn.innerText = "Copy Local AHMS Handoff";
+      if (btn) btn.innerText = "Copy Local AHMS Handoff";
     }, 2000);
   }).catch(() => {
     prompt("Copy this Local AHMS handoff URL:", generatedLocalAHMSUrl);
+  });
+}
+
+function copyLocalAHMSInfo() {
+  if (!generatedLocalAHMSUrl) {
+    alert("Generate the match link first.");
+    return;
+  }
+
+  navigator.clipboard.writeText(generatedLocalAHMSUrl).then(() => {
+    const btn = $('#copyLocalAHMSDisplayBtn');
+    if (btn) btn.innerText = "Local AHMS Link Copied!";
+
+    setTimeout(() => {
+      if (btn) btn.innerText = "Copy Local AHMS Link";
+    }, 2000);
+  }).catch(() => {
+    prompt("Copy this Local AHMS link:", generatedLocalAHMSUrl);
   });
 }
 
@@ -2375,7 +2399,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   if (localAHMSBtn) localAHMSBtn.addEventListener("click", copyLocalAHMSHandoff);
 
   const localAHMSDisplayBtn = document.getElementById("copyLocalAHMSDisplayBtn");
-  if (localAHMSDisplayBtn) localAHMSDisplayBtn.addEventListener("click", copyLocalAHMSHandoff);
+  if (localAHMSDisplayBtn) localAHMSDisplayBtn.addEventListener("click", copyLocalAHMSInfo);
 
   renderIpEditor();
 
