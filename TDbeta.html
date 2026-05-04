@@ -219,16 +219,7 @@ v2.5.1 - Local AHMS handoff beta
 
 <div class="muted" style="margin-top:6px;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
 
-<div class="row" style="margin-top:10px;">
-  <span class="safeBadge">
-    <label class="chk" style="margin:0;">
-      <input type="checkbox" id="chkSafeMode">
-      TD Safe Mode
-    </label>
-    <span id="safeModeStatus" class="safeOn">NO SHEET WRITES</span>
-  </span>
-  <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish. Bracket cloud is also disabled in this beta.</span>
-</div>
+
 
 <div class="tabs" id="tabs">
   <button class="tabbtn active" data-tab="tabMatch">Match Links</button>
@@ -267,7 +258,21 @@ v2.5.1 - Local AHMS handoff beta
   </div>
 
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">Show Match Log, Help, and Table IPs</summary>
+    <summary class="clicky">Show Match Log, Help, Table IPs, and Safe Mode</summary>
+
+    <details class="block" style="max-width:900px;margin:14px auto">
+      <summary class="clicky">TD Safe Mode</summary>
+      <div class="row-left" style="margin-top:10px;">
+        <span class="safeBadge">
+          <label class="chk" style="margin:0;">
+            <input type="checkbox" id="chkSafeMode">
+            TD Safe Mode
+          </label>
+          <span id="safeModeStatus" class="safeOn">NO SHEET WRITES</span>
+        </span>
+        <span class="muted" style="font-size:12px;">Safe Mode blocks match log, AYPT updates, and bracket publish. Bracket cloud is also disabled in this beta.</span>
+      </div>
+    </details>
 
     <details class="block" style="max-width:900px;margin:14px auto">
       <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
