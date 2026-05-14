@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.2 - Room Control score jump beta
+v2.6.3 - Room Control stale match cleanup beta
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -2035,18 +2035,58 @@ function findMatchRefById(matchId, preferredLane=""){
   return null;
 }
 
-function goToTableMatch(tableId){
-  const table = findRoomTable(tableId);
-  if(!table || !table.matchId){
-    alert("No bracket match is assigned to this table yet.");
-    return;
+function namesMatchPair(a1, a2, b1, b2){
+  const leftA = normalizeName(a1).toLowerCase();
+  const leftB = normalizeName(a2).toLowerCase();
+  const rightA = normalizeName(b1).toLowerCase();
+  const rightB = normalizeName(b2).toLowerCase();
+
+  if(!leftA || !leftB || !rightA || !rightB) return false;
+
+  return (leftA === rightA && leftB === rightB) || (leftA === rightB && leftB === rightA);
+}
+
+function findMatchRefByPlayers(p1, p2){
+  if(!BRACKET_STATE || !p1 || !p2) return null;
+
+  for(const item of listAllMatches()){
+    const m = item.m;
+    if(!m) continue;
+    if(m.p1 === "TBD" || m.p2 === "TBD" || m.p1 === "BYE" || m.p2 === "BYE") continue;
+
+    if(namesMatchPair(p1, p2, m.p1, m.p2)){
+      return { lane: item.lane, id: m.id, match: m };
+    }
   }
 
-  const ref = findMatchRefById(table.matchId, table.matchLane || "");
-  if(!ref){
-    alert("That table has a saved match ID, but I cannot find it in the current bracket. It may be from an older bracket.");
-    return;
+  return null;
+}
+
+function clearStaleTableMatch(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.status = "open";
+  table.p1 = "";
+  table.p2 = "";
+  table.matchId = "";
+  table.matchLane = "";
+
+  saveRoomState();
+  renderRoomViews();
+
+  const panel = document.getElementById("assignPanel");
+  if(panel){
+    panel.style.display = "block";
+    panel.innerHTML = `
+      <div class="ok" style="font-weight:1000;">Table ${esc(table.number)} cleared.</div>
+      <div class="mini">Old assignment removed. This table is open again.</div>
+    `;
   }
+}
+
+function jumpToBracketMatch(ref){
+  if(!ref) return;
 
   setTab("tabBrackets");
   buildMatchPicker();
@@ -2075,6 +2115,41 @@ function goToTableMatch(tableId){
 
     setTimeout(()=> card.classList.remove("matchFocus"), 2800);
   });
+}
+
+function goToTableMatch(tableId){
+  const table = findRoomTable(tableId);
+  if(!table){
+    alert("Table not found.");
+    return;
+  }
+
+  if(!table.matchId && (!table.p1 || !table.p2)){
+    alert("No bracket match is assigned to this table yet.");
+    return;
+  }
+
+  let ref = findMatchRefById(table.matchId, table.matchLane || "");
+
+  if(!ref){
+    ref = findMatchRefByPlayers(table.p1, table.p2);
+
+    if(ref){
+      table.matchId = ref.id;
+      table.matchLane = ref.lane;
+      saveRoomState();
+      jumpToBracketMatch(ref);
+      return;
+    }
+
+    const shouldClear = confirm("That table has a saved match from an older bracket and I cannot find those players in the current bracket. Clear this table and mark it open?");
+    if(shouldClear){
+      clearStaleTableMatch(tableId);
+    }
+    return;
+  }
+
+  jumpToBracketMatch(ref);
 }
 
 function markTableOpen(tableId){
