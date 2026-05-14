@@ -2367,7 +2367,7 @@ function listAllMatches(){
 
   BRACKET_STATE.winnersRounds.forEach(r => r.forEach(m => out.push({ lane:"W", m })));
   BRACKET_STATE.losersRounds.forEach(r => r.forEach(m => out.push({ lane:"L", m })));
-  BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m })));
+  BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m }));
 
   return out;
 }
