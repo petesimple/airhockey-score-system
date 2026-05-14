@@ -1,14 +1,15 @@
 <!-- =====================
-TDbeta.html - Tournament Director (Integrated)
-v2.5.1 - Local AHMS handoff beta
-- Keeps v2.5 local archive beta + late entrant support
-- Fixes random timestamp writes to AYPT by disabling all bracket cloud traffic
-- AYPT reads still work
-- Local brackets still work
-- Archive still works
-- Full Bracket Live now shows a placeholder until a real bracket endpoint exists
-- Adds latecomer insertion into eligible Winners Round 1 BYE slots
-- Adds Copy Local AHMS Handoff button for Pi local file AHMS handoff
+TD.html - Tournament Director (Integrated)
+v2.6.0 - Room Control beta
+- Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
+- Adds Room Setup tab with draggable top-down table layout
+- Adds Room Control panel on Links tab
+- Adds Assign Table and Fill Links buttons to bracket matches
+- Color codes table status:
+  Open = green
+  Assigned = yellow
+  Playing = red
+  Offline = gray
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -31,71 +32,245 @@ v2.5.1 - Local AHMS handoff beta
     --accent:#00bcd4;
     --ok:#3ddc84;
     --bad:#ff5a5a;
+    --warn:#ffd54f;
     --teamA:#d32f2f;
     --teamB:#1976d2;
     --radius:12px;
   }
-  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); padding: 16px; text-align: center; }
-  input, select, button, textarea { padding: 10px; margin: 10px; font-size: 1em; border-radius: 6px; border: none; }
-  input, textarea { background:#0f0f10; color:#fff; border:1px solid #333; }
+
+  *{ box-sizing:border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    text-align: center;
+  }
+
+  input, select, button, textarea {
+    padding: 10px;
+    margin: 10px;
+    font-size: 1em;
+    border-radius: 6px;
+    border: none;
+  }
+
+  input, textarea {
+    background:#0f0f10;
+    color:#fff;
+    border:1px solid #333;
+  }
+
   input { width: 180px; }
-  textarea{ width:100%; max-width:700px; }
-  button { background: var(--accent); color: #000; cursor: pointer; font-weight: 800; }
+
+  textarea{
+    width:100%;
+    max-width:700px;
+  }
+
+  button {
+    background: var(--accent);
+    color: #000;
+    cursor: pointer;
+    font-weight: 800;
+  }
+
   button.secondary{ background:#333; color:#0f0; font-weight:700; }
   button.danger{ background:#444; color:#f66; font-weight:800; }
   button:disabled{ opacity:.5; cursor:not-allowed; }
+
   #result, #qrcode { margin-top: 20px; }
   a { color: #00eaff; }
-  #copyBtn { margin-top: 10px; padding: 6px 14px; font-size: 0.9em; background: #333; color: #0f0; }
+
+  #copyBtn {
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-size: 0.9em;
+    background: #333;
+    color: #0f0;
+  }
+
   #copyBtn.copied { background: #0f0; color: #000; }
+
   .muted { color:var(--muted); font-size:0.9em }
-  details.block { margin: 20px auto; max-width: 900px; background: var(--panel2); color: var(--text); padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; }
-  summary.clicky { cursor: pointer; font-weight: bold; font-size: 1.1em; color: #00eaff; }
-  .card{ max-width: 980px; margin: 14px auto; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align:left; }
-  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; }
-  .row-left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
-  .pill{ padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); font-size:12px; color:rgba(255,255,255,.75); }
+
+  details.block {
+    margin: 20px auto;
+    max-width: 900px;
+    background: var(--panel2);
+    color: var(--text);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    text-align: left;
+  }
+
+  summary.clicky {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #00eaff;
+  }
+
+  .card{
+    max-width: 980px;
+    margin: 14px auto;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align:left;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .row-left{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-start;
+  }
+
+  .pill{
+    padding:4px 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    font-size:12px;
+    color:rgba(255,255,255,.75);
+  }
+
   .spacer{ height: 10px; }
 
-  .tabs{ max-width:980px; margin:0 auto 10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-  .tabbtn{
-    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
-    padding:10px 12px; border-radius: 12px; font-weight:900; cursor:pointer;
+  .tabs{
+    max-width:980px;
+    margin:0 auto 10px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
   }
+
+  .tabbtn{
+    background:#1f1f1f;
+    color:#fff;
+    border:1px solid rgba(255,255,255,.14);
+    padding:10px 12px;
+    border-radius: 12px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
   .tabbtn.active{
     background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000; border:none;
+    color:#000;
+    border:none;
   }
+
   .tabpane{ display:none; }
   .tabpane.active{ display:block; }
 
   #tdGate {
-    position: fixed; inset: 0; z-index: 99999;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
     display: none;
     background: radial-gradient(1200px 800px at 50% -20%, #222, #111 60%, #0b0b0b 100%);
     color: #fff;
   }
+
   .td-gate-inner {
-    max-width: 360px; margin: 15vh auto 0; text-align: center;
-    background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 22px;
+    max-width: 360px;
+    margin: 15vh auto 0;
+    text-align: center;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 22px;
     box-shadow: 0 12px 40px rgba(0,0,0,.5);
   }
-  .td-gate-title { font-weight: 800; margin-bottom: 8px; font-size: 1.2em; color: #00eaff; }
-  .td-gate-sub { color:#bbb; font-size:.95em; margin-bottom: 12px; }
-  .td-pin {
-    width: 160px; text-align: center; letter-spacing: .2em;
-    padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #444; background:#111; color:#fff;
-  }
-  .td-gate-btn {
-    margin-top: 10px; padding: 10px 14px; font-size: 1em; border-radius: 8px; border: 1px solid #00bcd4;
-    background:#00bcd4; color:#000; cursor: pointer; font-weight:900;
-  }
-  .td-gate-msg { height: 1.2em; margin-top: 8px; color:#f66; font-size:.95em; }
-  .td-hint { margin-top: 10px; font-size:.85em; color:#888; }
 
-  table{ width:100%; border-collapse: collapse; }
-  th, td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align: top; }
-  th{ position:sticky; top:0; background:#141415; z-index:2; text-align:left; font-size: 12px; color: rgba(255,255,255,.75); letter-spacing:.3px; text-transform: uppercase; }
+  .td-gate-title {
+    font-weight: 800;
+    margin-bottom: 8px;
+    font-size: 1.2em;
+    color: #00eaff;
+  }
+
+  .td-gate-sub {
+    color:#bbb;
+    font-size:.95em;
+    margin-bottom: 12px;
+  }
+
+  .td-pin {
+    width: 160px;
+    text-align: center;
+    letter-spacing: .2em;
+    padding: 10px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background:#111;
+    color:#fff;
+  }
+
+  .td-gate-btn {
+    margin-top: 10px;
+    padding: 10px 14px;
+    font-size: 1em;
+    border-radius: 8px;
+    border: 1px solid #00bcd4;
+    background:#00bcd4;
+    color:#000;
+    cursor: pointer;
+    font-weight:900;
+  }
+
+  .td-gate-msg {
+    height: 1.2em;
+    margin-top: 8px;
+    color:#f66;
+    font-size:.95em;
+  }
+
+  .td-hint {
+    margin-top: 10px;
+    font-size:.85em;
+    color:#888;
+  }
+
+  table{
+    width:100%;
+    border-collapse: collapse;
+  }
+
+  th, td{
+    padding:10px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    vertical-align: top;
+  }
+
+  th{
+    position:sticky;
+    top:0;
+    background:#141415;
+    z-index:2;
+    text-align:left;
+    font-size: 12px;
+    color: rgba(255,255,255,.75);
+    letter-spacing:.3px;
+    text-transform: uppercase;
+  }
+
   tr:hover td{ background: rgba(255,255,255,.03); }
 
   .mini{ font-size: 12px; color: rgba(255,255,255,.7); }
@@ -109,40 +284,90 @@ v2.5.1 - Local AHMS handoff beta
     background: rgba(0,0,0,.18);
     padding:10px;
   }
-  .zoomStage{ transform-origin: top left; display:inline-block; }
-  .bracket{ min-width:900px; display:flex; gap:22px; padding:10px 6px 6px; align-items:flex-start; }
-  .col{ display:flex; flex-direction:column; gap:14px; min-width:260px; }
-  .col-title{ font-size:12px; color:rgba(255,255,255,.7); letter-spacing:.4px; text-transform:uppercase; margin-left:6px; }
+
+  .zoomStage{
+    transform-origin: top left;
+    display:inline-block;
+  }
+
+  .bracket{
+    min-width:900px;
+    display:flex;
+    gap:22px;
+    padding:10px 6px 6px;
+    align-items:flex-start;
+  }
+
+  .col{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-width:260px;
+  }
+
+  .col-title{
+    font-size:12px;
+    color:rgba(255,255,255,.7);
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    margin-left:6px;
+  }
+
   .match{
     background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.12);
     border-radius:14px;
     padding:10px;
   }
+
   .match-head{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    margin-bottom:10px; color:rgba(255,255,255,.75); font-size:12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+    color:rgba(255,255,255,.75);
+    font-size:12px;
   }
+
   .match-head .tag{
-    padding:4px 8px; border-radius:999px;
+    padding:4px 8px;
+    border-radius:999px;
     border:1px solid rgba(255,255,255,.12);
     background:rgba(255,255,255,.05);
-    font-weight:800; color:#fff; font-size:11px; letter-spacing:.2px;
+    font-weight:800;
+    color:#fff;
+    font-size:11px;
+    letter-spacing:.2px;
   }
+
   .slot{
-    display:grid; grid-template-columns: 1fr 44px 44px; gap:8px; align-items:center;
-    margin-bottom:8px; padding:8px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.20);
+    display:grid;
+    grid-template-columns: 1fr 44px 44px;
+    gap:8px;
+    align-items:center;
+    margin-bottom:8px;
+    padding:8px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.20);
   }
+
   .slot:last-child{ margin-bottom:0; }
   .name{ font-weight:900; font-size:13px; line-height:1.1; }
   .seed{ font-size:11px; color:rgba(255,255,255,.55); margin-top:2px; }
+
   .scoreBox{
-    width:44px; text-align:center; padding:8px 6px; border-radius:10px;
+    width:44px;
+    text-align:center;
+    padding:8px 6px;
+    border-radius:10px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.10);
-    color:#fff; font-weight:900;
+    color:#fff;
+    font-weight:900;
   }
+
   .scoreInput{
     width:44px;
     text-align:center;
@@ -154,39 +379,81 @@ v2.5.1 - Local AHMS handoff beta
     font-weight:900;
     outline:none;
   }
+
   .scoreInput:focus{
     border-color: rgba(0,234,255,.7);
     box-shadow: 0 0 0 2px rgba(0,234,255,.15);
   }
 
-  .slot.win{ border-color: rgba(61,220,132,.55); box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset; }
+  .slot.win{
+    border-color: rgba(61,220,132,.55);
+    box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset;
+  }
+
   .slot.lose{ opacity:.78; }
 
-  .ctrlbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
-  .chk{ display:flex; align-items:center; gap:8px; font-size:13px; color:rgba(255,255,255,.85); user-select:none; }
+  .ctrlbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-start;
+  }
+
+  .chk{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:rgba(255,255,255,.85);
+    user-select:none;
+  }
+
   .chk input{ transform: scale(1.15); }
   input[type="range"]{ width:190px; }
 
-  .saved-dot{ display:inline-block; width:8px; height:8px; margin-left:.4rem; border-radius:50%; background:var(--ok); opacity:0; transition:opacity .2s ease; }
+  .saved-dot{
+    display:inline-block;
+    width:8px;
+    height:8px;
+    margin-left:.4rem;
+    border-radius:50%;
+    background:var(--ok);
+    opacity:0;
+    transition:opacity .2s ease;
+  }
+
   .saved-dot.show{ opacity:1; }
 
   .btnTiny{
-    padding:6px 10px; margin:0; border-radius:10px; font-size:12px;
-    background:#1f1f1f; color:#fff; border:1px solid rgba(255,255,255,.14);
-    cursor:pointer; font-weight:900;
+    padding:6px 10px;
+    margin:0;
+    border-radius:10px;
+    font-size:12px;
+    background:#1f1f1f;
+    color:#fff;
+    border:1px solid rgba(255,255,255,.14);
+    cursor:pointer;
+    font-weight:900;
   }
+
   .btnTiny.primary{
     background: linear-gradient(90deg, var(--teamA), #fff, var(--teamB));
-    color:#000; border:none;
+    color:#000;
+    border:none;
   }
 
   .safeBadge{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:6px 10px; border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 10px;
+    border-radius:999px;
     border:1px solid rgba(255,255,255,.14);
     background:rgba(0,0,0,.25);
     font-size:12px;
   }
+
   .safeOn{ color:#ffd54f; font-weight:900; }
   .safeOff{ color:#3ddc84; font-weight:900; }
 
@@ -196,6 +463,195 @@ v2.5.1 - Local AHMS handoff beta
     padding:12px;
     background:rgba(255,255,255,.03);
     margin-bottom:10px;
+  }
+
+  .matchActionBar{
+    margin-top:8px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .roomGridWrap{
+    width:100%;
+    overflow:auto;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+      rgba(0,0,0,.22);
+    background-size: 40px 40px;
+    padding:12px;
+  }
+
+  .roomCanvas{
+    position:relative;
+    width:1000px;
+    height:620px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.14);
+    background:radial-gradient(circle at 50% 0%, rgba(0,188,212,.12), rgba(0,0,0,.18) 55%);
+    overflow:hidden;
+  }
+
+  .roomTable{
+    position:absolute;
+    width:138px;
+    min-height:76px;
+    border-radius:18px;
+    border:2px solid rgba(255,255,255,.18);
+    background:#222;
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    padding:8px;
+    box-shadow:0 10px 28px rgba(0,0,0,.35);
+    cursor:pointer;
+    user-select:none;
+    touch-action:none;
+  }
+
+  .roomTable.open{
+    background:rgba(61,220,132,.18);
+    border-color:rgba(61,220,132,.85);
+  }
+
+  .roomTable.assigned{
+    background:rgba(255,213,79,.18);
+    border-color:rgba(255,213,79,.9);
+  }
+
+  .roomTable.playing{
+    background:rgba(255,90,90,.18);
+    border-color:rgba(255,90,90,.9);
+  }
+
+  .roomTable.offline{
+    background:rgba(120,120,120,.18);
+    border-color:rgba(170,170,170,.45);
+    opacity:.72;
+  }
+
+  .roomTable.hiddenTable{
+    display:none;
+  }
+
+  .roomTableNum{
+    font-size:22px;
+    font-weight:1000;
+    line-height:1;
+  }
+
+  .roomTableStatus{
+    font-size:11px;
+    margin-top:4px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.75);
+    letter-spacing:.4px;
+  }
+
+  .roomTablePlayers{
+    font-size:12px;
+    margin-top:6px;
+    color:rgba(255,255,255,.86);
+    line-height:1.2;
+    max-width:124px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .roomLegend{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    margin:10px 0;
+  }
+
+  .legendDot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    display:inline-block;
+    margin-right:5px;
+  }
+
+  .legendOpen{ background:#3ddc84; }
+  .legendAssigned{ background:#ffd54f; }
+  .legendPlaying{ background:#ff5a5a; }
+  .legendOffline{ background:#888; }
+
+  .assignPanel{
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(0,0,0,.22);
+    border-radius:14px;
+    padding:12px;
+    margin-top:12px;
+  }
+
+  .tablePickBtn{
+    padding:8px 10px;
+    margin:4px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.16);
+    background:#1f1f1f;
+    color:#fff;
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .tablePickBtn.open{
+    background:rgba(61,220,132,.2);
+    color:#fff;
+    border-color:rgba(61,220,132,.8);
+  }
+
+  .tablePickBtn.assigned{
+    background:rgba(255,213,79,.2);
+    color:#fff;
+    border-color:rgba(255,213,79,.8);
+  }
+
+  .tablePickBtn.playing{
+    background:rgba(255,90,90,.2);
+    color:#fff;
+    border-color:rgba(255,90,90,.8);
+  }
+
+  .tablePickBtn.offline{
+    background:rgba(120,120,120,.2);
+    color:#fff;
+    border-color:rgba(170,170,170,.55);
+  }
+
+  .roomStatusTools{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+
+  .roomHint{
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    border-radius:12px;
+    padding:10px;
+    margin-top:10px;
+    font-size:12px;
+    color:rgba(255,255,255,.72);
+  }
+
+  @media (max-width: 720px){
+    body{ padding:10px; }
+    .card{ padding:12px; }
+    #logo{ height:120px !important; }
+    .slot{ grid-template-columns:1fr 44px; }
+    .slot > div:last-child{ display:none; }
   }
 </style>
 </head>
@@ -217,12 +673,9 @@ v2.5.1 - Local AHMS handoff beta
 </div>
 <input type="file" id="logoUploader" accept="image/*" style="display:none;" />
 
-
-
-
-
 <div class="tabs" id="tabs">
   <button class="tabbtn active" data-tab="tabMatch">Links</button>
+  <button class="tabbtn" data-tab="tabRoomSetup">Room Setup</button>
   <button class="tabbtn" data-tab="tabAYPT">AYPT</button>
   <button class="tabbtn" data-tab="tabBrackets">Brackets</button>
   <button class="tabbtn" data-tab="tabFull">Live</button>
@@ -230,7 +683,6 @@ v2.5.1 - Local AHMS handoff beta
   <button class="tabbtn" data-tab="tabArchive">Archive</button>
 </div>
 
-<!-- TAB: Match Links -->
 <div id="tabMatch" class="tabpane active">
   <div class="card">
     <div class="row">
@@ -257,6 +709,36 @@ v2.5.1 - Local AHMS handoff beta
     <canvas id="qrcode"></canvas>
   </div>
 
+  <div class="card">
+    <div class="row-left" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:1000;font-size:1.15em;">Room Control</div>
+        <div class="mini">Open tables stay green. Assigned tables turn yellow. Playing tables turn red.</div>
+      </div>
+      <div class="row-left">
+        <button class="btnTiny primary" id="btnRoomRefreshLinks">Refresh Room</button>
+        <button class="btnTiny" onclick="setTab('tabRoomSetup')">Room Setup</button>
+      </div>
+    </div>
+
+    <div class="roomLegend">
+      <span><span class="legendDot legendOpen"></span>Open</span>
+      <span><span class="legendDot legendAssigned"></span>Assigned</span>
+      <span><span class="legendDot legendPlaying"></span>Playing</span>
+      <span><span class="legendDot legendOffline"></span>Offline</span>
+    </div>
+
+    <div id="assignPanel" class="assignPanel" style="display:none;"></div>
+
+    <div class="roomGridWrap">
+      <div id="roomCanvasLinks" class="roomCanvas"></div>
+    </div>
+
+    <div class="roomHint">
+      Click Assign Table on a bracket match, then click an open table here. After generating links, mark the table Playing or Open as the room changes.
+    </div>
+  </div>
+
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
     <summary class="clicky">Settings</summary>
 
@@ -277,11 +759,11 @@ v2.5.1 - Local AHMS handoff beta
     <details class="block" style="max-width:900px;margin:14px auto">
       <summary class="clicky">How to Use This Page (Quick TD Guide)</summary>
       <div style="margin-top: 10px; line-height: 1.5;">
-        <p><strong>1. Who's playing?</strong> Enter names for Player 1 and Player 2.</p>
-        <p><strong>2. Table and Ref?</strong> Optional table # and referee name.</p>
-        <p><strong>3. Match type.</strong> Best of 3, 5, or 7.</p>
+        <p><strong>1. Build or load your bracket.</strong> Use the Brackets tab or AYPT to seed entrants.</p>
+        <p><strong>2. Set up the room.</strong> Use Room Setup to drag tables into place.</p>
+        <p><strong>3. Assign matches.</strong> Click Assign Table on a match, then choose an open table from Links.</p>
         <p><strong>4. Generate Link.</strong> Creates a scoreboard URL, QR code, Match Sheet link, and Local AHMS handoff.</p>
-        <p><strong>5. Match Log.</strong> Saves locally and (if Safe Mode is OFF) posts to AYPT - Match Log.</p>
+        <p><strong>5. Keep flow moving.</strong> Mark tables Playing, Open, Assigned, or Offline as the tournament room changes.</p>
       </div>
     </details>
 
@@ -313,11 +795,50 @@ v2.5.1 - Local AHMS handoff beta
       <button onclick="document.getElementById('logoUploader').click()">Upload Logo</button>
     </div>
 
-    <div class="muted" style="margin-top:16px; text-align:center;">TD Integrated build - Match links + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
+    <div class="muted" style="margin-top:16px; text-align:center;">TD Integrated build - Match links + Room Control + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
   </details>
 </div>
 
-<!-- TAB: AYPT -->
+<div id="tabRoomSetup" class="tabpane">
+  <div class="card">
+    <div class="row-left" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:1000;font-size:1.15em;">Room Setup</div>
+        <div class="mini">Drag tables into place. This layout appears on the Links page during the tournament.</div>
+      </div>
+      <div class="row-left">
+        <button class="btnTiny primary" id="btnAddRoomTable">Add Table</button>
+        <button class="btnTiny" id="btnSaveRoomLayout">Save Layout</button>
+        <button class="btnTiny danger" id="btnResetRoomLayout">Reset Layout</button>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row-left">
+      <input id="roomNameInput" placeholder="Room name, example 7-6 Main Room" style="width:280px;" />
+      <button class="btnTiny" id="btnSaveRoomName">Save Room Name</button>
+      <button class="btnTiny" id="btnClearRoomStatuses">Clear Statuses</button>
+      <span class="muted" id="roomSetupMsg">-</span>
+    </div>
+
+    <div class="roomLegend">
+      <span><span class="legendDot legendOpen"></span>Open</span>
+      <span><span class="legendDot legendAssigned"></span>Assigned</span>
+      <span><span class="legendDot legendPlaying"></span>Playing</span>
+      <span><span class="legendDot legendOffline"></span>Offline</span>
+    </div>
+
+    <div class="roomGridWrap">
+      <div id="roomCanvasSetup" class="roomCanvas"></div>
+    </div>
+
+    <div class="roomHint">
+      Setup tips: drag a table to move it. Click a table to cycle Open, Assigned, Playing, Offline. Double click a table to rename it. Table layout and status are saved on this device.
+    </div>
+  </div>
+</div>
+
 <div id="tabAYPT" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -349,7 +870,6 @@ v2.5.1 - Local AHMS handoff beta
   </div>
 </div>
 
-<!-- TAB: Brackets -->
 <div id="tabBrackets" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -374,7 +894,7 @@ v2.5.1 - Local AHMS handoff beta
 
     <div class="row-left" style="gap:12px;">
       <div style="min-width:280px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) - or click "Use AYPT List..." in AYPT tab</div>
+        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) or click Use AYPT List in AYPT tab</div>
         <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
       </div>
 
@@ -384,8 +904,8 @@ v2.5.1 - Local AHMS handoff beta
           <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
           <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
         </div>
-        <div class="mini">Tip - Double-elim is the default. BYEs auto-fill.</div>
-        <div class="mini" style="margin-top:6px;">Tip - click a player row in the chart to set winner. Shift-click clears (if downstream not started).</div>
+        <div class="mini">Tip: Double-elim is the default. BYEs auto-fill.</div>
+        <div class="mini" style="margin-top:6px;">Tip: click a player row in the chart to set winner. Shift-click clears if downstream has not started.</div>
       </div>
     </div>
 
@@ -416,7 +936,6 @@ v2.5.1 - Local AHMS handoff beta
   </div>
 </div>
 
-<!-- TAB: Full Live -->
 <div id="tabFull" class="tabpane">
   <div class="card">
     <div class="ctrlbar">
@@ -442,7 +961,6 @@ v2.5.1 - Local AHMS handoff beta
   </div>
 </div>
 
-<!-- TAB: Results -->
 <div id="tabResults" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -471,7 +989,6 @@ v2.5.1 - Local AHMS handoff beta
   </div>
 </div>
 
-<!-- TAB: Archive -->
 <div id="tabArchive" class="tabpane">
   <div class="card">
     <div class="row-left">
@@ -503,11 +1020,6 @@ const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLU
 
 const LOCAL_AHMS_FILE = "file:///home/airhockeyprint/Desktop/AHMS.html";
 
-/*
-  IMPORTANT:
-  Do NOT point bracket traffic at the AYPT script unless that Apps Script
-  explicitly supports action=bracketGet and action=bracketSave.
-*/
 const BRACKETS_CLOUD_ENABLED = false;
 const BRACKETS_ENDPOINT = "";
 
@@ -519,27 +1031,36 @@ const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
   UTILS
 ========================================================= */
 const $ = (sel, root=document) => root.querySelector(sel);
+
 function esc(s){
   return String(s ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
 }
+
 function fmtLocal(iso){
   if(!iso) return "";
   try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
+
 function csvCell(v){
   const s = String(v ?? "");
   if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
   return s;
 }
+
 function isSafeMode(){
   return localStorage.getItem(LS_SAFE_MODE) !== "0";
 }
+
 function setSafeMode(on){
   localStorage.setItem(LS_SAFE_MODE, on ? "1" : "0");
   refreshSafeModeUI();
 }
+
 function refreshSafeModeUI(){
   const chk = $('#chkSafeMode');
   const lab = $('#safeModeStatus');
@@ -569,7 +1090,6 @@ function refreshSafeModeUI(){
   document.querySelectorAll('.admin-note').forEach(el => el.disabled = on);
 }
 
-/* JSONP helper */
 function jsonp(url, params = {}, timeoutMs = 12000){
   return new Promise((resolve, reject) => {
     const cb = "TD_CB_" + Math.random().toString(36).slice(2);
@@ -589,6 +1109,7 @@ function jsonp(url, params = {}, timeoutMs = 12000){
       if (el) el.remove();
       try { delete window[cb]; } catch(_) { window[cb] = undefined; }
     }
+
     document.body.appendChild(s);
   });
 }
@@ -601,6 +1122,7 @@ function setTab(id){
   document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("active", p.id === id));
   localStorage.setItem("TD_ACTIVE_TAB", id);
 }
+
 document.addEventListener("click", (e)=>{
   const b = e.target.closest(".tabbtn");
   if(!b) return;
@@ -625,6 +1147,11 @@ function generateMatchLink() {
   const table = $('#tableNumber').value.trim();
   const refRaw = $('#refName').value.trim();
   const ref = encodeURIComponent(refRaw);
+
+  if(!p1Raw || !p2Raw){
+    alert("Enter both player names first.");
+    return;
+  }
 
   const baseUrl = window.location.origin + '/airhockey-score-system/';
 
@@ -671,6 +1198,7 @@ function generateMatchLink() {
   `;
 
   $('#copyBtn').style.display = 'inline-block';
+
   const curlBtn = $('#copyCurlBtn');
   if (curlBtn) curlBtn.style.display = 'inline-block';
 
@@ -710,6 +1238,8 @@ function generateMatchLink() {
   }else{
     saveToAYPTMatchLog(payload);
   }
+
+  syncRoomTableFromGeneratedLink(table, p1Raw, p2Raw, matchId);
 }
 
 function copyLink() {
@@ -717,7 +1247,10 @@ function copyLink() {
     const btn = $('#copyBtn');
     btn.classList.add('copied');
     btn.innerText = 'Copied!';
-    setTimeout(() => { btn.classList.remove('copied'); btn.innerText = 'Copy to Clipboard'; }, 2000);
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerText = 'Copy to Clipboard';
+    }, 2000);
   });
 }
 
@@ -762,7 +1295,13 @@ function copyLocalAHMSInfo() {
 ========================================================= */
 function addToMatchLog(text, url) {
   const now = new Date();
-  const logItem = { text, url, time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), date: now.toLocaleDateString() };
+  const logItem = {
+    text,
+    url,
+    time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    date: now.toLocaleDateString()
+  };
+
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   log.unshift(logItem);
   localStorage.setItem('matchLog', JSON.stringify(log));
@@ -774,16 +1313,23 @@ function renderMatchLog() {
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
   const filtered = log.filter(item => item.text.toLowerCase().includes(searchQuery));
   const totalPages = Math.ceil(filtered.length / pageSize);
+
   if (currentPage > totalPages) currentPage = totalPages || 1;
+
   const start = (currentPage - 1) * pageSize;
   const visible = filtered.slice(start, start + pageSize);
   const logList = $('#logList');
+
+  if(!logList) return;
+
   logList.innerHTML = '';
+
   visible.forEach(item => {
     const li = document.createElement('li');
     li.innerHTML = `<a href="${item.url}" target="_blank">${esc(item.text)}</a> <span style="color: #888; font-size: 0.85em;">(${esc(item.date)}, ${esc(item.time)})</span>`;
     logList.appendChild(li);
   });
+
   const pageInfo = $('#pageInfo');
   if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
 }
@@ -797,18 +1343,25 @@ function clearMatchLog() {
 
 function exportMatchLogCSV() {
   const log = JSON.parse(localStorage.getItem('matchLog') || '[]');
-  if (log.length === 0) { alert('No matches to export.'); return; }
+  if (log.length === 0) {
+    alert('No matches to export.');
+    return;
+  }
+
   const headers = ['Date', 'Time', 'Match Info', 'Link'];
   const rows = log.map(item => [item.date, item.time, item.text, item.url]);
   const csvContent = [headers, ...rows].map(e => e.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
+
   link.href = url;
   link.download = `MatchLog_${new Date().toISOString().split('T')[0]}.csv`;
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+
   URL.revokeObjectURL(url);
 }
 
@@ -816,7 +1369,7 @@ function nextPage() { currentPage++; renderMatchLog(); }
 function prevPage() { if (currentPage > 1) { currentPage--; renderMatchLog(); } }
 
 /* =========================================================
-  CLOUD SYNC - AYPT MATCH LOG
+  CLOUD SYNC
 ========================================================= */
 const QUEUE_KEY = 'matchLogCloudQueue';
 
@@ -837,25 +1390,32 @@ function enqueue(payload) {
 
 async function flushCloudQueue() {
   if(isSafeMode()) return;
+
   const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   if (!q.length) return;
+
   showCloudStatus(`Syncing ${q.length} pending...`);
+
   const remaining = [];
+
   for (const item of q) {
     const ok = await postToAYPTMatchLog(item);
     if (!ok) remaining.push(item);
   }
+
   localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
   showCloudStatus(remaining.length ? `${remaining.length} still pending...` : 'All synced!', true);
 }
 
 function postToAYPTMatchLog(payload) {
   if(isSafeMode()) return Promise.resolve(true);
+
   try {
     const body = new URLSearchParams({
       action: 'appendMatchLog',
       payload: JSON.stringify(payload)
     });
+
     return fetch(AYPT_MATCHLOG_ENDPOINT, {
       method: 'POST',
       cache: 'no-store',
@@ -865,9 +1425,19 @@ function postToAYPTMatchLog(payload) {
         await fetch(AYPT_MATCHLOG_ENDPOINT, { method: 'POST', mode: 'no-cors', body });
         return true;
       }
+
       const text = await resp.text();
-      try { const j = JSON.parse(text); return !!(j && j.ok); } catch { return true; }
-    }).catch((e) => { console.warn('AYPT post failed, will queue:', e); return false; });
+
+      try {
+        const j = JSON.parse(text);
+        return !!(j && j.ok);
+      } catch {
+        return true;
+      }
+    }).catch((e) => {
+      console.warn('AYPT post failed, will queue:', e);
+      return false;
+    });
   } catch (e) {
     console.warn('AYPT post failed, will queue:', e);
     return Promise.resolve(false);
@@ -879,6 +1449,7 @@ function saveToAYPTMatchLog(payload){
     showCloudStatus("Safe Mode: match log not posted.", true);
     return Promise.resolve(true);
   }
+
   return postToAYPTMatchLog(payload).then(ok => {
     if (!ok) enqueue(payload);
     else showCloudStatus('Saved to AYPT ✓', true);
@@ -894,18 +1465,22 @@ let AYPT_ROWS = [];
 async function loadAYPT(){
   const statusEl = $('#ayptStatus');
   const tbody = $('#ayptTable tbody');
+
   statusEl.textContent = "Loading...";
   tbody.innerHTML = "";
 
   try{
     const data = await jsonp(AYPT_SIGNUPS_ENDPOINT, { list:"1" });
+
     if(!data || !data.ok) throw new Error(data && data.message || "Load failed");
+
     const rows = data.rows || [];
     AYPT_ROWS = rows;
 
     rows.forEach((r, idx) => {
       const tr = document.createElement("tr");
       const paidChecked = r.paid ? "checked" : "";
+
       tr.innerHTML = `
         <td class="mini">${idx+1}</td>
         <td>${esc(r.firstName || "")}</td>
@@ -921,6 +1496,7 @@ async function loadAYPT(){
           <span class="saved-dot" id="saved-${esc(r.id ?? idx)}" title="Saved"></span>
         </td>
       `;
+
       tbody.appendChild(tr);
     });
 
@@ -934,6 +1510,7 @@ async function loadAYPT(){
 
 function pulseSaved(id){
   const dot = document.getElementById(`saved-${id}`);
+
   if (dot) {
     dot.classList.add("show");
     setTimeout(()=>dot.classList.remove("show"), 900);
@@ -945,6 +1522,7 @@ async function ayptUpdate(id, fields){
     pulseSaved(id);
     return true;
   }
+
   try{
     await jsonp(AYPT_SIGNUPS_ENDPOINT, Object.assign({ update:"1", id }, fields));
     pulseSaved(id);
@@ -965,21 +1543,25 @@ function wireAYPTTable(){
     if(e.target.classList.contains("paid-toggle")){
       if(isSafeMode()){
         e.target.checked = !e.target.checked;
-        alert("Safe Mode is ON - Paid updates are disabled.");
+        alert("Safe Mode is ON. Paid updates are disabled.");
         return;
       }
+
       const id = e.target.getAttribute("data-id");
       const paid = e.target.checked ? "1" : "0";
       const ok = await ayptUpdate(id, { paid });
-      if(!ok) alert("Paid update failed (endpoint may not support update=1).");
+
+      if(!ok) alert("Paid update failed. Endpoint may not support update=1.");
     }
   });
 
   tbody.addEventListener("input", (e)=>{
     if(e.target.classList.contains("admin-note")){
       if(isSafeMode()) return;
+
       const id = e.target.getAttribute("data-id");
       const v = e.target.value;
+
       clearTimeout(noteTimer);
       noteTimer = setTimeout(async ()=>{
         await ayptUpdate(id, { adminNote: v });
@@ -995,11 +1577,492 @@ function useAYPTToSeed(){
 
   $('#entrantsBox').value = names.join("\n");
   setTab("tabBrackets");
-  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click "New Bracket..."`;
+  $('#bracketStatus').textContent = `Loaded ${names.length} entrants from AYPT. Click New Bracket.`;
 }
 
 /* =========================================================
-  BRACKETS - LOCAL STATE
+  ROOM CONTROL
+========================================================= */
+const ROOM_KEY = "TD_ROOM_LAYOUT_V1";
+const ROOM_NAME_KEY = "TD_ROOM_NAME_V1";
+
+let ROOM_STATE = null;
+let pendingAssignMatch = null;
+
+function defaultRoomState(){
+  return {
+    version: 1,
+    tables: [
+      { id:"T1", number:"1", x:80, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
+      { id:"T2", number:"2", x:260, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
+      { id:"T3", number:"3", x:440, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
+      { id:"T4", number:"4", x:620, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" }
+    ]
+  };
+}
+
+function loadRoomState(){
+  try{
+    const raw = localStorage.getItem(ROOM_KEY);
+    if(!raw) return defaultRoomState();
+
+    const parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.tables)) return defaultRoomState();
+
+    parsed.tables = parsed.tables.map((t, idx)=>Object.assign({
+      id:`T${idx+1}`,
+      number:String(idx+1),
+      x:80 + idx * 180,
+      y:80,
+      status:"open",
+      active:true,
+      p1:"",
+      p2:"",
+      matchId:""
+    }, t));
+
+    return parsed;
+  }catch{
+    return defaultRoomState();
+  }
+}
+
+function saveRoomState(){
+  localStorage.setItem(ROOM_KEY, JSON.stringify(ROOM_STATE || defaultRoomState()));
+}
+
+function getRoomTables(){
+  if(!ROOM_STATE) ROOM_STATE = loadRoomState();
+  return ROOM_STATE.tables || [];
+}
+
+function findRoomTable(tableId){
+  return getRoomTables().find(t => t.id === tableId);
+}
+
+function findRoomTableByNumber(number){
+  const n = String(number || "").trim();
+  if(!n) return null;
+  return getRoomTables().find(t => String(t.number || "").trim() === n);
+}
+
+function tableStatusLabel(status){
+  if(status === "assigned") return "Assigned";
+  if(status === "playing") return "Playing";
+  if(status === "offline") return "Offline";
+  return "Open";
+}
+
+function cycleTableStatus(table){
+  const order = ["open", "assigned", "playing", "offline"];
+  const idx = order.indexOf(table.status || "open");
+  table.status = order[(idx + 1) % order.length];
+
+  if(table.status === "open" || table.status === "offline"){
+    table.p1 = "";
+    table.p2 = "";
+    table.matchId = "";
+  }
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+function renderRoomTableEl(table, mode){
+  const el = document.createElement("div");
+  el.className = `roomTable ${table.status || "open"} ${table.active === false ? "hiddenTable" : ""}`;
+  el.style.left = `${Number(table.x || 0)}px`;
+  el.style.top = `${Number(table.y || 0)}px`;
+  el.dataset.tableId = table.id;
+  el.dataset.mode = mode;
+
+  const players = [table.p1, table.p2].filter(Boolean).join(" vs ");
+
+  el.innerHTML = `
+    <div class="roomTableNum">Table ${esc(table.number || "")}</div>
+    <div class="roomTableStatus">${esc(tableStatusLabel(table.status))}</div>
+    <div class="roomTablePlayers">${esc(players || "Ready")}</div>
+  `;
+
+  if(mode === "setup"){
+    makeRoomTableDraggable(el, table);
+
+    el.addEventListener("click", (e)=>{
+      if(el.dataset.dragged === "1") return;
+      cycleTableStatus(table);
+    });
+
+    el.addEventListener("dblclick", (e)=>{
+      e.stopPropagation();
+      const next = prompt("Table number or label:", table.number || "");
+      if(next === null) return;
+
+      table.number = String(next).trim() || table.number;
+      saveRoomState();
+      renderRoomViews();
+    });
+  }else{
+    el.addEventListener("click", ()=>{
+      if(pendingAssignMatch){
+        assignPendingMatchToTable(table.id);
+      }else{
+        renderQuickTableTools(table.id);
+      }
+    });
+  }
+
+  return el;
+}
+
+function renderRoomViews(){
+  if(!ROOM_STATE) ROOM_STATE = loadRoomState();
+
+  const setup = document.getElementById("roomCanvasSetup");
+  const links = document.getElementById("roomCanvasLinks");
+
+  if(setup){
+    setup.innerHTML = "";
+    getRoomTables().forEach(t => setup.appendChild(renderRoomTableEl(t, "setup")));
+  }
+
+  if(links){
+    links.innerHTML = "";
+    getRoomTables().forEach(t => links.appendChild(renderRoomTableEl(t, "links")));
+  }
+
+  renderAssignPanel();
+}
+
+function makeRoomTableDraggable(el, table){
+  let startX = 0;
+  let startY = 0;
+  let origX = 0;
+  let origY = 0;
+  let dragging = false;
+
+  function down(e){
+    const pt = e.touches ? e.touches[0] : e;
+    dragging = true;
+    el.dataset.dragged = "0";
+    startX = pt.clientX;
+    startY = pt.clientY;
+    origX = Number(table.x || 0);
+    origY = Number(table.y || 0);
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+    document.addEventListener("touchmove", move, { passive:false });
+    document.addEventListener("touchend", up);
+  }
+
+  function move(e){
+    if(!dragging) return;
+    if(e.cancelable) e.preventDefault();
+
+    const pt = e.touches ? e.touches[0] : e;
+    const dx = pt.clientX - startX;
+    const dy = pt.clientY - startY;
+
+    if(Math.abs(dx) > 3 || Math.abs(dy) > 3) el.dataset.dragged = "1";
+
+    table.x = Math.max(0, Math.min(860, origX + dx));
+    table.y = Math.max(0, Math.min(520, origY + dy));
+
+    el.style.left = `${table.x}px`;
+    el.style.top = `${table.y}px`;
+  }
+
+  function up(){
+    dragging = false;
+    saveRoomState();
+
+    setTimeout(()=>{ el.dataset.dragged = "0"; }, 80);
+
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", up);
+    document.removeEventListener("touchmove", move);
+    document.removeEventListener("touchend", up);
+  }
+
+  el.addEventListener("mousedown", down);
+  el.addEventListener("touchstart", down, { passive:true });
+}
+
+function addRoomTable(){
+  if(!ROOM_STATE) ROOM_STATE = loadRoomState();
+
+  const existing = getRoomTables()
+    .map(t => Number(t.number))
+    .filter(n => !Number.isNaN(n));
+
+  const nextNum = existing.length ? Math.max(...existing) + 1 : 1;
+
+  ROOM_STATE.tables.push({
+    id: `T${Date.now()}`,
+    number: String(nextNum),
+    x: 80 + ((nextNum - 1) % 5) * 180,
+    y: 80 + Math.floor((nextNum - 1) / 5) * 130,
+    status: "open",
+    active: true,
+    p1: "",
+    p2: "",
+    matchId: ""
+  });
+
+  saveRoomState();
+  renderRoomViews();
+
+  const msg = document.getElementById("roomSetupMsg");
+  if(msg) msg.textContent = `Added Table ${nextNum}`;
+}
+
+function resetRoomLayout(){
+  if(!confirm("Reset room layout and table statuses?")) return;
+
+  ROOM_STATE = defaultRoomState();
+  saveRoomState();
+  renderRoomViews();
+
+  const msg = document.getElementById("roomSetupMsg");
+  if(msg) msg.textContent = "Room layout reset.";
+}
+
+function clearRoomStatuses(){
+  if(!ROOM_STATE) ROOM_STATE = loadRoomState();
+
+  getRoomTables().forEach(t=>{
+    t.status = "open";
+    t.p1 = "";
+    t.p2 = "";
+    t.matchId = "";
+  });
+
+  saveRoomState();
+  renderRoomViews();
+
+  const msg = document.getElementById("roomSetupMsg");
+  if(msg) msg.textContent = "All table statuses cleared.";
+}
+
+function saveRoomName(){
+  const v = (document.getElementById("roomNameInput")?.value || "").trim();
+  localStorage.setItem(ROOM_NAME_KEY, v);
+
+  const msg = document.getElementById("roomSetupMsg");
+  if(msg) msg.textContent = v ? `Saved room name: ${v}` : "Room name cleared.";
+}
+
+function openRoomAssign(matchRef){
+  const [lane, id] = String(matchRef || "").split("|");
+  const m = findMatch(lane, id);
+
+  if(!m) return alert("Match not found.");
+
+  pendingAssignMatch = { lane, id };
+
+  setTab("tabMatch");
+  renderAssignPanel();
+
+  const panel = document.getElementById("assignPanel");
+  if(panel) panel.scrollIntoView({ behavior:"smooth", block:"center" });
+}
+
+function renderAssignPanel(){
+  const panel = document.getElementById("assignPanel");
+  if(!panel) return;
+
+  if(!pendingAssignMatch){
+    panel.style.display = "none";
+    panel.innerHTML = "";
+    return;
+  }
+
+  const m = findMatch(pendingAssignMatch.lane, pendingAssignMatch.id);
+
+  if(!m){
+    pendingAssignMatch = null;
+    panel.style.display = "none";
+    panel.innerHTML = "";
+    return;
+  }
+
+  const roomName = localStorage.getItem(ROOM_NAME_KEY) || "";
+  const tables = getRoomTables().filter(t => t.active !== false);
+
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <div class="row-left" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:1000;">Assign Match</div>
+        <div class="mini">${roomName ? esc(roomName) + " | " : ""}${esc(m.label || m.id)}: ${esc(m.p1)} vs ${esc(m.p2)}</div>
+      </div>
+      <button class="btnTiny danger" id="btnCancelAssign">Cancel</button>
+    </div>
+    <div class="spacer"></div>
+    <div>
+      ${tables.map(t => `
+        <button class="tablePickBtn ${esc(t.status || "open")}" data-assign-table="${esc(t.id)}">
+          Table ${esc(t.number)} ${esc(tableStatusLabel(t.status))}
+        </button>
+      `).join("")}
+    </div>
+  `;
+
+  panel.querySelectorAll("[data-assign-table]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      assignPendingMatchToTable(btn.getAttribute("data-assign-table"));
+    });
+  });
+
+  const cancel = document.getElementById("btnCancelAssign");
+  if(cancel){
+    cancel.addEventListener("click", ()=>{
+      pendingAssignMatch = null;
+      renderAssignPanel();
+    });
+  }
+}
+
+function assignPendingMatchToTable(tableId){
+  if(!pendingAssignMatch) return;
+
+  const m = findMatch(pendingAssignMatch.lane, pendingAssignMatch.id);
+  const table = findRoomTable(tableId);
+
+  if(!m || !table) return alert("Match or table not found.");
+
+  if(table.status === "playing"){
+    const ok = confirm(`Table ${table.number} is marked playing. Assign anyway?`);
+    if(!ok) return;
+  }
+
+  table.status = "assigned";
+  table.p1 = m.p1 || "";
+  table.p2 = m.p2 || "";
+  table.matchId = m.id || "";
+
+  saveRoomState();
+
+  document.getElementById("player1").value = m.p1 || "";
+  document.getElementById("player2").value = m.p2 || "";
+  document.getElementById("tableNumber").value = table.number || "";
+  document.getElementById("refName").value = "";
+
+  generateMatchLink();
+
+  pendingAssignMatch = null;
+  renderRoomViews();
+
+  const panel = document.getElementById("assignPanel");
+  if(panel){
+    panel.style.display = "block";
+    panel.innerHTML = `
+      <div class="ok" style="font-weight:1000;">Assigned to Table ${esc(table.number)}</div>
+      <div class="mini">${esc(m.p1)} vs ${esc(m.p2)}</div>
+      <div class="roomStatusTools">
+        <button class="btnTiny primary" onclick="markTablePlaying('${esc(table.id)}')">Mark Playing</button>
+        <button class="btnTiny" onclick="markTableOpen('${esc(table.id)}')">Mark Open</button>
+        <button class="btnTiny" onclick="copyLink()">Copy Scoreboard</button>
+        <button class="btnTiny" onclick="copyLocalAHMSInfo()">Copy AHMS</button>
+      </div>
+    `;
+  }
+}
+
+function renderQuickTableTools(tableId){
+  const table = findRoomTable(tableId);
+  const panel = document.getElementById("assignPanel");
+
+  if(!table || !panel) return;
+
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <div class="row-left" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:1000;">Table ${esc(table.number)}</div>
+        <div class="mini">${esc(tableStatusLabel(table.status))}${table.p1 || table.p2 ? ` | ${esc(table.p1)} vs ${esc(table.p2)}` : ""}</div>
+      </div>
+      <button class="btnTiny danger" id="btnCloseTableTools">Close</button>
+    </div>
+    <div class="roomStatusTools">
+      <button class="btnTiny" onclick="markTableOpen('${esc(table.id)}')">Open</button>
+      <button class="btnTiny" onclick="markTableAssigned('${esc(table.id)}')">Assigned</button>
+      <button class="btnTiny primary" onclick="markTablePlaying('${esc(table.id)}')">Playing</button>
+      <button class="btnTiny" onclick="markTableOffline('${esc(table.id)}')">Offline</button>
+    </div>
+  `;
+
+  const close = document.getElementById("btnCloseTableTools");
+  if(close){
+    close.addEventListener("click", ()=>{
+      panel.style.display = "none";
+      panel.innerHTML = "";
+    });
+  }
+}
+
+function markTableOpen(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.status = "open";
+  table.p1 = "";
+  table.p2 = "";
+  table.matchId = "";
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+function markTableAssigned(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.status = "assigned";
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+function markTablePlaying(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.status = "playing";
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+function markTableOffline(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.status = "offline";
+  table.p1 = "";
+  table.p2 = "";
+  table.matchId = "";
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId){
+  if(!tableNumber) return;
+
+  const table = findRoomTableByNumber(tableNumber);
+  if(!table) return;
+
+  table.status = "assigned";
+  table.p1 = p1 || "";
+  table.p2 = p2 || "";
+  table.matchId = matchId || "";
+
+  saveRoomState();
+  renderRoomViews();
+}
+
+/* =========================================================
+  BRACKETS
 ========================================================= */
 let BRACKET_STATE = null;
 
@@ -1026,11 +2089,13 @@ function defaultTournamentId(){
   const dd = String(d.getDate()).padStart(2,"0");
   return `weekly${yyyy}${mm}${dd}`;
 }
+
 function getTournamentId(){
   const el = $('#tournamentId');
   const v = (el?.value || "").trim();
   return v || defaultTournamentId();
 }
+
 function setTournamentId(v){
   const el = $('#tournamentId');
   if(el) el.value = v || "";
@@ -1044,6 +2109,7 @@ function hasMatchStarted(m){
   const w  = String(m.winner || "").trim();
   return !!(s1 || s2 || w);
 }
+
 function clearMatchResult(m){
   if(!m) return;
   m.s1 = "";
@@ -1099,6 +2165,7 @@ async function cloudLoadBracket(){
 }
 
 let publishTimer = null;
+
 function schedulePublish(){
   if(!BRACKETS_CLOUD_ENABLED) return;
   if(isSafeMode()) return;
@@ -1115,8 +2182,11 @@ function schedulePublish(){
 }
 
 function nextPow2(n){
-  let p=1; while(p<n) p*=2; return p;
+  let p=1;
+  while(p<n) p*=2;
+  return p;
 }
+
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -1124,12 +2194,14 @@ function shuffle(arr){
   }
   return arr;
 }
+
 function makeMatch(id,label,p1,p2){
   return { id, label, p1, p2, s1:"", s2:"", winner:"", loser:"" };
 }
 
 function newBracketFromEntrants(){
   const raw = ($('#entrantsBox').value || "").split("\n").map(s=>s.trim()).filter(Boolean);
+
   if(raw.length < 2) return alert("Need at least 2 entrants.");
 
   let entrants = raw.slice();
@@ -1146,14 +2218,17 @@ function newBracketFromEntrants(){
   const winnersRounds = [w1];
   let roundSize = size/2;
   let r=2;
+
   while(roundSize >= 1){
     const round = [];
     for(let m=1;m<=roundSize;m++){
       round.push(makeMatch(`W${r}-${m}`, `Winners R${r} M${m}`, "TBD", "TBD"));
     }
+
     winnersRounds.push(round);
     roundSize = roundSize/2;
     r++;
+
     if(roundSize === 0) break;
     if(roundSize === 1) break;
   }
@@ -1161,18 +2236,21 @@ function newBracketFromEntrants(){
   const Lrounds = [];
   const wRoundsCount = Math.log2(size);
   const lCount = Math.max(1, (2*wRoundsCount)-1);
+
   for(let i=1;i<=lCount;i++){
     const matchesInRound = Math.max(1, Math.floor(size / Math.pow(2, Math.ceil(i/2)+1)));
     const lr = [];
+
     for(let m=1;m<=matchesInRound;m++){
       lr.push(makeMatch(`L${i}-${m}`, `Losers R${i} M${m}`, "TBD", "TBD"));
     }
+
     Lrounds.push(lr);
   }
 
   const grandFinal = [
     makeMatch("GF-1","Grand Final 1","TBD","TBD"),
-    makeMatch("GF-2","Grand Final 2 (if needed)","TBD","TBD")
+    makeMatch("GF-2","Grand Final 2 if needed","TBD","TBD")
   ];
 
   BRACKET_STATE = {
@@ -1196,6 +2274,7 @@ function newBracketFromEntrants(){
   saveBracketState();
   renderBracket();
   buildMatchPicker();
+
   $('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
 
   schedulePublish();
@@ -1228,6 +2307,7 @@ function propagateWinners(){
   for(let r=0;r<WR.length-1;r++){
     const round = WR[r];
     const next = WR[r+1];
+
     for(let i=0;i<round.length;i++){
       const m = round[i];
       const target = next[Math.floor(i/2)];
@@ -1244,12 +2324,14 @@ function propagateWinners(){
   }
 
   const lastW = WR[WR.length-1][0];
+
   if(lastW){
     const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
     BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
   }
 
   const losers = [];
+
   WR.forEach((round)=>{
     round.forEach((m)=>{
       if(m.winner && m.loser){
@@ -1261,6 +2343,7 @@ function propagateWinners(){
 
   const LR = BRACKET_STATE.losersRounds;
   let idx=0;
+
   for(let r=0;r<LR.length;r++){
     for(let m=0;m<LR[r].length;m++){
       const match = LR[r][m];
@@ -1272,6 +2355,7 @@ function propagateWinners(){
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
   const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
+
   if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
     BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
   }
@@ -1280,19 +2364,23 @@ function propagateWinners(){
 function listAllMatches(){
   const out = [];
   if(!BRACKET_STATE) return out;
+
   BRACKET_STATE.winnersRounds.forEach(r => r.forEach(m => out.push({ lane:"W", m })));
   BRACKET_STATE.losersRounds.forEach(r => r.forEach(m => out.push({ lane:"L", m })));
-  BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m }));
+  BRACKET_STATE.grandFinal.forEach(m => out.push({ lane:"GF", m })));
+
   return out;
 }
 
 function buildMatchPicker(){
   const sel = $('#selMatch');
   const selW = $('#selWinner');
+
   sel.innerHTML = '';
   selW.innerHTML = '';
 
   const matches = listAllMatches().filter(x => x.m.p1 && x.m.p2 && x.m.p1!=="TBD" && x.m.p2!=="TBD");
+
   matches.forEach(({lane,m})=>{
     const opt = document.createElement("option");
     opt.value = `${lane}|${m.id}`;
@@ -1306,26 +2394,40 @@ function buildMatchPicker(){
     const v = sel.value || '';
     const [lane,id] = v.split("|");
     const match = findMatch(lane,id);
+
     if(!match) return;
-    const o1 = document.createElement("option"); o1.value="p1"; o1.textContent = match.p1;
-    const o2 = document.createElement("option"); o2.value="p2"; o2.textContent = match.p2;
-    selW.appendChild(o1); selW.appendChild(o2);
+
+    const o1 = document.createElement("option");
+    o1.value="p1";
+    o1.textContent = match.p1;
+
+    const o2 = document.createElement("option");
+    o2.value="p2";
+    o2.textContent = match.p2;
+
+    selW.appendChild(o1);
+    selW.appendChild(o2);
   }
+
   sel.addEventListener("change", refreshWinners);
   refreshWinners();
 }
 
 function findMatch(lane,id){
   if(!BRACKET_STATE) return null;
+
   if(lane==="W"){
     for(const r of BRACKET_STATE.winnersRounds) for(const m of r) if(m.id===id) return m;
   }
+
   if(lane==="L"){
     for(const r of BRACKET_STATE.losersRounds) for(const m of r) if(m.id===id) return m;
   }
+
   if(lane==="GF"){
     for(const m of BRACKET_STATE.grandFinal) if(m.id===id) return m;
   }
+
   return null;
 }
 
@@ -1338,12 +2440,14 @@ function canClearWinner(lane, id, which){
 
   const feedKey = `${lane}|${id}|${which}`;
   const feed = (BRACKET_STATE && BRACKET_STATE.feeds) ? BRACKET_STATE.feeds[feedKey] : null;
+
   if(feed){
     const t = findMatch(feed.lane, feed.id);
     if(t && hasMatchStarted(t)) return false;
   }
 
   const all = listAllMatches();
+
   for(const item of all){
     const mm = item.m;
     if(mm === m) continue;
@@ -1351,6 +2455,7 @@ function canClearWinner(lane, id, which){
       if(hasMatchStarted(mm)) return false;
     }
   }
+
   return true;
 }
 
@@ -1363,15 +2468,18 @@ function normalizeName(s){
 
 function playerExistsInBracket(name){
   if(!BRACKET_STATE) return false;
+
   const n = normalizeName(name).toLowerCase();
   if(!n) return false;
 
   const all = listAllMatches();
+
   for(const item of all){
     const m = item.m;
     if(normalizeName(m.p1).toLowerCase() === n) return true;
     if(normalizeName(m.p2).toLowerCase() === n) return true;
   }
+
   return false;
 }
 
@@ -1389,6 +2497,7 @@ function getLateAddCandidates(){
   for(const m of round1){
     const p1Bye = m.p1 === "BYE";
     const p2Bye = m.p2 === "BYE";
+
     if(!p1Bye && !p2Bye) continue;
 
     const feed = getFeedTargetForWinner(m.id);
@@ -1406,7 +2515,7 @@ function getLateAddCandidates(){
         matchId: m.id,
         slot: "p1",
         type: p2Bye ? "double-bye" : "single-bye",
-        label: `${m.label} - open ${p2Bye ? "double-BYE" : "BYE"} slot`
+        label: `${m.label} open ${p2Bye ? "double BYE" : "BYE"} slot`
       });
     }
 
@@ -1415,7 +2524,7 @@ function getLateAddCandidates(){
         matchId: m.id,
         slot: "p2",
         type: p1Bye ? "double-bye" : "single-bye",
-        label: `${m.label} - open ${p1Bye ? "double-BYE" : "BYE"} slot`
+        label: `${m.label} open ${p1Bye ? "double BYE" : "BYE"} slot`
       });
     }
   }
@@ -1450,14 +2559,17 @@ function addLateEntrant(){
   const name = normalizeName(rawName);
 
   if(!name) return alert("Enter the late entrant name first.");
+
   if(name.toLowerCase() === "bye" || name.toLowerCase() === "tbd"){
     return alert("That name is reserved.");
   }
+
   if(playerExistsInBracket(name)){
     return alert("That player is already somewhere in this bracket.");
   }
 
   const candidates = getLateAddCandidates();
+
   if(!candidates.length){
     if(msg) msg.textContent = "No eligible Round 1 BYE slots remain.";
     return alert("No eligible Round 1 BYE slots remain.");
@@ -1471,6 +2583,7 @@ function addLateEntrant(){
 
   const chosen = candidates[0];
   const match = findMatch("W", chosen.matchId);
+
   if(!match) return alert("Eligible match not found.");
 
   clearMatchResult(match);
@@ -1499,7 +2612,7 @@ function addLateEntrant(){
         : `${name} added to ${match.label}. Match now needs to be played.`;
   }
 
-  $('#bracketStatus').textContent = `Late entrant added: ${name} -> ${match.label} (${chosen.slot.toUpperCase()})`;
+  $('#bracketStatus').textContent = `Late entrant added: ${name} to ${match.label} (${chosen.slot.toUpperCase()})`;
 }
 
 /* =========================================================
@@ -1508,18 +2621,22 @@ function addLateEntrant(){
 function advanceWinner(){
   const msg = $('#advanceMsg');
   msg.textContent = '';
+
   if(!BRACKET_STATE) return alert("No bracket loaded.");
+
   const val = $('#selMatch').value;
   if(!val) return alert("Pick a match.");
+
   const [lane,id] = val.split("|");
   const m = findMatch(lane,id);
+
   if(!m) return alert("Match not found.");
 
   const w = $('#selWinner').value;
   if(!w) return alert("Pick winner.");
 
   if(m.winner === w){
-    msg.innerHTML = `<span class="muted">No change - already set.</span>`;
+    msg.innerHTML = `<span class="muted">No change. Already set.</span>`;
     return;
   }
 
@@ -1528,6 +2645,7 @@ function advanceWinner(){
 
   const s1 = prompt("Score for " + m.p1 + " (optional):", m.s1 || "");
   const s2 = prompt("Score for " + m.p2 + " (optional):", m.s2 || "");
+
   if(s1 !== null) m.s1 = String(s1);
   if(s2 !== null) m.s2 = String(s2);
 
@@ -1535,6 +2653,7 @@ function advanceWinner(){
   saveBracketState();
   renderBracket();
   buildMatchPicker();
+
   msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
 
   schedulePublish();
@@ -1552,9 +2671,11 @@ function loadArchive(){
     return [];
   }
 }
+
 function saveArchive(arr){
   localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arr));
 }
+
 function renderArchive(){
   const list = $('#archiveList');
   const status = $('#archiveStatus');
@@ -1588,14 +2709,17 @@ function renderArchive(){
         </div>
       </div>
     `;
+
     list.appendChild(wrap);
   });
 }
+
 function saveCurrentBracketToArchive(){
   if(!BRACKET_STATE){
     alert("No current bracket to archive.");
     return;
   }
+
   const archive = loadArchive();
   const id = `arch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
   const tournamentId = getTournamentId();
@@ -1611,11 +2735,14 @@ function saveCurrentBracketToArchive(){
 
   saveArchive(archive);
   renderArchive();
+
   $('#archiveStatus').textContent = `Saved current bracket to archive: ${title}`;
 }
+
 function loadArchiveItem(id){
   const archive = loadArchive();
   const item = archive.find(x => x.id === id);
+
   if(!item) return alert("Archive item not found.");
 
   BRACKET_STATE = JSON.parse(JSON.stringify(item.state));
@@ -1625,43 +2752,57 @@ function loadArchiveItem(id){
   renderBracket();
   buildMatchPicker();
   renderResults();
+
   $('#bracketStatus').textContent = `Loaded archived bracket: ${item.title}`;
   setTab('tabBrackets');
 }
+
 function deleteArchiveItem(id){
   const archive = loadArchive();
   const next = archive.filter(x => x.id !== id);
   saveArchive(next);
   renderArchive();
 }
+
 function exportArchiveItem(id){
   const archive = loadArchive();
   const item = archive.find(x => x.id === id);
+
   if(!item) return alert("Archive item not found.");
+
   const blob = new Blob([JSON.stringify(item, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `${(item.tournamentId || "archive").replace(/[^a-z0-9_-]/gi,'_')}.json`;
+
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
+
 function exportFullArchive(){
   const archive = loadArchive();
   const blob = new Blob([JSON.stringify(archive, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `TD_Archive_${new Date().toISOString().slice(0,10)}.json`;
+
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
+
 function importArchiveFile(file){
   const reader = new FileReader();
+
   reader.onload = () => {
     try{
       const parsed = JSON.parse(reader.result);
@@ -1680,20 +2821,24 @@ function importArchiveFile(file){
 
       incoming.forEach(item=>{
         const clone = JSON.parse(JSON.stringify(item));
+
         if(!clone.id) clone.id = `arch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
         if(!clone.savedAt) clone.savedAt = new Date().toISOString();
         if(!clone.title) clone.title = clone.tournamentId || "Imported Tournament";
         if(!clone.state || !clone.state.winnersRounds) return;
+
         merged.push(clone);
       });
 
       saveArchive(merged);
       renderArchive();
+
       $('#archiveStatus').textContent = `Imported ${incoming.length} archive item${incoming.length===1?'':'s'}.`;
     }catch(e){
       alert("Archive import failed: " + e.message);
     }
   };
+
   reader.readAsText(file);
 }
 
@@ -1702,8 +2847,10 @@ function importArchiveFile(file){
 ========================================================= */
 function resetBracket(){
   if(!confirm("Reset bracket state?")) return;
+
   localStorage.removeItem(STATE_KEY);
   BRACKET_STATE = null;
+
   $('#bracketRoot').textContent = "No bracket loaded yet.";
   $('#fullRoot').textContent = "No bracket loaded yet.";
   $('#bracketStatus').textContent = "Bracket reset.";
@@ -1716,6 +2863,7 @@ function renderMatchCard(match, lane, editable=false){
   const card = document.createElement("div");
   card.className = "match";
   const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
+  const playable = editable && match.p1 && match.p2 && match.p1 !== "TBD" && match.p2 !== "TBD" && match.p1 !== "BYE" && match.p2 !== "BYE";
 
   card.innerHTML = `
     <div class="match-head">
@@ -1723,14 +2871,27 @@ function renderMatchCard(match, lane, editable=false){
       <div class="tag">${tagText}</div>
     </div>
   `;
+
   card.appendChild(renderSlot(match, lane, "p1", editable));
   card.appendChild(renderSlot(match, lane, "p2", editable));
+
+  if(playable){
+    const bar = document.createElement("div");
+    bar.className = "matchActionBar";
+    bar.innerHTML = `
+      <button class="btnTiny primary" type="button" data-room-assign="${esc(lane)}|${esc(match.id)}">Assign Table</button>
+      <button class="btnTiny" type="button" data-link-fill="${esc(lane)}|${esc(match.id)}">Fill Links</button>
+    `;
+    card.appendChild(bar);
+  }
+
   return card;
 }
 
 function renderSlot(match, lane, which, editable){
   const slot = document.createElement("div");
   slot.className = "slot";
+
   if(match.winner === which) slot.classList.add("win");
   if(match.winner && match.winner !== which) slot.classList.add("lose");
 
@@ -1743,7 +2904,7 @@ function renderSlot(match, lane, which, editable){
   slot.innerHTML = `
     <div>
       <div class="name">${esc(name)}</div>
-      <div class="seed">${esc(id)} - ${which.toUpperCase()}</div>
+      <div class="seed">${esc(id)} ${which.toUpperCase()}</div>
     </div>
 
     ${
@@ -1777,17 +2938,19 @@ function renderSlot(match, lane, which, editable){
 
 function renderBracket(){
   const root = $('#bracketRoot');
+
   if(!BRACKET_STATE){
     root.textContent = "No bracket loaded yet.";
     return;
   }
+
   const bracketEl = document.createElement("div");
   bracketEl.className = "bracket";
 
   (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
     const col = document.createElement("div");
     col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+    col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
     round.forEach(m => col.appendChild(renderMatchCard(m,"W", true)));
     bracketEl.appendChild(col);
   });
@@ -1795,7 +2958,7 @@ function renderBracket(){
   (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
     const col = document.createElement("div");
     col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+    col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
     round.forEach(m => col.appendChild(renderMatchCard(m,"L", true)));
     bracketEl.appendChild(col);
   });
@@ -1815,6 +2978,7 @@ function renderBracket(){
 ========================================================= */
 function wireBracketChartEditing(){
   const root = document.getElementById("bracketRoot");
+
   if(!root) return;
 
   root.addEventListener("input", (e)=>{
@@ -1825,6 +2989,7 @@ function wireBracketChartEditing(){
     const id = inp.getAttribute("data-id");
     const which = inp.getAttribute("data-which");
     const m = findMatch(lane, id);
+
     if(!m) return;
 
     const v = (inp.value || "").replace(/[^\d]/g, "");
@@ -1838,6 +3003,28 @@ function wireBracketChartEditing(){
   });
 
   root.addEventListener("click", (e)=>{
+    const assignBtn = e.target.closest("[data-room-assign]");
+    if(assignBtn){
+      e.stopPropagation();
+      openRoomAssign(assignBtn.getAttribute("data-room-assign"));
+      return;
+    }
+
+    const fillBtn = e.target.closest("[data-link-fill]");
+    if(fillBtn){
+      e.stopPropagation();
+
+      const [lane, id] = fillBtn.getAttribute("data-link-fill").split("|");
+      const m = findMatch(lane, id);
+
+      if(!m) return;
+
+      document.getElementById("player1").value = m.p1 || "";
+      document.getElementById("player2").value = m.p2 || "";
+      setTab("tabMatch");
+      return;
+    }
+
     const slot = e.target.closest('.slot[data-action="pickWinner"]');
     if(!slot || !BRACKET_STATE) return;
     if(e.target.closest(".scoreInput")) return;
@@ -1846,13 +3033,16 @@ function wireBracketChartEditing(){
     const id = slot.getAttribute("data-id");
     const which = slot.getAttribute("data-which");
     const m = findMatch(lane, id);
+
     if(!m) return;
 
     if(e.shiftKey){
       if(!m.winner) return;
+
       const currentWinnerWhich = m.winner;
+
       if(!canClearWinner(lane, id, currentWinnerWhich)){
-        $('#bracketStatus').textContent = "Cannot clear - downstream match already started.";
+        $('#bracketStatus').textContent = "Cannot clear. Downstream match already started.";
         return;
       }
 
@@ -1862,7 +3052,8 @@ function wireBracketChartEditing(){
       renderBracket();
       buildMatchPicker();
       schedulePublish();
-      $('#bracketStatus').textContent = "Cleared result (downstream not started).";
+
+      $('#bracketStatus').textContent = "Cleared result. Downstream not started.";
       return;
     }
 
@@ -1897,6 +3088,7 @@ function setFullZoomPercent(pct){
 function fullFit(){
   const viewer = $('#fullViewer');
   const content = $('#fullRoot .bracket');
+
   if(!viewer || !content) return;
 
   const prev = fullZoom;
@@ -1905,6 +3097,7 @@ function fullFit(){
 
   const vw = viewer.clientWidth - 24;
   const cw = content.scrollWidth;
+
   if(cw>0){
     const target = Math.max(0.5, Math.min(2.0, vw/cw));
     fullZoom = target;
@@ -1930,6 +3123,7 @@ async function renderFullBracket(){
 
   try{
     const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+
     if(!data || !data.ok) throw new Error((data && data.message) || "Cloud fetch failed");
 
     if(!data.row || !data.row.bracketJson){
@@ -1946,7 +3140,7 @@ async function renderFullBracket(){
     (state.winnersRounds || []).forEach((round, idx)=>{
       const col = document.createElement("div");
       col.className = "col";
-      col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
+      col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
       round.forEach(m => col.appendChild(renderMatchCard(m,"W", false)));
       bracketEl.appendChild(col);
     });
@@ -1954,7 +3148,7 @@ async function renderFullBracket(){
     (state.losersRounds || []).forEach((round, idx)=>{
       const col = document.createElement("div");
       col.className = "col";
-      col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
+      col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
       round.forEach(m => col.appendChild(renderMatchCard(m,"L", false)));
       bracketEl.appendChild(col);
     });
@@ -1986,6 +3180,7 @@ function startFullAuto(){
     }
   }, 20000);
 }
+
 function stopFullAuto(){
   if(fullTimer) clearInterval(fullTimer);
   fullTimer = null;
@@ -1998,14 +3193,16 @@ let RESULTS = [];
 
 function getChampionData(state){
   if(!state || !state.grandFinal) return null;
+
   const gf1 = state.grandFinal[0];
   const gf2 = state.grandFinal[1];
-
   const finalMatch = (gf2 && gf2.p1 && gf2.p2 && gf2.winner) ? gf2 : (gf1 && gf1.winner ? gf1 : null);
+
   if(!finalMatch) return null;
 
   const champ = finalMatch.winner === "p1" ? finalMatch.p1 : finalMatch.p2;
   const runner = finalMatch.winner === "p1" ? finalMatch.p2 : finalMatch.p1;
+
   return { champ, runner, finalMatchId: finalMatch.id || "" };
 }
 
@@ -2015,15 +3212,20 @@ function collectEliminations(state){
 
   const pushElim = (m) => {
     if(!m || !m.winner || !m.loser) return;
+
     const loserName = (m.loser === "p1" ? m.p1 : m.p2);
     const winnerName = (m.winner === "p1" ? m.p1 : m.p2);
+
     if(!loserName || loserName === "BYE" || loserName === "TBD") return;
+
     elim.push({ name: loserName, eliminatedBy: winnerName || "", matchId: m.id || "" });
   };
 
   (state.losersRounds || []).forEach(r => r.forEach(pushElim));
+
   const map = new Map();
   elim.forEach(e => map.set(e.name.toLowerCase(), e));
+
   return Array.from(map.values());
 }
 
@@ -2039,14 +3241,16 @@ function buildPlacements(state){
   const eliminated = collectEliminations(state).filter(e => !taken.has(e.name.toLowerCase())).reverse();
 
   let nextPlace = placements.length + 1;
+
   for(const e of eliminated){
     placements.push({ place: nextPlace++, name: e.name, eliminatedBy: e.eliminatedBy, matchId: e.matchId });
   }
 
   const placedSet = new Set(placements.map(p => p.name.toLowerCase()));
   const leftovers = entrants.filter(n => !placedSet.has(n.toLowerCase()));
+
   for(const n of leftovers){
-    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded (in progress?)" });
+    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded. In progress?" });
   }
 
   return placements;
@@ -2054,13 +3258,17 @@ function buildPlacements(state){
 
 function renderResults(){
   const state = loadBracketState();
+
   if(!state){
     $('#resultsStatus').textContent = "No bracket state.";
     return;
   }
+
   RESULTS = buildPlacements(state);
+
   const tbody = $('#resultsTable tbody');
   tbody.innerHTML = "";
+
   RESULTS.forEach(r=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -2072,6 +3280,7 @@ function renderResults(){
     `;
     tbody.appendChild(tr);
   });
+
   $('#resultsStatus').textContent = `Built results for ${RESULTS.length} players.`;
 }
 
@@ -2081,6 +3290,7 @@ function exportResultsCSV(){
 
   const header = ["Place","Player","Eliminated By","Match Id","Note"];
   const lines = [header.join(",")];
+
   for(const p of RESULTS){
     lines.push([
       p.place ?? "",
@@ -2090,23 +3300,35 @@ function exportResultsCSV(){
       csvCell(p.note ?? "")
     ].join(","));
   }
+
   const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
 
 function exportResultsJSON(){
   if(!RESULTS.length) renderResults();
+
   const blob = new Blob([JSON.stringify(RESULTS, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
 
@@ -2115,32 +3337,46 @@ function exportResultsJSON(){
 ========================================================= */
 function exportBracketJSON(){
   const state = loadBracketState();
+
   if(!state) return alert("No bracket loaded.");
+
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `AHSS_Bracket_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
   URL.revokeObjectURL(url);
 }
 
 function importBracketJSONFile(file){
   const reader = new FileReader();
+
   reader.onload = () => {
     try{
       const state = JSON.parse(reader.result);
+
       if(!state || !state.winnersRounds) throw new Error("Invalid bracket JSON");
+
       localStorage.setItem(STATE_KEY, JSON.stringify(state));
       BRACKET_STATE = state;
+
       renderBracket();
       buildMatchPicker();
+
       $('#bracketStatus').textContent = "Imported bracket JSON.";
+
       schedulePublish();
     }catch(e){
       alert("Import failed: " + e.message);
     }
   };
+
   reader.readAsText(file);
 }
 
@@ -2150,6 +3386,7 @@ function importBracketJSONFile(file){
 const logo = document.getElementById('logo');
 const uploader = document.getElementById('logoUploader');
 let pressTimer;
+
 logo.addEventListener('dragstart', (e) => e.preventDefault());
 logo.addEventListener('selectstart', (e) => e.preventDefault());
 logo.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
@@ -2158,19 +3395,31 @@ logo.addEventListener('mouseleave', () => clearTimeout(pressTimer));
 logo.addEventListener('touchstart', () => { pressTimer = setTimeout(() => { uploader.click(); }, 500); });
 logo.addEventListener('touchend', () => clearTimeout(pressTimer));
 logo.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+
 uploader.addEventListener('change', (e) => {
   const file = e.target.files[0];
+
   if (file && file.type.startsWith('image/')) {
     const reader = new FileReader();
-    reader.onload = function (evt) { logo.src = evt.target.result; localStorage.setItem('customLogo', evt.target.result); };
+
+    reader.onload = function (evt) {
+      logo.src = evt.target.result;
+      localStorage.setItem('customLogo', evt.target.result);
+    };
+
     reader.readAsDataURL(file);
   }
 });
+
 window.addEventListener('DOMContentLoaded', () => {
   const savedLogo = localStorage.getItem('customLogo');
   if (savedLogo) logo.src = savedLogo;
 });
-function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo.png'; }
+
+function resetLogo() {
+  localStorage.removeItem('customLogo');
+  logo.src = 'TDlogo.png';
+}
 
 /* =========================================================
   TD PIN
@@ -2189,6 +3438,7 @@ function resetLogo() { localStorage.removeItem('customLogo'); logo.src = 'TDlogo
 
   window.unlockTD = function unlockTD(){
     const val = (pinEl.value || '').trim();
+
     if (val === PIN || urlCode === PIN) {
       sessionStorage.setItem('TD_UNLOCK', '1');
       showGate(false);
@@ -2221,80 +3471,134 @@ const LISTENER_PORT = 7070;
 const AUTH_TOKEN    = "changeme-123";
 
 function loadTableIPs(){
-  try { return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS}; }
-  catch { return {...DEFAULT_TABLE_IPS}; }
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY_IPS)) || {...DEFAULT_TABLE_IPS};
+  } catch {
+    return {...DEFAULT_TABLE_IPS};
+  }
 }
-function saveTableIPs(map){ localStorage.setItem(LS_KEY_IPS, JSON.stringify(map)); }
+
+function saveTableIPs(map){
+  localStorage.setItem(LS_KEY_IPS, JSON.stringify(map));
+}
+
 function msg(text){
   const m = document.getElementById("ipMsg");
-  if (m) { m.textContent = text; m.style.display = "block"; }
+  if (m) {
+    m.textContent = text;
+    m.style.display = "block";
+  }
 }
+
 function addRow(tableVal, ipVal){
   const wrap = document.getElementById("ipEditor");
-  const t = document.createElement("input"); t.placeholder="Table #"; t.value=tableVal; t.inputMode="numeric"; t.style.textAlign="center";
-  const i = document.createElement("input"); i.placeholder="IP e.g. 10.0.0.53"; i.value=ipVal;
-  const rm = document.createElement("button"); rm.type="button"; rm.textContent="Remove";
-  const row = document.createElement("div"); row.style.display = "contents";
+  const t = document.createElement("input");
+  const i = document.createElement("input");
+  const rm = document.createElement("button");
+  const row = document.createElement("div");
+
+  t.placeholder="Table #";
+  t.value=tableVal;
+  t.inputMode="numeric";
+  t.style.textAlign="center";
+
+  i.placeholder="IP e.g. 10.0.0.53";
+  i.value=ipVal;
+
+  rm.type="button";
+  rm.textContent="Remove";
+
+  row.style.display = "contents";
+
   rm.onclick = () => row.remove();
-  row.appendChild(t); row.appendChild(i); row.appendChild(rm);
+
+  row.appendChild(t);
+  row.appendChild(i);
+  row.appendChild(rm);
+
   wrap.appendChild(row);
 }
+
 function renderIpEditor(){
   const wrap = document.getElementById("ipEditor");
+
   if (!wrap) return;
+
   wrap.innerHTML = "";
+
   const map = loadTableIPs();
+
   Object.keys(map).sort((a,b)=>Number(a)-Number(b)).forEach(tbl => addRow(tbl, map[tbl]));
+
   document.getElementById("addRowBtn").onclick  = () => addRow("", "");
   document.getElementById("saveIPsBtn").onclick = saveFromEditor;
   document.getElementById("testIPsBtn").onclick = testAll;
 }
+
 function saveFromEditor(){
   const wrap = document.getElementById("ipEditor");
   const inputs = Array.from(wrap.querySelectorAll("input"));
   const map = {};
+
   for (let k=0; k<inputs.length; k+=2){
     const table = (inputs[k].value||"").trim();
     const ip    = (inputs[k+1].value||"").trim();
+
     if (table && ip) map[table] = ip;
   }
+
   saveTableIPs(map);
   msg("Saved IPs.");
 }
+
 async function testAll(){
   const entries = Object.entries(loadTableIPs());
+
   if (!entries.length) return msg("No tables configured.");
+
   msg("Testing...");
+
   const results = [];
+
   for (const [tbl, ip] of entries){
     try {
       const r = await Promise.race([
         fetch(`http://${ip}:${LISTENER_PORT}/ping`, { cache:"no-store" }),
         new Promise((_, rej)=> setTimeout(()=>rej(new Error("timeout")), 1500))
       ]);
+
       results.push(`${tbl}: ${r.ok ? "ok" : "fail"} (${ip})`);
     } catch {
       results.push(`${tbl}: fail (${ip})`);
     }
   }
+
   if (results.every(s => s.includes(": fail")) && location.protocol === "https:") {
-    results.push("Hint: TD is over HTTPS; open via http:// on your LAN to allow tablet calls.");
+    results.push("Hint: TD is over HTTPS. Open via http:// on your LAN to allow tablet calls.");
   }
+
   msg(results.join(" | "));
 }
+
 function buildCurlCommand(url, table) {
   const map = loadTableIPs();
   const ip  = map[String(table)] || "<TABLE_IP_HERE>";
+
   const cmd = `curl -X POST "http://${ip}:${LISTENER_PORT}/open" \\
   -H "Content-Type: application/json" \\
   -d '{"token":"${AUTH_TOKEN}","url":"${url}"}'`;
+
   return cmd;
 }
+
 function copyCurlCommand() {
   const table = document.getElementById('tableNumber').value.trim();
+
   if (!table) return alert("Enter a Table # first.");
   if (!generatedUrl) return alert("Generate the match link first.");
+
   const cmd = buildCurlCommand(generatedUrl, table);
+
   navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.getElementById('copyCurlBtn');
     btn.innerText = "Copied!";
@@ -2306,10 +3610,11 @@ function copyCurlCommand() {
   SW
 ========================================================= */
 const SW_OFF = new URL(location.href).searchParams.get('sw') === 'off';
+
 if ('serviceWorker' in navigator && !SW_OFF) {
   navigator.serviceWorker.register('service-worker-td.js', { scope: './' })
     .then(() => console.log('TD Service Worker registered!'))
-    .catch(() => console.log('SW registration failed (ignored).'));
+    .catch(() => console.log('SW registration failed. Ignored.'));
 } else {
   console.log('SW disabled for this session.');
 }
@@ -2321,6 +3626,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   if(localStorage.getItem(LS_SAFE_MODE) === null){
     localStorage.setItem(LS_SAFE_MODE, "1");
   }
+
   $('#chkSafeMode').addEventListener("change", (e)=> setSafeMode(!!e.target.checked));
   refreshSafeModeUI();
 
@@ -2351,16 +3657,24 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   $('#btnPublishBracket').addEventListener("click", async ()=>{
     if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud publish is disabled in this beta.");
-    if(isSafeMode()) return alert("Safe Mode is ON - publish is blocked.");
+    if(isSafeMode()) return alert("Safe Mode is ON. Publish is blocked.");
     if(!BRACKET_STATE) return alert("No bracket to publish.");
-    try{ await cloudSaveBracket(BRACKET_STATE); }
-    catch(e){ alert("Publish failed: " + (e.message || e)); }
+
+    try{
+      await cloudSaveBracket(BRACKET_STATE);
+    }catch(e){
+      alert("Publish failed: " + (e.message || e));
+    }
   });
 
   $('#btnLoadBracketCloud').addEventListener("click", async ()=>{
     if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud load is disabled in this beta.");
-    try{ await cloudLoadBracket(); }
-    catch(e){ alert("Load failed: " + (e.message || e)); }
+
+    try{
+      await cloudLoadBracket();
+    }catch(e){
+      alert("Load failed: " + (e.message || e));
+    }
   });
 
   $('#btnFullRefresh').addEventListener("click", renderFullBracket);
@@ -2385,6 +3699,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
     if(loadId) return loadArchiveItem(loadId);
     if(expId) return exportArchiveItem(expId);
+
     if(delId){
       if(confirm("Delete this archived tournament?")){
         deleteArchiveItem(delId);
@@ -2402,6 +3717,39 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   if (localAHMSDisplayBtn) localAHMSDisplayBtn.addEventListener("click", copyLocalAHMSInfo);
 
   renderIpEditor();
+
+  ROOM_STATE = loadRoomState();
+
+  const roomNameInput = document.getElementById("roomNameInput");
+  if(roomNameInput){
+    roomNameInput.value = localStorage.getItem(ROOM_NAME_KEY) || "";
+  }
+
+  const btnAddRoomTable = document.getElementById("btnAddRoomTable");
+  if(btnAddRoomTable) btnAddRoomTable.addEventListener("click", addRoomTable);
+
+  const btnSaveRoomLayout = document.getElementById("btnSaveRoomLayout");
+  if(btnSaveRoomLayout){
+    btnSaveRoomLayout.addEventListener("click", ()=>{
+      saveRoomState();
+      const msg = document.getElementById("roomSetupMsg");
+      if(msg) msg.textContent = "Room layout saved.";
+    });
+  }
+
+  const btnResetRoomLayout = document.getElementById("btnResetRoomLayout");
+  if(btnResetRoomLayout) btnResetRoomLayout.addEventListener("click", resetRoomLayout);
+
+  const btnSaveRoomName = document.getElementById("btnSaveRoomName");
+  if(btnSaveRoomName) btnSaveRoomName.addEventListener("click", saveRoomName);
+
+  const btnClearRoomStatuses = document.getElementById("btnClearRoomStatuses");
+  if(btnClearRoomStatuses) btnClearRoomStatuses.addEventListener("click", clearRoomStatuses);
+
+  const btnRoomRefreshLinks = document.getElementById("btnRoomRefreshLinks");
+  if(btnRoomRefreshLinks) btnRoomRefreshLinks.addEventListener("click", renderRoomViews);
+
+  renderRoomViews();
 
   BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
