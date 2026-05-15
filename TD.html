@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.6 - Real chart flow beta
+v2.6.7 - Focused Bracket View
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -831,6 +831,39 @@ v2.6.6 - Real chart flow beta
     min-height:20px;
   }
 
+
+  .bracketFocusedNote{
+    margin:8px 0 12px;
+    padding:9px 11px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.20);
+    color:rgba(255,255,255,.68);
+    font-size:12px;
+  }
+
+  .bracketFutureHidden{
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.025);
+    border-radius:14px;
+    padding:12px;
+    color:rgba(255,255,255,.55);
+    font-size:12px;
+    text-align:center;
+  }
+
+  .bracket{
+    min-width:1040px;
+  }
+
+  .bracketZone{
+    overflow:hidden;
+  }
+
+  .bracketColumns{
+    overflow:visible;
+  }
+
   @media (max-width: 900px){
     .bracketTopBar,
     .bracketSetupGrid,
@@ -998,7 +1031,7 @@ v2.6.6 - Real chart flow beta
       <button onclick="document.getElementById('logoUploader').click()">Upload Logo</button>
     </div>
 
-    <div class="muted" style="margin-top:16px; text-align:center;">TD Integrated build - Match links + Room Control + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
+    <div class="muted tdBuildFooter" style="margin-top:16px; text-align:center;">TD Integrated build - Match links + Room Control + AYPT + Brackets + Live View + Results + Archive + Local AHMS File Handoff</div>
   </details>
 </div>
 
@@ -1214,6 +1247,9 @@ v2.6.6 - Real chart flow beta
   </div>
 </div>
 
+
+<div class="muted tdBuildFooter" id="tdBuildFooter" style="max-width:980px;margin:22px auto 8px;text-align:center;font-size:12px;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <script>
@@ -1231,6 +1267,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
+const TD_BUILD = "v2.6.7 - Focused Bracket View";
 
 /* =========================================================
   UTILS
@@ -3374,33 +3411,121 @@ function renderSlot(match, lane, which, editable){
   return slot;
 }
 
+function isMatchReadyToCall(m){
+  if(!m) return false;
+  if(m.winner) return true;
+  if(!m.p1 || !m.p2) return false;
+  if(m.p1 === "TBD" || m.p2 === "TBD") return false;
+  if(m.p1 === "BYE" || m.p2 === "BYE") return false;
+  return true;
+}
+
+function roundHasVisibleMatch(round){
+  return (round || []).some(isMatchReadyToCall);
+}
+
+function firstVisibleRoundIndex(rounds){
+  if(!rounds || !rounds.length) return -1;
+  for(let i=0; i<rounds.length; i++){
+    if(roundHasVisibleMatch(rounds[i])) return i;
+  }
+  return -1;
+}
+
+function lastVisibleRoundIndex(rounds){
+  if(!rounds || !rounds.length) return -1;
+  for(let i=rounds.length - 1; i>=0; i--){
+    if(roundHasVisibleMatch(rounds[i])) return i;
+  }
+  return -1;
+}
+
+function visibleWindowForRounds(rounds){
+  if(!rounds || !rounds.length) return [];
+
+  const first = firstVisibleRoundIndex(rounds);
+  const last = lastVisibleRoundIndex(rounds);
+
+  if(first === -1) return [];
+
+  /*
+    Focused view:
+    show active rounds plus only one next round.
+    This keeps the bracket from showing every TBD future column.
+  */
+  const end = Math.min(rounds.length - 1, Math.max(first, last) + 1);
+  const out = [];
+
+  for(let i=first; i<=end; i++){
+    out.push({ round: rounds[i], idx: i, isFuture: !roundHasVisibleMatch(rounds[i]) });
+  }
+
+  return out;
+}
+
+function shouldShowFinals(state){
+  const gf = state && state.grandFinal ? state.grandFinal : [];
+  if(gf.some(isMatchReadyToCall)) return true;
+
+  const winnersLast = state.winnersRounds && state.winnersRounds[state.winnersRounds.length - 1] ? state.winnersRounds[state.winnersRounds.length - 1][0] : null;
+  const losersLastRound = state.losersRounds && state.losersRounds[state.losersRounds.length - 1] ? state.losersRounds[state.losersRounds.length - 1] : [];
+  const losersLast = losersLastRound.length ? losersLastRound[losersLastRound.length - 1] : null;
+
+  return !!(winnersLast && winnersLast.winner && losersLast && losersLast.winner);
+}
+
+function buildRoundColumn(round, idx, lane, editable, isFuture=false){
+  const col = document.createElement("div");
+  col.className = "col";
+
+  const laneName = lane === "W" ? "Winners" : "Losers";
+  const arrow = lane === "W" ? "→" : (isFuture ? "…" : "←");
+  const note = isFuture ? "next up" : (lane === "W" ? "moves right" : "moves left");
+
+  col.innerHTML = `<div class="col-title">${laneName} R${idx+1} <span class="flowArrow">${arrow}</span> <span class="flowNote">${note}</span></div>`;
+
+  if(isFuture){
+    col.innerHTML += `<div class="bracketFutureHidden">Next column will fill when the match is called.</div>`;
+    return col;
+  }
+
+  round.forEach(m => {
+    if(isMatchReadyToCall(m)){
+      col.appendChild(renderMatchCard(m, lane, editable));
+    }
+  });
+
+  return col;
+}
+
 function buildBracketChart(state, editable=false){
   const bracketEl = document.createElement("div");
   bracketEl.className = "bracket";
+
+  const losersVisible = visibleWindowForRounds(state.losersRounds || []);
+  const winnersVisible = visibleWindowForRounds(state.winnersRounds || []);
+  const finalsVisible = shouldShowFinals(state);
 
   const losersZone = document.createElement("div");
   losersZone.className = "bracketZone losers";
   losersZone.innerHTML = `
     <div class="bracketZoneTitle">
       <span>Losers Side</span>
-      <span class="bracketZoneSub">flow left until final survivor</span>
+      <span class="bracketZoneSub">shown when live</span>
     </div>
+    <div class="bracketFocusedNote">Only active losers rounds and the next waiting column are shown.</div>
   `;
 
   const losersCols = document.createElement("div");
   losersCols.className = "bracketColumns reverseFlow";
 
-  (state.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-
-    const arrow = idx < (state.losersRounds || []).length - 1 ? `<span class="flowArrow">←</span>` : `<span class="flowArrow">↗</span>`;
-    const note = idx < (state.losersRounds || []).length - 1 ? "moves left" : "feeds final";
-
-    col.innerHTML = `<div class="col-title">Losers R${idx+1} ${arrow} <span class="flowNote">${note}</span></div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L", editable)));
-    losersCols.appendChild(col);
-  });
+  if(losersVisible.length){
+    losersVisible.forEach(item=>{
+      losersCols.appendChild(buildRoundColumn(item.round, item.idx, "L", editable, item.isFuture));
+    });
+  }else{
+    losersCols.innerHTML = `<div class="bracketFutureHidden">Losers side will appear when a player drops from winners.</div>`;
+  }
 
   losersZone.appendChild(losersCols);
 
@@ -3411,21 +3536,19 @@ function buildBracketChart(state, editable=false){
       <span>Winners Side</span>
       <span class="bracketZoneSub">winners move right</span>
     </div>
+    <div class="bracketFocusedNote">Only active winners rounds and the next waiting column are shown.</div>
   `;
 
   const winnersCols = document.createElement("div");
   winnersCols.className = "bracketColumns";
 
-  (state.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    const arrow = idx < (state.winnersRounds || []).length - 1 ? `<span class="flowArrow">→</span>` : `<span class="flowArrow">→</span>`;
-    const note = idx < (state.winnersRounds || []).length - 1 ? "moves right" : "feeds final";
-
-    col.innerHTML = `<div class="col-title">Winners R${idx+1} ${arrow} <span class="flowNote">${note}</span></div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W", editable)));
-    winnersCols.appendChild(col);
-  });
+  if(winnersVisible.length){
+    winnersVisible.forEach(item=>{
+      winnersCols.appendChild(buildRoundColumn(item.round, item.idx, "W", editable, item.isFuture));
+    });
+  }else{
+    winnersCols.innerHTML = `<div class="bracketFutureHidden">No active winners matches yet.</div>`;
+  }
 
   winnersZone.appendChild(winnersCols);
 
@@ -3434,7 +3557,7 @@ function buildBracketChart(state, editable=false){
   finalsZone.innerHTML = `
     <div class="bracketZoneTitle">
       <span>Finals</span>
-      <span class="bracketZoneSub">winners champ vs losers champ</span>
+      <span class="bracketZoneSub">appears when ready</span>
     </div>
   `;
 
@@ -3444,7 +3567,15 @@ function buildBracketChart(state, editable=false){
   const gfCol = document.createElement("div");
   gfCol.className = "col";
   gfCol.innerHTML = `<div class="col-title">Grand Final <span class="flowArrow">★</span></div>`;
-  (state.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", editable)));
+
+  if(finalsVisible){
+    (state.grandFinal || []).forEach(m => {
+      if(isMatchReadyToCall(m)) gfCol.appendChild(renderMatchCard(m,"GF", editable));
+    });
+  }else{
+    gfCol.innerHTML += `<div class="bracketFutureHidden">Grand Final appears when winners side champ and losers side champ are ready.</div>`;
+  }
+
   finalsCols.appendChild(gfCol);
   finalsZone.appendChild(finalsCols);
 
@@ -4092,6 +4223,9 @@ if ('serviceWorker' in navigator && !SW_OFF) {
   INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async ()=>{
+  document.querySelectorAll(".tdBuildFooter").forEach(el => {
+    el.textContent = `Tournament Director ${TD_BUILD}`;
+  });
   if(localStorage.getItem(LS_SAFE_MODE) === null){
     localStorage.setItem(LS_SAFE_MODE, "1");
   }
