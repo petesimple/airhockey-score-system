@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.9 - Waiting Match Visibility Fix
+v2.7.0 - BYE Labels and Finals Reset Fix
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -1392,7 +1392,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v2.6.9 - Waiting Match Visibility Fix";
+const TD_BUILD = "v2.7.0 - BYE Labels and Finals Reset Fix";
 
 /* =========================================================
   UTILS
@@ -2941,20 +2941,38 @@ function propagateWinners(){
 
   /*
     Finals.
+    Grand Final 1 is winners-side champ vs losers-side champ.
+    Grand Final 2 appears only if the losers-side champ beats the undefeated
+    winners-side champ in Grand Final 1, creating the reset match.
   */
   const lastW = WR[WR.length-1] && WR[WR.length-1][0];
   const wChamp = lastW && lastW.winner ? winnerName(lastW) : "TBD";
-
-  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
-    BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
-  }
 
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
   const lChamp = lastL && lastL.winner ? winnerName(lastL) : "TBD";
 
-  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
-    BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
+  const gf1 = BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] ? BRACKET_STATE.grandFinal[0] : null;
+  const gf2 = BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[1] ? BRACKET_STATE.grandFinal[1] : null;
+
+  if(gf1 && !hasMatchStarted(gf1)){
+    gf1.p1 = wChamp || "TBD";
+    gf1.p2 = lChamp || "TBD";
+  }
+
+  if(gf2 && !hasMatchStarted(gf2)){
+    gf2.p1 = "TBD";
+    gf2.p2 = "TBD";
+
+    if(gf1 && gf1.winner){
+      const gf1Winner = winnerName(gf1);
+      const gf1Loser = loserName(gf1);
+
+      if(isRealBracketName(gf1Winner) && isRealBracketName(gf1Loser)){
+        gf2.p1 = gf1Loser;
+        gf2.p2 = gf1Winner;
+      }
+    }
   }
 }
 
@@ -2976,7 +2994,11 @@ function buildMatchPicker(){
   sel.innerHTML = '';
   selW.innerHTML = '';
 
-  const matches = listAllMatches().filter(x => x.m.p1 && x.m.p2 && x.m.p1!=="TBD" && x.m.p2!=="TBD");
+  const matches = listAllMatches().filter(x =>
+    x.m.p1 && x.m.p2 &&
+    x.m.p1 !== "TBD" && x.m.p2 !== "TBD" &&
+    x.m.p1 !== "BYE" && x.m.p2 !== "BYE"
+  );
 
   matches.forEach(({lane,m})=>{
     const opt = document.createElement("option");
@@ -3495,15 +3517,18 @@ function renderSlot(match, lane, which, editable){
   if(match.winner === which) slot.classList.add("win");
   if(match.winner && match.winner !== which) slot.classList.add("lose");
 
-  const name = (which==="p1"?match.p1:match.p2) || "TBD";
+  const rawName = (which==="p1"?match.p1:match.p2) || "TBD";
+  const otherName = (which==="p1"?match.p2:match.p1) || "TBD";
+  const waitingBye = rawName === "TBD" && isRealBracketName(otherName);
+  const displayName = waitingBye ? "BYE" : rawName;
   const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
   const id = match.id || "";
 
-  const canEdit = editable && name !== "TBD" && name !== "BYE";
+  const canEdit = editable && rawName !== "TBD" && rawName !== "BYE";
 
   slot.innerHTML = `
     <div>
-      <div class="name">${esc(name)}</div>
+      <div class="name">${esc(displayName)}</div>
       <div class="seed">${esc(id)} ${which.toUpperCase()}</div>
     </div>
 
