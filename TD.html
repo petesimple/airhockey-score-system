@@ -651,6 +651,45 @@ v3.0.2 - Spreadsheet Letter Crossovers
     text-overflow:ellipsis;
   }
 
+  .roomTable.rotated{
+    width:76px;
+    min-height:138px;
+  }
+
+  .roomTable.rotated .roomTableNum{
+    font-size:18px;
+  }
+
+  .roomTable.rotated .roomTablePlayers{
+    max-width:62px;
+    font-size:11px;
+  }
+
+  .roomRotateBtn{
+    position:absolute;
+    top:4px;
+    right:4px;
+    width:24px;
+    height:24px;
+    padding:0;
+    margin:0;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.35);
+    color:#fff;
+    font-size:14px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:3;
+  }
+
+  .roomRotateBtn:hover{
+    background:rgba(0,188,212,.35);
+  }
+  
   .roomLegend{
     display:flex;
     gap:8px;
@@ -1439,7 +1478,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.2 - Spreadsheet Letter Crossovers";
+const TD_BUILD = "v3.0.3 - Room Table Rotation";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
