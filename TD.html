@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.8 - Unified Chart View
+v2.6.9 - Waiting Match Visibility Fix
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -1392,7 +1392,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v2.6.8 - Unified Chart View";
+const TD_BUILD = "v2.6.9 - Waiting Match Visibility Fix";
 
 /* =========================================================
   UTILS
@@ -3536,17 +3536,25 @@ function renderSlot(match, lane, which, editable){
   return slot;
 }
 
+function isRealBracketName(name){
+  return !!name && name !== "TBD" && name !== "BYE";
+}
+
 function isMatchReadyToCall(m){
   if(!m) return false;
   if(m.winner) return true;
-  if(!m.p1 || !m.p2) return false;
-  if(m.p1 === "TBD" || m.p2 === "TBD") return false;
-  if(m.p1 === "BYE" || m.p2 === "BYE") return false;
+  if(!isRealBracketName(m.p1) || !isRealBracketName(m.p2)) return false;
   return true;
 }
 
+function isMatchVisibleOnChart(m){
+  if(!m) return false;
+  if(m.winner) return true;
+  return isRealBracketName(m.p1) || isRealBracketName(m.p2);
+}
+
 function roundHasVisibleMatch(round){
-  return (round || []).some(isMatchReadyToCall);
+  return (round || []).some(isMatchVisibleOnChart);
 }
 
 function firstVisibleRoundIndex(rounds){
@@ -3573,6 +3581,11 @@ function visibleWindowForRounds(rounds){
 
   if(first === -1) return [];
 
+  /*
+    Show active or partially-filled rounds, plus one empty next column.
+    This lets the TD see that a player is waiting without exposing the
+    whole future bracket skeleton.
+  */
   const end = Math.min(rounds.length - 1, Math.max(first, last) + 1);
   const out = [];
 
@@ -3585,13 +3598,13 @@ function visibleWindowForRounds(rounds){
 
 function shouldShowFinals(state){
   const gf = state && state.grandFinal ? state.grandFinal : [];
-  if(gf.some(isMatchReadyToCall)) return true;
+  if(gf.some(isMatchVisibleOnChart)) return true;
 
   const winnersLast = state.winnersRounds && state.winnersRounds[state.winnersRounds.length - 1] ? state.winnersRounds[state.winnersRounds.length - 1][0] : null;
   const losersLastRound = state.losersRounds && state.losersRounds[state.losersRounds.length - 1] ? state.losersRounds[state.losersRounds.length - 1] : [];
   const losersLast = losersLastRound.length ? losersLastRound[losersLastRound.length - 1] : null;
 
-  return !!(winnersLast && winnersLast.winner && losersLast && losersLast.winner);
+  return !!(winnersLast && winnersLast.winner) || !!(losersLast && losersLast.winner);
 }
 
 function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
@@ -3610,7 +3623,7 @@ function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
   }
 
   round.forEach(m => {
-    if(isMatchReadyToCall(m)){
+    if(isMatchVisibleOnChart(m)){
       col.appendChild(renderMatchCard(m, lane, editable));
     }
   });
@@ -3688,7 +3701,7 @@ function buildBracketChart(state, editable=false){
 
   if(finalsVisible){
     (state.grandFinal || []).forEach(m => {
-      if(isMatchReadyToCall(m)) gfCol.appendChild(renderMatchCard(m,"GF", editable));
+      if(isMatchVisibleOnChart(m)) gfCol.appendChild(renderMatchCard(m,"GF", editable));
     });
   }else{
     gfCol.innerHTML += `<div class="chartPlaceholder">Grand Final appears when the winners champ and losers champ are ready.</div>`;
