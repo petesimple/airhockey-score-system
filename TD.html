@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.4 - Bracket controls cleanup beta
+v2.6.6 - Real chart flow beta
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -292,18 +292,77 @@ v2.6.4 - Bracket controls cleanup beta
   }
 
   .bracket{
-    min-width:900px;
-    display:flex;
+    min-width:1100px;
+    display:grid;
+    grid-template-columns:minmax(260px, 1fr) minmax(260px, 1fr) minmax(260px, 1fr);
     gap:22px;
     padding:10px 6px 6px;
+    align-items:stretch;
+  }
+
+  .bracketZone{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    background:rgba(0,0,0,.16);
+    padding:12px;
+    min-height:420px;
+    position:relative;
+  }
+
+  .bracketZoneTitle{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:12px;
+    padding:8px 10px;
+    border-radius:12px;
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.08);
+    font-size:12px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.78);
+    font-weight:900;
+  }
+
+  .bracketZoneSub{
+    font-size:11px;
+    text-transform:none;
+    letter-spacing:0;
+    color:rgba(255,255,255,.48);
+    font-weight:700;
+  }
+
+  .bracketZone.losers{
+    background:linear-gradient(90deg, rgba(255,90,90,.08), rgba(0,0,0,.16));
+  }
+
+  .bracketZone.winners{
+    background:linear-gradient(90deg, rgba(0,0,0,.16), rgba(61,220,132,.07));
+  }
+
+  .bracketZone.finals{
+    background:linear-gradient(90deg, rgba(0,188,212,.06), rgba(255,213,79,.06));
+  }
+
+  .bracketColumns{
+    display:flex;
+    gap:18px;
     align-items:flex-start;
+    min-height:320px;
+  }
+
+  .bracketColumns.reverseFlow{
+    flex-direction:row-reverse;
   }
 
   .col{
     display:flex;
     flex-direction:column;
     gap:14px;
-    min-width:260px;
+    min-width:240px;
+    position:relative;
   }
 
   .col-title{
@@ -312,6 +371,21 @@ v2.6.4 - Bracket controls cleanup beta
     letter-spacing:.4px;
     text-transform:uppercase;
     margin-left:6px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .flowArrow{
+    color:rgba(0,234,255,.75);
+    font-size:14px;
+  }
+
+  .flowNote{
+    font-size:11px;
+    color:rgba(255,255,255,.48);
+    text-transform:none;
+    letter-spacing:0;
   }
 
   .match{
@@ -2508,10 +2582,20 @@ function newBracketFromEntrants(){
 
   const Lrounds = [];
   const wRoundsCount = Math.log2(size);
-  const lCount = Math.max(1, (2*wRoundsCount)-1);
+
+  /*
+    Double elimination losers bracket round counts:
+    4 players  -> 2 losers rounds: 1,1
+    8 players  -> 4 losers rounds: 2,2,1,1
+    16 players -> 6 losers rounds: 4,4,2,2,1,1
+
+    Previous beta used one extra losers round and refilled every round
+    with the same early losers, which caused duplicate matches.
+  */
+  const lCount = Math.max(1, (2*wRoundsCount)-2);
 
   for(let i=1;i<=lCount;i++){
-    const matchesInRound = Math.max(1, Math.floor(size / Math.pow(2, Math.ceil(i/2)+1)));
+    const matchesInRound = Math.max(1, Math.floor(size / Math.pow(2, Math.floor((i+1)/2)+1)));
     const lr = [];
 
     for(let m=1;m<=matchesInRound;m++){
@@ -2558,25 +2642,50 @@ function propagateWinners(){
 
   BRACKET_STATE.feeds = {};
 
-  (BRACKET_STATE.losersRounds || []).forEach(round => {
-    round.forEach(m => {
-      if(!hasMatchStarted(m)){
-        m.p1 = "TBD";
-        m.p2 = "TBD";
-        m.s1 = "";
-        m.s2 = "";
-        m.winner = "";
-        m.loser = "";
-      }
-    });
-  });
+  const WR = BRACKET_STATE.winnersRounds || [];
+  const LR = BRACKET_STATE.losersRounds || [];
+
+  function winnerName(m){
+    if(!m || !m.winner) return "TBD";
+    return m.winner === "p1" ? m.p1 : m.p2;
+  }
+
+  function loserName(m){
+    if(!m || !m.loser) return "TBD";
+    return m.loser === "p1" ? m.p1 : m.p2;
+  }
+
+  function putIfOpen(match, slot, name){
+    if(!match || !slot) return;
+    if(hasMatchStarted(match)) return;
+    match[slot] = name || "TBD";
+  }
+
+  function resetOpenMatch(m){
+    if(!m || hasMatchStarted(m)) return;
+    m.p1 = "TBD";
+    m.p2 = "TBD";
+    m.s1 = "";
+    m.s2 = "";
+    m.winner = "";
+    m.loser = "";
+  }
+
+  LR.forEach(round => round.forEach(resetOpenMatch));
 
   if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
+    BRACKET_STATE.grandFinal[0].p1 = "TBD";
     BRACKET_STATE.grandFinal[0].p2 = "TBD";
   }
 
-  const WR = BRACKET_STATE.winnersRounds;
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[1] && !hasMatchStarted(BRACKET_STATE.grandFinal[1])){
+    BRACKET_STATE.grandFinal[1].p1 = "TBD";
+    BRACKET_STATE.grandFinal[1].p2 = "TBD";
+  }
 
+  /*
+    Winners bracket progression.
+  */
   for(let r=0;r<WR.length-1;r++){
     const round = WR[r];
     const next = WR[r+1];
@@ -2585,9 +2694,9 @@ function propagateWinners(){
       const m = round[i];
       const target = next[Math.floor(i/2)];
       const slot = (i%2===0) ? "p1" : "p2";
+      const name = m.winner ? winnerName(m) : "TBD";
 
-      const winnerName = m.winner ? (m.winner==="p1"?m.p1:m.p2) : "TBD";
-      if(target) target[slot] = winnerName || "TBD";
+      putIfOpen(target, slot, name);
 
       if(target){
         BRACKET_STATE.feeds[`W|${m.id}|p1`] = { lane:"W", id: target.id, which: slot };
@@ -2596,38 +2705,91 @@ function propagateWinners(){
     }
   }
 
-  const lastW = WR[WR.length-1][0];
+  /*
+    Winners round losers drop into the correct losers bracket rounds.
 
-  if(lastW){
-    const wChamp = lastW.winner ? (lastW.winner==="p1"?lastW.p1:lastW.p2) : "TBD";
-    BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
+    W R1 losers fill Losers R1.
+    W R2 losers fill Losers R2.
+    W R3 losers fill Losers R4.
+    W R4 losers fill Losers R6.
+  */
+  for(let r=0;r<WR.length;r++){
+    const round = WR[r];
+    const loserRoundIndex = r === 0 ? 0 : (2*r - 1);
+    const targetRound = LR[loserRoundIndex];
+
+    if(!targetRound) continue;
+
+    let dropIndex = 0;
+
+    for(let i=0;i<round.length;i++){
+      const m = round[i];
+      if(!m.winner || !m.loser) continue;
+
+      const name = loserName(m);
+      if(!name || name === "BYE" || name === "TBD") continue;
+
+      const target = targetRound[Math.floor(dropIndex/2)];
+      const slot = dropIndex % 2 === 0 ? "p1" : "p2";
+
+      putIfOpen(target, slot, name);
+
+      if(target){
+        BRACKET_STATE.feeds[`W|${m.id}|${m.loser}`] = { lane:"L", id: target.id, which: slot };
+      }
+
+      dropIndex++;
+    }
   }
 
-  const losers = [];
+  /*
+    Losers bracket winners advance through the losers bracket.
+    Odd visual rounds pair winners together.
+    Even visual rounds carry winners forward to face new drops from the winners bracket.
+  */
+  for(let r=0;r<LR.length-1;r++){
+    const round = LR[r];
+    const next = LR[r+1];
 
-  WR.forEach((round)=>{
-    round.forEach((m)=>{
-      if(m.winner && m.loser){
-        const loserName = (m.loser==="p1"?m.p1:m.p2);
-        if(loserName && loserName !== "BYE") losers.push(loserName);
+    for(let i=0;i<round.length;i++){
+      const m = round[i];
+      if(!m.winner) continue;
+
+      const name = winnerName(m);
+      if(!name || name === "BYE" || name === "TBD") continue;
+
+      let target;
+      let slot;
+
+      if(r % 2 === 0){
+        target = next[i];
+        slot = "p1";
+      }else{
+        target = next[Math.floor(i/2)];
+        slot = i % 2 === 0 ? "p1" : "p2";
       }
-    });
-  });
 
-  const LR = BRACKET_STATE.losersRounds;
-  let idx=0;
+      putIfOpen(target, slot, name);
 
-  for(let r=0;r<LR.length;r++){
-    for(let m=0;m<LR[r].length;m++){
-      const match = LR[r][m];
-      if(match.p1 === "TBD" && idx < losers.length) match.p1 = losers[idx++];
-      if(match.p2 === "TBD" && idx < losers.length) match.p2 = losers[idx++];
+      if(target){
+        BRACKET_STATE.feeds[`L|${m.id}|${m.winner}`] = { lane:"L", id: target.id, which: slot };
+      }
     }
+  }
+
+  /*
+    Finals.
+  */
+  const lastW = WR[WR.length-1] && WR[WR.length-1][0];
+  const wChamp = lastW && lastW.winner ? winnerName(lastW) : "TBD";
+
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
+    BRACKET_STATE.grandFinal[0].p1 = wChamp || "TBD";
   }
 
   const lastLround = LR[LR.length-1];
   const lastL = lastLround && lastLround[lastLround.length-1];
-  const lChamp = lastL && lastL.winner ? (lastL.winner==="p1"?lastL.p1:lastL.p2) : "TBD";
+  const lChamp = lastL && lastL.winner ? winnerName(lastL) : "TBD";
 
   if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
     BRACKET_STATE.grandFinal[0].p2 = lChamp || "TBD";
@@ -3212,6 +3374,87 @@ function renderSlot(match, lane, which, editable){
   return slot;
 }
 
+function buildBracketChart(state, editable=false){
+  const bracketEl = document.createElement("div");
+  bracketEl.className = "bracket";
+
+  const losersZone = document.createElement("div");
+  losersZone.className = "bracketZone losers";
+  losersZone.innerHTML = `
+    <div class="bracketZoneTitle">
+      <span>Losers Side</span>
+      <span class="bracketZoneSub">flow left until final survivor</span>
+    </div>
+  `;
+
+  const losersCols = document.createElement("div");
+  losersCols.className = "bracketColumns reverseFlow";
+
+  (state.losersRounds || []).forEach((round, idx)=>{
+    const col = document.createElement("div");
+    col.className = "col";
+
+    const arrow = idx < (state.losersRounds || []).length - 1 ? `<span class="flowArrow">←</span>` : `<span class="flowArrow">↗</span>`;
+    const note = idx < (state.losersRounds || []).length - 1 ? "moves left" : "feeds final";
+
+    col.innerHTML = `<div class="col-title">Losers R${idx+1} ${arrow} <span class="flowNote">${note}</span></div>`;
+    round.forEach(m => col.appendChild(renderMatchCard(m,"L", editable)));
+    losersCols.appendChild(col);
+  });
+
+  losersZone.appendChild(losersCols);
+
+  const winnersZone = document.createElement("div");
+  winnersZone.className = "bracketZone winners";
+  winnersZone.innerHTML = `
+    <div class="bracketZoneTitle">
+      <span>Winners Side</span>
+      <span class="bracketZoneSub">winners move right</span>
+    </div>
+  `;
+
+  const winnersCols = document.createElement("div");
+  winnersCols.className = "bracketColumns";
+
+  (state.winnersRounds || []).forEach((round, idx)=>{
+    const col = document.createElement("div");
+    col.className = "col";
+    const arrow = idx < (state.winnersRounds || []).length - 1 ? `<span class="flowArrow">→</span>` : `<span class="flowArrow">→</span>`;
+    const note = idx < (state.winnersRounds || []).length - 1 ? "moves right" : "feeds final";
+
+    col.innerHTML = `<div class="col-title">Winners R${idx+1} ${arrow} <span class="flowNote">${note}</span></div>`;
+    round.forEach(m => col.appendChild(renderMatchCard(m,"W", editable)));
+    winnersCols.appendChild(col);
+  });
+
+  winnersZone.appendChild(winnersCols);
+
+  const finalsZone = document.createElement("div");
+  finalsZone.className = "bracketZone finals";
+  finalsZone.innerHTML = `
+    <div class="bracketZoneTitle">
+      <span>Finals</span>
+      <span class="bracketZoneSub">winners champ vs losers champ</span>
+    </div>
+  `;
+
+  const finalsCols = document.createElement("div");
+  finalsCols.className = "bracketColumns";
+
+  const gfCol = document.createElement("div");
+  gfCol.className = "col";
+  gfCol.innerHTML = `<div class="col-title">Grand Final <span class="flowArrow">★</span></div>`;
+  (state.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", editable)));
+  finalsCols.appendChild(gfCol);
+  finalsZone.appendChild(finalsCols);
+
+  bracketEl.appendChild(losersZone);
+  bracketEl.appendChild(winnersZone);
+  bracketEl.appendChild(finalsZone);
+
+  return bracketEl;
+}
+
 function renderBracket(){
   const root = $('#bracketRoot');
 
@@ -3220,33 +3463,8 @@ function renderBracket(){
     return;
   }
 
-  const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
-
-  (BRACKET_STATE.winnersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"W", true)));
-    bracketEl.appendChild(col);
-  });
-
-  (BRACKET_STATE.losersRounds || []).forEach((round, idx)=>{
-    const col = document.createElement("div");
-    col.className = "col";
-    col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
-    round.forEach(m => col.appendChild(renderMatchCard(m,"L", true)));
-    bracketEl.appendChild(col);
-  });
-
-  const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-  (BRACKET_STATE.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", true)));
-  bracketEl.appendChild(gfCol);
-
   root.innerHTML = "";
-  root.appendChild(bracketEl);
+  root.appendChild(buildBracketChart(BRACKET_STATE, true));
 }
 
 /* =========================================================
@@ -3410,33 +3628,8 @@ async function renderFullBracket(){
 
     const state = JSON.parse(data.row.bracketJson);
 
-    const bracketEl = document.createElement("div");
-    bracketEl.className = "bracket";
-
-    (state.winnersRounds || []).forEach((round, idx)=>{
-      const col = document.createElement("div");
-      col.className = "col";
-      col.innerHTML = `<div class="col-title">Winners Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"W", false)));
-      bracketEl.appendChild(col);
-    });
-
-    (state.losersRounds || []).forEach((round, idx)=>{
-      const col = document.createElement("div");
-      col.className = "col";
-      col.innerHTML = `<div class="col-title">Losers Round ${idx+1}</div>`;
-      round.forEach(m => col.appendChild(renderMatchCard(m,"L", false)));
-      bracketEl.appendChild(col);
-    });
-
-    const gfCol = document.createElement("div");
-    gfCol.className = "col";
-    gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-    (state.grandFinal || []).forEach(m => gfCol.appendChild(renderMatchCard(m,"GF", false)));
-    bracketEl.appendChild(gfCol);
-
     root.innerHTML = "";
-    root.appendChild(bracketEl);
+    root.appendChild(buildBracketChart(state, false));
 
     $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
   }catch(e){
