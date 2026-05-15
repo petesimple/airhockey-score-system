@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v3.0.0 - 128 Golden Chart Prototype
+v3.0.2 - Spreadsheet Letter Crossovers
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -1439,7 +1439,172 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.0 - 128 Golden Chart Prototype";
+const TD_BUILD = "v3.0.2 - Spreadsheet Letter Crossovers";
+const GOLDEN_128_CROSSOVER_MAP = {
+  "2": {
+    "source": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q",
+      "R",
+      "S",
+      "T",
+      "U",
+      "V",
+      "W",
+      "X",
+      "Y",
+      "Z",
+      "AA",
+      "AB",
+      "AC",
+      "AD",
+      "AE",
+      "AF"
+    ],
+    "destTopToBottom": [
+      "AF",
+      "AE",
+      "AD",
+      "AC",
+      "AB",
+      "AA",
+      "Z",
+      "Y",
+      "X",
+      "W",
+      "V",
+      "U",
+      "T",
+      "S",
+      "R",
+      "Q",
+      "P",
+      "O",
+      "N",
+      "M",
+      "L",
+      "K",
+      "J",
+      "I",
+      "H",
+      "G",
+      "F",
+      "E",
+      "D",
+      "C",
+      "B",
+      "A"
+    ]
+  },
+  "3": {
+    "source": [
+      "AG",
+      "AH",
+      "AI",
+      "AJ",
+      "AK",
+      "AL",
+      "AM",
+      "AN",
+      "AO",
+      "AP",
+      "AQ",
+      "AR",
+      "AS",
+      "AT",
+      "AU",
+      "AV"
+    ],
+    "destTopToBottom": [
+      "AN",
+      "AM",
+      "AL",
+      "AK",
+      "AJ",
+      "AI",
+      "AH",
+      "AG",
+      "AV",
+      "AU",
+      "AT",
+      "AS",
+      "AR",
+      "AQ",
+      "AP",
+      "AO"
+    ]
+  },
+  "4": {
+    "source": [
+      "AW",
+      "AX",
+      "AY",
+      "AZ",
+      "BA",
+      "BB",
+      "BC",
+      "BD"
+    ],
+    "destTopToBottom": [
+      "BA",
+      "BB",
+      "BC",
+      "BD",
+      "AW",
+      "AX",
+      "AY",
+      "AZ"
+    ]
+  },
+  "5": {
+    "source": [
+      "BE",
+      "BF",
+      "BG",
+      "BH"
+    ],
+    "destTopToBottom": [
+      "BE",
+      "BF",
+      "BG",
+      "BH"
+    ]
+  },
+  "6": {
+    "source": [
+      "BI",
+      "BJ"
+    ],
+    "destTopToBottom": [
+      "BJ",
+      "BI"
+    ]
+  },
+  "7": {
+    "source": [
+      "BK"
+    ],
+    "destTopToBottom": [
+      "BK"
+    ]
+  }
+};
+
 
 /* =========================================================
   UTILS
@@ -2951,13 +3116,53 @@ function propagateWinners(){
     }
   }
 
-  /*
-    Winners round losers drop into the correct losers bracket rounds.
+  function goldenCrossoverRoute(winnersRoundNumber, sourceIndex, targetCount){
+    /*
+      Spreadsheet-driven crossover model.
 
-    W R1 losers fill Losers R1.
-    W R2 losers fill Losers R2.
-    W R3 losers fill Losers R4.
-    W R4 losers fill Losers R6.
+      The uploaded 128chart.xls uses letters A through BK as routing keys.
+      For Winners Round 2 and later, each winners-side match owns one source
+      letter. The destination side of the chart shows those letters in the
+      exact target order.
+
+      Example from the 128 sheet:
+      W2 sources are A through AF.
+      The Round 3 destination column shows AF, AE, AD ... A from top to bottom,
+      so W2-M1 (A) drops to the bottom target while W2-M32 (AF) drops to the top.
+
+      This resolver follows that uploaded sheet instead of guessing by formula.
+    */
+    if(BRACKET_STATE && Number(BRACKET_STATE.bracketSize) === 128){
+      const map = GOLDEN_128_CROSSOVER_MAP[String(winnersRoundNumber)];
+      if(map && map.source && map.destTopToBottom && map.source.length === targetCount){
+        const label = map.source[sourceIndex];
+        const targetIndex = map.destTopToBottom.indexOf(label);
+
+        if(label && targetIndex >= 0){
+          return { targetIndex, label };
+        }
+      }
+    }
+
+    /*
+      Fallback for smaller test brackets.
+      This keeps 4, 8, 16, 32, and 64 usable while the 128 model follows
+      the uploaded golden chart.
+    */
+    if(!targetCount || targetCount <= 1) return { targetIndex: 0, label: "" };
+    const half = Math.floor(targetCount / 2);
+    return { targetIndex: (sourceIndex + half) % targetCount, label: "" };
+  }
+
+  /*
+    Winners round losers drop into the proper losers bracket crossover slots.
+
+    W R1 losers fill every slot of Losers R1.
+    W R2 losers cross into Losers R2, one per match, opposite L1 winners.
+    W R3 losers cross into Losers R4, one per match, opposite L3 winners.
+    W R4 losers cross into Losers R6, and so on.
+
+    This is the critical crossover fix for the 128 model.
   */
   for(let r=0;r<WR.length;r++){
     const round = WR[r];
@@ -2975,12 +3180,30 @@ function propagateWinners(){
       const name = loserName(m);
       if(!name || name === "BYE" || name === "TBD") continue;
 
-      const target = targetRound[Math.floor(dropIndex/2)];
-      const slot = dropIndex % 2 === 0 ? "p1" : "p2";
+      let target;
+      let slot;
+
+      if(r === 0){
+        target = targetRound[Math.floor(dropIndex/2)];
+        slot = dropIndex % 2 === 0 ? "p1" : "p2";
+      }else{
+        const winnersRoundNumber = r + 1;
+        const route = goldenCrossoverRoute(winnersRoundNumber, dropIndex, targetRound.length);
+        const targetIndex = route.targetIndex;
+        target = targetRound[targetIndex];
+        slot = "p2";
+
+        if(target && route.label){
+          target.goldenCrossoverLabel = route.label;
+          target.goldenCrossoverSource = m.id;
+        }
+      }
 
       putIfOpen(target, slot, name);
 
       if(target){
+        target.crossover = target.crossover || {};
+        target.crossover[slot] = m.id;
         BRACKET_STATE.feeds[`W|${m.id}|${m.loser}`] = { lane:"L", id: target.id, which: slot };
       }
 
@@ -3571,9 +3794,11 @@ function renderMatchCard(match, lane, editable=false){
   const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
   const playable = editable && match.p1 && match.p2 && match.p1 !== "TBD" && match.p2 !== "TBD" && match.p1 !== "BYE" && match.p2 !== "BYE";
 
+  const routeLabel = match.goldenCrossoverLabel ? ` <span class="mini" style="color:#00eaff;">${esc(match.goldenCrossoverLabel)}</span>` : "";
+
   card.innerHTML = `
     <div class="match-head">
-      <div>${esc(match.label || match.id || "")}</div>
+      <div>${esc(match.label || match.id || "")}${routeLabel}</div>
       <div class="tag">${tagText}</div>
     </div>
   `;
