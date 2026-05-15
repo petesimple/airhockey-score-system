@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.7.0 - BYE Labels and Finals Reset Fix
+v3.0.0 - 128 Golden Chart Prototype
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -989,6 +989,41 @@ v2.7.0 - BYE Labels and Finals Reset Fix
     display:none !important;
   }
 
+
+  .bracketSizeSelect{
+    width:140px;
+    margin:0;
+  }
+
+  .seedPreview{
+    margin-top:10px;
+    font-size:12px;
+    color:rgba(255,255,255,.62);
+    line-height:1.35;
+  }
+
+  .chartFullNote{
+    margin:8px 0 12px;
+    padding:9px 11px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.20);
+    color:rgba(255,255,255,.68);
+    font-size:12px;
+  }
+
+  .bracket.unifiedChart{
+    min-width:5600px;
+  }
+
+  .chartLane{
+    overflow:visible;
+  }
+
+  .chartColumns{
+    overflow:visible;
+  }
+
   @media (max-width: 900px){
     .bracketTopBar,
     .bracketSetupGrid,
@@ -1265,9 +1300,21 @@ v2.7.0 - BYE Labels and Finals Reset Fix
           <div class="bracketOptionRow">
             <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
             <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
+            <label class="chk">Bracket Size
+              <select id="bracketSizeSelect" class="bracketSizeSelect">
+                <option value="auto">Auto</option>
+                <option value="4">4</option>
+                <option value="8">8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
+                <option value="64">64</option>
+                <option value="128" selected>128</option>
+              </select>
+            </label>
           </div>
-          <div class="mini" style="margin-top:12px;">Tip: Double-elim is the default. BYEs auto-fill.</div>
+          <div class="mini" style="margin-top:12px;">Tip: 128 is the new cap. BYEs auto-fill and show as BYE in the chart.</div>
           <div class="mini" style="margin-top:6px;">Tip: click a player row in the chart to set winner. Shift-click clears if downstream has not started.</div>
+          <div class="seedPreview">Seed order uses the tested 128-style bracket placement: 1 vs 128, 64 vs 65, 32 vs 97, and so on.</div>
         </div>
       </div>
 
@@ -1392,7 +1439,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v2.7.0 - BYE Labels and Finals Reset Fix";
+const TD_BUILD = "v3.0.0 - 128 Golden Chart Prototype";
 
 /* =========================================================
   UTILS
@@ -2696,6 +2743,46 @@ function nextPow2(n){
   return p;
 }
 
+function getRequestedBracketSize(playerCount){
+  const sel = document.getElementById("bracketSizeSelect");
+  const raw = sel ? sel.value : "128";
+  let size = raw === "auto" ? nextPow2(playerCount) : Number(raw);
+
+  if(!size || Number.isNaN(size)) size = nextPow2(playerCount);
+  size = Math.max(4, Math.min(128, size));
+
+  if(size < playerCount){
+    size = nextPow2(playerCount);
+  }
+
+  if(size > 128){
+    size = 128;
+  }
+
+  return size;
+}
+
+function standardSeedOrder(size){
+  if(size <= 2) return [1,2];
+  const prev = standardSeedOrder(size/2);
+  const out = [];
+
+  prev.forEach(seed => {
+    out.push(seed);
+    out.push(size + 1 - seed);
+  });
+
+  return out;
+}
+
+function makeSeededEntrants(rawNames, size){
+  const order = standardSeedOrder(size);
+  return order.map(seed => ({
+    seed,
+    name: rawNames[seed - 1] || "BYE"
+  }));
+}
+
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -2712,20 +2799,30 @@ function newBracketFromEntrants(){
   const raw = ($('#entrantsBox').value || "").split("\n").map(s=>s.trim()).filter(Boolean);
 
   if(raw.length < 2) return alert("Need at least 2 entrants.");
+  if(raw.length > 128) return alert("This build is capped at 128 entrants.");
 
-  let entrants = raw.slice();
-  if($('#chkShuffle').checked) entrants = shuffle(entrants);
+  let entrantsRaw = raw.slice();
+  if($('#chkShuffle').checked) entrantsRaw = shuffle(entrantsRaw);
 
-  const size = nextPow2(entrants.length);
-  while(entrants.length < size) entrants.push("BYE");
+  const size = getRequestedBracketSize(entrantsRaw.length);
+  if(size < entrantsRaw.length){
+    return alert(`Bracket size ${size} is too small for ${entrantsRaw.length} entrants.`);
+  }
+
+  const seeded = makeSeededEntrants(entrantsRaw, size);
 
   const w1 = [];
   for(let i=0;i<size;i+=2){
-    w1.push(makeMatch(`W1-${i/2+1}`, `Winners R1 M${i/2+1}`, entrants[i], entrants[i+1]));
+    const a = seeded[i];
+    const b = seeded[i+1];
+    const m = makeMatch(`W1-${i/2+1}`, `Winners R1 M${i/2+1}`, a.name, b.name);
+    m.seed1 = a.seed;
+    m.seed2 = b.seed;
+    w1.push(m);
   }
 
   const winnersRounds = [w1];
-  let roundSize = size/2;
+  let roundSize = size/4;
   let r=2;
 
   while(roundSize >= 1){
@@ -2733,27 +2830,13 @@ function newBracketFromEntrants(){
     for(let m=1;m<=roundSize;m++){
       round.push(makeMatch(`W${r}-${m}`, `Winners R${r} M${m}`, "TBD", "TBD"));
     }
-
     winnersRounds.push(round);
     roundSize = roundSize/2;
     r++;
-
-    if(roundSize === 0) break;
-    if(roundSize === 1) break;
   }
 
   const Lrounds = [];
   const wRoundsCount = Math.log2(size);
-
-  /*
-    Double elimination losers bracket round counts:
-    4 players  -> 2 losers rounds: 1,1
-    8 players  -> 4 losers rounds: 2,2,1,1
-    16 players -> 6 losers rounds: 4,4,2,2,1,1
-
-    Previous beta used one extra losers round and refilled every round
-    with the same early losers, which caused duplicate matches.
-  */
   const lCount = Math.max(1, (2*wRoundsCount)-2);
 
   for(let i=1;i<=lCount;i++){
@@ -2775,11 +2858,12 @@ function newBracketFromEntrants(){
   BRACKET_STATE = {
     createdAt: Date.now(),
     bracketSize: size,
-    entrants: raw,
+    entrants: entrantsRaw,
+    seedOrder: seeded,
     winnersRounds,
     losersRounds: Lrounds,
     grandFinal,
-    notes: "Simple DE skeleton. Advance winners using selector or click a row.",
+    notes: "TD v3 128-cap double-elim prototype using seeded bracket positions.",
     feeds: {}
   };
 
@@ -3601,24 +3685,15 @@ function lastVisibleRoundIndex(rounds){
 function visibleWindowForRounds(rounds){
   if(!rounds || !rounds.length) return [];
 
-  const first = firstVisibleRoundIndex(rounds);
-  const last = lastVisibleRoundIndex(rounds);
-
-  if(first === -1) return [];
-
   /*
-    Show active or partially-filled rounds, plus one empty next column.
-    This lets the TD see that a player is waiting without exposing the
-    whole future bracket skeleton.
+    v3 chart mode shows the full bracket surface on purpose.
+    Every round is visible so the TD can see the full 128 model.
   */
-  const end = Math.min(rounds.length - 1, Math.max(first, last) + 1);
-  const out = [];
-
-  for(let i=first; i<=end; i++){
-    out.push({ round: rounds[i], idx: i, isFuture: !roundHasVisibleMatch(rounds[i]) });
-  }
-
-  return out;
+  return rounds.map((round, idx) => ({
+    round,
+    idx,
+    isFuture: !roundHasVisibleMatch(round)
+  }));
 }
 
 function shouldShowFinals(state){
@@ -3643,7 +3718,7 @@ function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
   col.innerHTML = `<div class="chartColumnTitle">${laneName} R${idx+1} <span class="flowArrow">${arrow}</span> <span class="flowNote">${note}</span></div>`;
 
   if(isFuture){
-    col.innerHTML += `<div class="chartPlaceholder">Next column appears when the match is called.</div>`;
+    col.innerHTML += `<div class="chartPlaceholder">Waiting for feeder match or BYE.</div>`;
     return col;
   }
 
@@ -3665,7 +3740,7 @@ function buildBracketChart(state, editable=false){
   const finalsVisible = shouldShowFinals(state);
 
   bracketEl.innerHTML = `
-    <div class="chartConnectorNote">last losers survivor feeds the final →</div>
+    <div class="chartConnectorNote">full 128 chart model, scroll sideways →</div>
     <div class="chartHeader">
       <div class="chartHeaderBox">
         <span>Losers Side</span>
@@ -4399,6 +4474,12 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || defaultTournamentId());
   $('#tournamentId').addEventListener("change", ()=> setTournamentId(getTournamentId()));
+
+  const bracketSizeSelect = document.getElementById("bracketSizeSelect");
+  if(bracketSizeSelect){
+    bracketSizeSelect.value = localStorage.getItem("TD_BRACKET_SIZE") || "128";
+    bracketSizeSelect.addEventListener("change", ()=> localStorage.setItem("TD_BRACKET_SIZE", bracketSizeSelect.value));
+  }
 
   wireAYPTTable();
   $('#btnAYPTRefresh').addEventListener("click", loadAYPT);
