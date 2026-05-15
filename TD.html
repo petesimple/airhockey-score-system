@@ -1488,11 +1488,27 @@ body.bracketFullscreenOpen{
         </div>
       </div>
 
-      <div class="viewer" id="bracketViewer">
-        <div class="zoomStage" id="bracketZoomStage">
-          <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
-        </div>
-      </div>
+      <div class="bracketViewTools">
+  <div class="mini">
+    Scroll sideways and vertically to move around the full bracket.
+  </div>
+
+  <div class="bracketZoomTools">
+    <span class="mini">Bracket Zoom</span>
+    <button class="btnTiny" id="btnBracketZoomOut" type="button">-</button>
+    <span class="bracketZoomReadout" id="bracketZoomReadout">100%</span>
+    <button class="btnTiny" id="btnBracketZoomIn" type="button">+</button>
+    <button class="btnTiny" id="btnBracketZoomReset" type="button">100%</button>
+    <button class="btnTiny primary" id="btnBracketFitWidth" type="button">Fit Width</button>
+    <button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
+  </div>
+</div>
+
+<div class="viewer" id="bracketViewer">
+  <div class="zoomStage" id="bracketZoomStage">
+    <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
+  </div>
+</div>
     </div>
   </div>
 </div>
