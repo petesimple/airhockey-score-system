@@ -5209,7 +5209,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   const bracketSizeSelect = document.getElementById("bracketSizeSelect");
   if(bracketSizeSelect){
-    bracketSizeSelect.value = localStorage.getItem("TD_BRACKET_SIZE") || "128";
+    bracketSizeSelect.value = localStorage.getItem("TD_BRACKET_SIZE") || "auto";
     bracketSizeSelect.addEventListener("change", ()=> localStorage.setItem("TD_BRACKET_SIZE", bracketSizeSelect.value));
   }
 
