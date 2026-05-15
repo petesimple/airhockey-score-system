@@ -1478,7 +1478,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.3 - Room Table Rotation";
+const TD_BUILD = "v3.0.4 - Room Table Match Restore";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -1857,8 +1857,12 @@ function generateMatchLink() {
     saveToAYPTMatchLog(payload);
   }
 
-  syncRoomTableFromGeneratedLink(table, p1Raw, p2Raw, matchId);
-}
+  syncRoomTableFromGeneratedLink(table, p1Raw, p2Raw, matchId, {
+  scoreboardUrl: generatedUrl,
+  matchSheetUrl: generatedMatchSheetUrl,
+  localAHMSUrl: generatedLocalAHMSUrl,
+  matchType: match
+});
 
 function copyLink() {
   navigator.clipboard.writeText(generatedUrl).then(() => {
@@ -2211,10 +2215,10 @@ function defaultRoomState(){
   return {
     version: 1,
     tables: [
-      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
-      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
-      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
-      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" }
+      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
+      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
+      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
+      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" }
     ]
   };
 }
@@ -2228,18 +2232,22 @@ function loadRoomState(){
     if(!parsed || !Array.isArray(parsed.tables)) return defaultRoomState();
 
     parsed.tables = parsed.tables.map((t, idx)=>Object.assign({
-      id:`T${idx+1}`,
-      number:String(idx+1),
-      x:80 + idx * 180,
-      y:80,
-      rotation:0,
-      status:"open",
-      active:true,
-      p1:"",
-      p2:"",
-      matchId:"",
-      matchLane:""
-    }, t));
+  id:`T${idx+1}`,
+  number:String(idx+1),
+  x:80 + idx * 180,
+  y:80,
+  rotation:0,
+  status:"open",
+  active:true,
+  p1:"",
+  p2:"",
+  matchId:"",
+  matchLane:"",
+  scoreboardUrl:"",
+  matchSheetUrl:"",
+  localAHMSUrl:"",
+  matchType:""
+}, t));
 
     return parsed;
   }catch{
@@ -2306,6 +2314,10 @@ function cycleTableStatus(table){
     table.p2 = "";
     table.matchId = "";
     table.matchLane = "";
+    table.scoreboardUrl = "";
+    table.matchSheetUrl = "";
+    table.localAHMSUrl = "";
+    table.matchType = "";
   }
 
   saveRoomState();
@@ -2364,7 +2376,13 @@ function renderRoomTableEl(table, mode){
       if(pendingAssignMatch){
         assignPendingMatchToTable(table.id);
       }else{
+        restoreMatchDetailsFromTable(table.id);
         renderQuickTableTools(table.id);
+
+        const result = document.getElementById("result");
+        if(result && (table.scoreboardUrl || table.localAHMSUrl)){
+          result.scrollIntoView({ behavior:"smooth", block:"center" });
+        }
       }
     });
   }
@@ -2470,7 +2488,11 @@ function addRoomTable(){
     p1: "",
     p2: "",
     matchId: "",
-    matchLane: ""
+    matchLane: "",
+    scoreboardUrl: "",
+    matchSheetUrl: "",
+    localAHMSUrl: "",
+    matchType: ""
   });
 
   saveRoomState();
@@ -2500,6 +2522,10 @@ function clearRoomStatuses(){
     t.p2 = "";
     t.matchId = "";
     t.matchLane = "";
+    t.scoreboardUrl = "";
+    t.matchSheetUrl = "";
+    t.localAHMSUrl = "";
+    t.matchType = "";
   });
 
   saveRoomState();
@@ -2636,6 +2662,81 @@ function assignPendingMatchToTable(tableId){
   }
 }
 
+function restoreMatchDetailsFromTable(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return false;
+
+  const hasDetails = table.p1 || table.p2 || table.scoreboardUrl || table.matchSheetUrl || table.localAHMSUrl;
+  if(!hasDetails) return false;
+
+  document.getElementById("player1").value = table.p1 || "";
+  document.getElementById("player2").value = table.p2 || "";
+  document.getElementById("tableNumber").value = table.number || "";
+  document.getElementById("refName").value = "";
+
+  const matchLength = document.getElementById("matchLength");
+  if(matchLength && table.matchType){
+    matchLength.value = table.matchType;
+  }
+
+  generatedUrl = table.scoreboardUrl || "";
+  generatedMatchSheetUrl = table.matchSheetUrl || "";
+  generatedLocalAHMSUrl = table.localAHMSUrl || "";
+
+  const matchSheetLink = document.getElementById("matchSheetLink");
+  if(matchSheetLink && generatedMatchSheetUrl){
+    matchSheetLink.href = generatedMatchSheetUrl;
+    matchSheetLink.style.display = "inline-block";
+  }
+
+  const localDisplay = document.getElementById("localAHMSDisplay");
+  if(localDisplay && generatedLocalAHMSUrl){
+    localDisplay.style.display = "block";
+    localDisplay.innerHTML = `<strong>Local AHMS Handoff:</strong> ${esc(generatedLocalAHMSUrl)}`;
+  }
+
+  const localDisplayBtn = document.getElementById("copyLocalAHMSDisplayBtn");
+  if(localDisplayBtn && generatedLocalAHMSUrl){
+    localDisplayBtn.style.display = "inline-block";
+    localDisplayBtn.innerText = "Copy Local AHMS Link";
+  }
+
+  const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
+  if(localAHMSBtn && generatedLocalAHMSUrl){
+    localAHMSBtn.style.display = "inline-block";
+    localAHMSBtn.innerText = "Copy Local AHMS Handoff";
+  }
+
+  const copyBtn = document.getElementById("copyBtn");
+  if(copyBtn && generatedUrl){
+    copyBtn.style.display = "inline-block";
+    copyBtn.classList.remove("copied");
+    copyBtn.innerText = "Copy to Clipboard";
+  }
+
+  const result = document.getElementById("result");
+  if(result && generatedUrl){
+    result.innerHTML = `
+      <p><strong>Match Link:</strong></p>
+      <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+      <p><strong>Table Assignment:</strong> Table ${esc(table.number || "")}</p>
+      <p><strong>Match ID:</strong> ${esc(table.matchId || "")}</p>
+    `;
+  }
+
+  const qr = document.getElementById("qrcode");
+  if(qr && generatedUrl && window.QRCode){
+    QRCode.toCanvas(qr, generatedUrl, {
+      width: 220,
+      color: { dark: "#ffffff", light: "#111111" }
+    }, function(error){
+      if(error) console.error(error);
+    });
+  }
+
+  return true;
+}
+
 function renderQuickTableTools(tableId){
   const table = findRoomTable(tableId);
   const panel = document.getElementById("assignPanel");
@@ -2722,6 +2823,10 @@ function clearStaleTableMatch(tableId){
   table.p2 = "";
   table.matchId = "";
   table.matchLane = "";
+  table.scoreboardUrl = "";
+  table.matchSheetUrl = "";
+  table.localAHMSUrl = "";
+  table.matchType = "";
 
   saveRoomState();
   renderRoomViews();
@@ -2812,6 +2917,10 @@ function markTableOpen(tableId){
   table.p2 = "";
   table.matchId = "";
   table.matchLane = "";
+  table.scoreboardUrl = "";
+  table.matchSheetUrl = "";
+  table.localAHMSUrl = "";
+  table.matchType = "";
 
   saveRoomState();
   renderRoomViews();
@@ -2846,12 +2955,16 @@ function markTableOffline(tableId){
   table.p2 = "";
   table.matchId = "";
   table.matchLane = "";
+  table.scoreboardUrl = "";
+  table.matchSheetUrl = "";
+  table.localAHMSUrl = "";
+  table.matchType = "";
 
   saveRoomState();
   renderRoomViews();
 }
 
-function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId){
+function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId, urls = {}){
   if(!tableNumber) return;
 
   const table = findRoomTableByNumber(tableNumber);
@@ -2862,6 +2975,10 @@ function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId){
   table.p2 = p2 || "";
   table.matchId = matchId || "";
   table.matchLane = table.matchLane || "";
+  table.scoreboardUrl = urls.scoreboardUrl || table.scoreboardUrl || "";
+  table.matchSheetUrl = urls.matchSheetUrl || table.matchSheetUrl || "";
+  table.localAHMSUrl = urls.localAHMSUrl || table.localAHMSUrl || "";
+  table.matchType = urls.matchType || table.matchType || "";
 
   saveRoomState();
   renderRoomViews();
