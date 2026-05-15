@@ -3403,7 +3403,12 @@ function newBracketFromEntrants(){
   renderBracket();
   buildMatchPicker();
 
-  $('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).`;
+  const autoNote =
+  document.getElementById("bracketSizeSelect")?.value === "auto" && raw.length % 2 === 0 && raw.length < 128
+    ? " Auto added one BYE preference slot for an opening BYE round."
+    : "";
+
+$('#bracketStatus').textContent = `New bracket created (${raw.length} entrants, size ${size}).${autoNote}`;
 
   schedulePublish();
 }
