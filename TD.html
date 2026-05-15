@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.7 - Focused Bracket View
+v2.6.8 - Unified Chart View
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -864,6 +864,131 @@ v2.6.7 - Focused Bracket View
     overflow:visible;
   }
 
+
+  .bracket.unifiedChart{
+    min-width:1120px;
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.12);
+    background:
+      linear-gradient(90deg, rgba(255,90,90,.10), rgba(0,0,0,.08) 33%, rgba(61,220,132,.08) 66%, rgba(0,188,212,.08)),
+      rgba(0,0,0,.18);
+    position:relative;
+  }
+
+  .chartHeader{
+    display:grid;
+    grid-template-columns:1fr 1fr 280px;
+    gap:18px;
+    margin-bottom:10px;
+  }
+
+  .chartHeaderBox{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.045);
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.78);
+    font-weight:900;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+  }
+
+  .chartHeaderBox .sub{
+    font-size:11px;
+    text-transform:none;
+    letter-spacing:0;
+    color:rgba(255,255,255,.48);
+  }
+
+  .chartBody{
+    display:grid;
+    grid-template-columns:1fr 1fr 280px;
+    gap:18px;
+    align-items:start;
+  }
+
+  .chartLane{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    background:rgba(0,0,0,.13);
+    min-height:360px;
+    padding:14px;
+    overflow:visible;
+  }
+
+  .chartLane.losersLane{
+    background:linear-gradient(90deg, rgba(255,90,90,.08), rgba(0,0,0,.12));
+  }
+
+  .chartLane.winnersLane{
+    background:linear-gradient(90deg, rgba(0,0,0,.12), rgba(61,220,132,.08));
+  }
+
+  .chartLane.finalsLane{
+    background:linear-gradient(90deg, rgba(0,188,212,.07), rgba(255,213,79,.06));
+  }
+
+  .chartColumns{
+    display:flex;
+    gap:18px;
+    align-items:flex-start;
+  }
+
+  .chartColumns.reverseFlow{
+    flex-direction:row-reverse;
+  }
+
+  .chartColumn{
+    min-width:240px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .chartColumnTitle{
+    font-size:12px;
+    color:rgba(255,255,255,.72);
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    margin:0 0 2px 4px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    white-space:nowrap;
+  }
+
+  .chartConnectorNote{
+    position:absolute;
+    top:62px;
+    right:300px;
+    font-size:11px;
+    color:rgba(0,234,255,.75);
+    letter-spacing:.2px;
+  }
+
+  .chartPlaceholder{
+    border:1px dashed rgba(255,255,255,.14);
+    background:rgba(0,0,0,.18);
+    border-radius:14px;
+    padding:14px;
+    color:rgba(255,255,255,.56);
+    font-size:12px;
+    text-align:center;
+    min-width:210px;
+  }
+
+  .bracketOldZonesHidden .bracketZone,
+  .bracketOldZonesHidden .bracketZoneTitle,
+  .bracketOldZonesHidden .bracketFocusedNote{
+    display:none !important;
+  }
+
   @media (max-width: 900px){
     .bracketTopBar,
     .bracketSetupGrid,
@@ -1267,7 +1392,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v2.6.7 - Focused Bracket View";
+const TD_BUILD = "v2.6.8 - Unified Chart View";
 
 /* =========================================================
   UTILS
@@ -3448,11 +3573,6 @@ function visibleWindowForRounds(rounds){
 
   if(first === -1) return [];
 
-  /*
-    Focused view:
-    show active rounds plus only one next round.
-    This keeps the bracket from showing every TBD future column.
-  */
   const end = Math.min(rounds.length - 1, Math.max(first, last) + 1);
   const out = [];
 
@@ -3474,18 +3594,18 @@ function shouldShowFinals(state){
   return !!(winnersLast && winnersLast.winner && losersLast && losersLast.winner);
 }
 
-function buildRoundColumn(round, idx, lane, editable, isFuture=false){
+function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
   const col = document.createElement("div");
-  col.className = "col";
+  col.className = "chartColumn";
 
   const laneName = lane === "W" ? "Winners" : "Losers";
   const arrow = lane === "W" ? "→" : (isFuture ? "…" : "←");
-  const note = isFuture ? "next up" : (lane === "W" ? "moves right" : "moves left");
+  const note = isFuture ? "next" : (lane === "W" ? "right" : "left");
 
-  col.innerHTML = `<div class="col-title">${laneName} R${idx+1} <span class="flowArrow">${arrow}</span> <span class="flowNote">${note}</span></div>`;
+  col.innerHTML = `<div class="chartColumnTitle">${laneName} R${idx+1} <span class="flowArrow">${arrow}</span> <span class="flowNote">${note}</span></div>`;
 
   if(isFuture){
-    col.innerHTML += `<div class="bracketFutureHidden">Next column will fill when the match is called.</div>`;
+    col.innerHTML += `<div class="chartPlaceholder">Next column appears when the match is called.</div>`;
     return col;
   }
 
@@ -3500,88 +3620,88 @@ function buildRoundColumn(round, idx, lane, editable, isFuture=false){
 
 function buildBracketChart(state, editable=false){
   const bracketEl = document.createElement("div");
-  bracketEl.className = "bracket";
+  bracketEl.className = "bracket unifiedChart";
 
   const losersVisible = visibleWindowForRounds(state.losersRounds || []);
   const winnersVisible = visibleWindowForRounds(state.winnersRounds || []);
   const finalsVisible = shouldShowFinals(state);
 
-  const losersZone = document.createElement("div");
-  losersZone.className = "bracketZone losers";
-  losersZone.innerHTML = `
-    <div class="bracketZoneTitle">
-      <span>Losers Side</span>
-      <span class="bracketZoneSub">shown when live</span>
+  bracketEl.innerHTML = `
+    <div class="chartConnectorNote">last losers survivor feeds the final →</div>
+    <div class="chartHeader">
+      <div class="chartHeaderBox">
+        <span>Losers Side</span>
+        <span class="sub">flows left</span>
+      </div>
+      <div class="chartHeaderBox">
+        <span>Winners Side</span>
+        <span class="sub">flows right</span>
+      </div>
+      <div class="chartHeaderBox">
+        <span>Finals</span>
+        <span class="sub">reconnects</span>
+      </div>
     </div>
-    <div class="bracketFocusedNote">Only active losers rounds and the next waiting column are shown.</div>
   `;
 
+  const body = document.createElement("div");
+  body.className = "chartBody";
+
+  const losersLane = document.createElement("div");
+  losersLane.className = "chartLane losersLane";
   const losersCols = document.createElement("div");
-  losersCols.className = "bracketColumns reverseFlow";
+  losersCols.className = "chartColumns reverseFlow";
 
   if(losersVisible.length){
     losersVisible.forEach(item=>{
-      losersCols.appendChild(buildRoundColumn(item.round, item.idx, "L", editable, item.isFuture));
+      losersCols.appendChild(buildUnifiedRoundColumn(item.round, item.idx, "L", editable, item.isFuture));
     });
   }else{
-    losersCols.innerHTML = `<div class="bracketFutureHidden">Losers side will appear when a player drops from winners.</div>`;
+    losersCols.innerHTML = `<div class="chartPlaceholder">Losers side appears when a player drops from winners.</div>`;
   }
 
-  losersZone.appendChild(losersCols);
+  losersLane.appendChild(losersCols);
 
-  const winnersZone = document.createElement("div");
-  winnersZone.className = "bracketZone winners";
-  winnersZone.innerHTML = `
-    <div class="bracketZoneTitle">
-      <span>Winners Side</span>
-      <span class="bracketZoneSub">winners move right</span>
-    </div>
-    <div class="bracketFocusedNote">Only active winners rounds and the next waiting column are shown.</div>
-  `;
-
+  const winnersLane = document.createElement("div");
+  winnersLane.className = "chartLane winnersLane";
   const winnersCols = document.createElement("div");
-  winnersCols.className = "bracketColumns";
+  winnersCols.className = "chartColumns";
 
   if(winnersVisible.length){
     winnersVisible.forEach(item=>{
-      winnersCols.appendChild(buildRoundColumn(item.round, item.idx, "W", editable, item.isFuture));
+      winnersCols.appendChild(buildUnifiedRoundColumn(item.round, item.idx, "W", editable, item.isFuture));
     });
   }else{
-    winnersCols.innerHTML = `<div class="bracketFutureHidden">No active winners matches yet.</div>`;
+    winnersCols.innerHTML = `<div class="chartPlaceholder">No active winners matches yet.</div>`;
   }
 
-  winnersZone.appendChild(winnersCols);
+  winnersLane.appendChild(winnersCols);
 
-  const finalsZone = document.createElement("div");
-  finalsZone.className = "bracketZone finals";
-  finalsZone.innerHTML = `
-    <div class="bracketZoneTitle">
-      <span>Finals</span>
-      <span class="bracketZoneSub">appears when ready</span>
-    </div>
-  `;
-
+  const finalsLane = document.createElement("div");
+  finalsLane.className = "chartLane finalsLane";
   const finalsCols = document.createElement("div");
-  finalsCols.className = "bracketColumns";
+  finalsCols.className = "chartColumns";
 
   const gfCol = document.createElement("div");
-  gfCol.className = "col";
-  gfCol.innerHTML = `<div class="col-title">Grand Final <span class="flowArrow">★</span></div>`;
+  gfCol.className = "chartColumn";
+  gfCol.innerHTML = `<div class="chartColumnTitle">Grand Final <span class="flowArrow">★</span></div>`;
 
   if(finalsVisible){
     (state.grandFinal || []).forEach(m => {
       if(isMatchReadyToCall(m)) gfCol.appendChild(renderMatchCard(m,"GF", editable));
     });
   }else{
-    gfCol.innerHTML += `<div class="bracketFutureHidden">Grand Final appears when winners side champ and losers side champ are ready.</div>`;
+    gfCol.innerHTML += `<div class="chartPlaceholder">Grand Final appears when the winners champ and losers champ are ready.</div>`;
   }
 
   finalsCols.appendChild(gfCol);
-  finalsZone.appendChild(finalsCols);
+  finalsLane.appendChild(finalsCols);
 
-  bracketEl.appendChild(losersZone);
-  bracketEl.appendChild(winnersZone);
-  bracketEl.appendChild(finalsZone);
+  body.appendChild(losersLane);
+  body.appendChild(winnersLane);
+  body.appendChild(finalsLane);
+
+  bracketEl.appendChild(body);
 
   return bracketEl;
 }
