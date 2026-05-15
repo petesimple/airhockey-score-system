@@ -2211,10 +2211,10 @@ function defaultRoomState(){
   return {
     version: 1,
     tables: [
-      { id:"T1", number:"1", x:80, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
-      { id:"T2", number:"2", x:260, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
-      { id:"T3", number:"3", x:440, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" },
-      { id:"T4", number:"4", x:620, y:80, status:"open", active:true, p1:"", p2:"", matchId:"" }
+      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
+      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
+      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" },
+      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"" }
     ]
   };
 }
@@ -2232,11 +2232,13 @@ function loadRoomState(){
       number:String(idx+1),
       x:80 + idx * 180,
       y:80,
+      rotation:0,
       status:"open",
       active:true,
       p1:"",
       p2:"",
-      matchId:""
+      matchId:"",
+      matchLane:""
     }, t));
 
     return parsed;
@@ -2271,6 +2273,29 @@ function tableStatusLabel(status){
   return "Open";
 }
 
+function isTableRotated(table){
+  return Number(table.rotation || 0) % 180 === 90;
+}
+
+function rotateRoomTable(tableId){
+  const table = findRoomTable(tableId);
+  if(!table) return;
+
+  table.rotation = isTableRotated(table) ? 0 : 90;
+
+  const tableW = isTableRotated(table) ? 76 : 138;
+  const tableH = isTableRotated(table) ? 138 : 76;
+
+  table.x = Math.max(0, Math.min(1000 - tableW, Number(table.x || 0)));
+  table.y = Math.max(0, Math.min(620 - tableH, Number(table.y || 0)));
+
+  saveRoomState();
+  renderRoomViews();
+
+  const msg = document.getElementById("roomSetupMsg");
+  if(msg) msg.textContent = `Rotated Table ${table.number}`;
+}
+
 function cycleTableStatus(table){
   const order = ["open", "assigned", "playing", "offline"];
   const idx = order.indexOf(table.status || "open");
@@ -2289,7 +2314,9 @@ function cycleTableStatus(table){
 
 function renderRoomTableEl(table, mode){
   const el = document.createElement("div");
-  el.className = `roomTable ${table.status || "open"} ${table.active === false ? "hiddenTable" : ""}`;
+  const rotated = isTableRotated(table);
+
+  el.className = `roomTable ${table.status || "open"} ${rotated ? "rotated" : ""} ${table.active === false ? "hiddenTable" : ""}`;
   el.style.left = `${Number(table.x || 0)}px`;
   el.style.top = `${Number(table.y || 0)}px`;
   el.dataset.tableId = table.id;
@@ -2298,6 +2325,7 @@ function renderRoomTableEl(table, mode){
   const players = [table.p1, table.p2].filter(Boolean).join(" vs ");
 
   el.innerHTML = `
+    ${mode === "setup" ? `<button type="button" class="roomRotateBtn" title="Rotate table" data-rotate-table="${esc(table.id)}">↻</button>` : ""}
     <div class="roomTableNum">Table ${esc(table.number || "")}</div>
     <div class="roomTableStatus">${esc(tableStatusLabel(table.status))}</div>
     <div class="roomTablePlayers">${esc(players || "Ready")}</div>
@@ -2306,12 +2334,23 @@ function renderRoomTableEl(table, mode){
   if(mode === "setup"){
     makeRoomTableDraggable(el, table);
 
+    const rotateBtn = el.querySelector("[data-rotate-table]");
+    if(rotateBtn){
+      rotateBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        rotateRoomTable(table.id);
+      });
+    }
+
     el.addEventListener("click", (e)=>{
+      if(e.target.closest(".roomRotateBtn")) return;
       if(el.dataset.dragged === "1") return;
       cycleTableStatus(table);
     });
 
     el.addEventListener("dblclick", (e)=>{
+      if(e.target.closest(".roomRotateBtn")) return;
       e.stopPropagation();
       const next = prompt("Table number or label:", table.number || "");
       if(next === null) return;
@@ -2360,6 +2399,8 @@ function makeRoomTableDraggable(el, table){
   let dragging = false;
 
   function down(e){
+    if(e.target.closest(".roomRotateBtn")) return;
+
     const pt = e.touches ? e.touches[0] : e;
     dragging = true;
     el.dataset.dragged = "0";
@@ -2383,8 +2424,11 @@ function makeRoomTableDraggable(el, table){
 
     if(Math.abs(dx) > 3 || Math.abs(dy) > 3) el.dataset.dragged = "1";
 
-    table.x = Math.max(0, Math.min(860, origX + dx));
-    table.y = Math.max(0, Math.min(520, origY + dy));
+    const tableW = isTableRotated(table) ? 76 : 138;
+    const tableH = isTableRotated(table) ? 138 : 76;
+
+    table.x = Math.max(0, Math.min(1000 - tableW, origX + dx));
+    table.y = Math.max(0, Math.min(620 - tableH, origY + dy));
 
     el.style.left = `${table.x}px`;
     el.style.top = `${table.y}px`;
@@ -2420,11 +2464,13 @@ function addRoomTable(){
     number: String(nextNum),
     x: 80 + ((nextNum - 1) % 5) * 180,
     y: 80 + Math.floor((nextNum - 1) / 5) * 130,
+    rotation: 0,
     status: "open",
     active: true,
     p1: "",
     p2: "",
-    matchId: ""
+    matchId: "",
+    matchLane: ""
   });
 
   saveRoomState();
