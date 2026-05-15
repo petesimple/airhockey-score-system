@@ -4487,6 +4487,148 @@ function wireBracketChartEditing(){
 }
 
 /* =========================================================
+  BRACKET VIEW ZOOM
+========================================================= */
+let bracketZoom = 1;
+
+function getBracketZoomStage(){
+  return document.getElementById("bracketZoomStage");
+}
+
+function getBracketViewer(){
+  return document.getElementById("bracketViewer");
+}
+
+function setBracketZoomPercent(pct, keepCenter=true){
+  const viewer = getBracketViewer();
+  const stage = getBracketZoomStage();
+
+  if(!viewer || !stage) return;
+
+  const oldZoom = bracketZoom;
+  const nextZoom = Math.max(0.25, Math.min(2.5, pct / 100));
+
+  let centerX = 0;
+  let centerY = 0;
+
+  if(keepCenter && oldZoom > 0){
+    centerX = (viewer.scrollLeft + viewer.clientWidth / 2) / oldZoom;
+    centerY = (viewer.scrollTop + viewer.clientHeight / 2) / oldZoom;
+  }
+
+  bracketZoom = nextZoom;
+  stage.style.transform = `scale(${bracketZoom})`;
+
+  const readout = document.getElementById("bracketZoomReadout");
+  if(readout) readout.textContent = `${Math.round(bracketZoom * 100)}%`;
+
+  localStorage.setItem("TD_BRACKET_ZOOM", String(Math.round(bracketZoom * 100)));
+
+  requestAnimationFrame(()=>{
+    if(keepCenter){
+      viewer.scrollLeft = Math.max(0, centerX * bracketZoom - viewer.clientWidth / 2);
+      viewer.scrollTop = Math.max(0, centerY * bracketZoom - viewer.clientHeight / 2);
+    }
+  });
+}
+
+function bracketZoomIn(){
+  setBracketZoomPercent((bracketZoom * 100) + 10);
+}
+
+function bracketZoomOut(){
+  setBracketZoomPercent((bracketZoom * 100) - 10);
+}
+
+function resetBracketZoom(){
+  setBracketZoomPercent(100, false);
+}
+
+function fitBracketWidth(){
+  const viewer = getBracketViewer();
+  const content = document.querySelector("#bracketRoot .bracket");
+
+  if(!viewer || !content) return;
+
+  const oldTransform = getBracketZoomStage().style.transform;
+  getBracketZoomStage().style.transform = "scale(1)";
+
+  const available = Math.max(300, viewer.clientWidth - 28);
+  const needed = content.scrollWidth || content.offsetWidth || 5600;
+  const targetPct = Math.max(25, Math.min(250, Math.floor((available / needed) * 100)));
+
+  getBracketZoomStage().style.transform = oldTransform;
+  setBracketZoomPercent(targetPct, false);
+
+  viewer.scrollLeft = 0;
+  viewer.scrollTop = 0;
+}
+
+function toggleBracketFullscreen(){
+  const tab = document.getElementById("tabBrackets");
+  const btn = document.getElementById("btnBracketFullscreen");
+
+  if(!tab) return;
+
+  const on = !tab.classList.contains("bracketFullscreen");
+
+  tab.classList.toggle("bracketFullscreen", on);
+  document.body.classList.toggle("bracketFullscreenOpen", on);
+
+  if(btn) btn.textContent = on ? "Exit Fullscreen" : "Fullscreen";
+
+  requestAnimationFrame(()=>{
+    const viewer = getBracketViewer();
+    if(viewer){
+      viewer.scrollLeft = viewer.scrollLeft;
+      viewer.scrollTop = viewer.scrollTop;
+    }
+  });
+}
+
+function wireBracketViewTools(){
+  const zin = document.getElementById("btnBracketZoomIn");
+  const zout = document.getElementById("btnBracketZoomOut");
+  const zreset = document.getElementById("btnBracketZoomReset");
+  const fit = document.getElementById("btnBracketFitWidth");
+  const full = document.getElementById("btnBracketFullscreen");
+  const viewer = getBracketViewer();
+
+  if(zin) zin.addEventListener("click", bracketZoomIn);
+  if(zout) zout.addEventListener("click", bracketZoomOut);
+  if(zreset) zreset.addEventListener("click", resetBracketZoom);
+  if(fit) fit.addEventListener("click", fitBracketWidth);
+  if(full) full.addEventListener("click", toggleBracketFullscreen);
+
+  if(viewer){
+    viewer.addEventListener("wheel", (e)=>{
+      if(e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+        viewer.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+
+      if(e.ctrlKey || e.metaKey){
+        e.preventDefault();
+        if(e.deltaY < 0) bracketZoomIn();
+        else bracketZoomOut();
+      }
+    }, { passive:false });
+  }
+
+  document.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape"){
+      const tab = document.getElementById("tabBrackets");
+      if(tab && tab.classList.contains("bracketFullscreen")){
+        toggleBracketFullscreen();
+      }
+    }
+  });
+
+  const saved = parseInt(localStorage.getItem("TD_BRACKET_ZOOM") || "100", 10);
+  setBracketZoomPercent(isFinite(saved) ? saved : 100, false);
+}
+  
+/* =========================================================
   FULL BRACKET LIVE
 ========================================================= */
 let fullZoom = 1;
