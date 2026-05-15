@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-v2.6.3 - Room Control stale match cleanup beta
+v2.6.4 - Bracket controls cleanup beta
 - Keeps TD match link generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Adds Room Setup tab with draggable top-down table layout
 - Adds Room Control panel on Links tab
@@ -659,6 +659,122 @@ v2.6.3 - Room Control stale match cleanup beta
     color:rgba(255,255,255,.72);
   }
 
+
+  .bracketControls{
+    display:grid;
+    gap:16px;
+  }
+
+  .bracketTopBar{
+    display:grid;
+    grid-template-columns: auto minmax(220px, 1fr) auto;
+    gap:12px;
+    align-items:center;
+  }
+
+  .bracketTopButtons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    align-items:center;
+  }
+
+  .bracketSubButtons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .bracketSetupGrid{
+    display:grid;
+    grid-template-columns:minmax(280px, 420px) 1fr;
+    gap:18px;
+    align-items:start;
+  }
+
+  .bracketEntrantsBox{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .bracketEntrantsBox textarea{
+    width:100%;
+    max-width:none;
+    min-height:180px;
+    margin:0;
+  }
+
+  .bracketOptionsPanel{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.18);
+    border-radius:14px;
+    padding:14px;
+    min-height:180px;
+  }
+
+  .bracketOptionRow{
+    display:flex;
+    gap:18px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+
+  .bracketActionPanel{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.035);
+    border-radius:14px;
+    padding:12px;
+  }
+
+  .bracketActionPanel select{
+    margin:0;
+  }
+
+  .advanceGrid{
+    display:grid;
+    grid-template-columns:auto minmax(260px, 1fr) minmax(180px, 320px) minmax(120px, auto);
+    gap:10px;
+    align-items:center;
+  }
+
+  .lateGrid{
+    display:grid;
+    grid-template-columns:minmax(220px, 380px) auto minmax(180px, 1fr);
+    gap:10px;
+    align-items:center;
+  }
+
+  .lateGrid input{
+    margin:0;
+    width:100%;
+  }
+
+  .bracketStatusLine{
+    min-height:20px;
+  }
+
+  @media (max-width: 900px){
+    .bracketTopBar,
+    .bracketSetupGrid,
+    .advanceGrid,
+    .lateGrid{
+      grid-template-columns:1fr;
+    }
+
+    .bracketTopButtons,
+    .bracketSubButtons{
+      justify-content:flex-start;
+    }
+
+    .advanceGrid select{
+      width:100%;
+    }
+  }
+
   @media (max-width: 720px){
     body{ padding:10px; }
     .card{ padding:12px; }
@@ -885,65 +1001,67 @@ v2.6.3 - Room Control stale match cleanup beta
 
 <div id="tabBrackets" class="tabpane">
   <div class="card">
-    <div class="row-left">
-      <div class="pill">Storage: localStorage + Brackets Sheet</div>
+    <div class="bracketControls">
+      <div class="bracketTopBar">
+        <div class="pill">Storage: localStorage + Brackets Sheet</div>
 
-      <input id="tournamentId" placeholder="Tournament ID" style="width:220px" />
+        <input id="tournamentId" placeholder="Tournament ID" style="width:100%; margin:0;" />
 
-      <button class="btnTiny primary" id="btnNewBracket">New Bracket from Entrants</button>
-      <button class="btnTiny" id="btnResetBracket">Reset Bracket</button>
-
-      <button class="btnTiny primary" id="btnPublishBracket">Publish to TVs</button>
-      <button class="btnTiny" id="btnLoadBracketCloud">Load from Cloud</button>
-
-      <button class="btnTiny" id="btnExportBracketJSON">Export Bracket JSON</button>
-      <button class="btnTiny" id="btnImportBracketJSON">Import Bracket JSON</button>
-
-      <input id="importBracketFile" type="file" accept="application/json" style="display:none">
-      <div class="muted" id="bracketStatus">-</div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="row-left" style="gap:12px;">
-      <div style="min-width:280px;">
-        <div class="mini" style="margin-bottom:6px;">Entrants (one per line) or click Use AYPT List in AYPT tab</div>
-        <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
-      </div>
-
-      <div style="min-width:260px;">
-        <div class="mini" style="margin-bottom:6px;">Bracket options</div>
-        <div class="row-left">
-          <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
-          <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
+        <div class="bracketTopButtons">
+          <button class="btnTiny primary" id="btnNewBracket">New Bracket from Entrants</button>
+          <button class="btnTiny" id="btnResetBracket">Reset Bracket</button>
+          <button class="btnTiny primary" id="btnPublishBracket">Publish to TVs</button>
         </div>
-        <div class="mini">Tip: Double-elim is the default. BYEs auto-fill.</div>
-        <div class="mini" style="margin-top:6px;">Tip: click a player row in the chart to set winner. Shift-click clears if downstream has not started.</div>
       </div>
-    </div>
 
-    <div class="spacer"></div>
+      <div class="bracketSubButtons">
+        <button class="btnTiny" id="btnLoadBracketCloud">Load from Cloud</button>
+        <button class="btnTiny" id="btnExportBracketJSON">Export Bracket JSON</button>
+        <button class="btnTiny" id="btnImportBracketJSON">Import Bracket JSON</button>
+        <input id="importBracketFile" type="file" accept="application/json" style="display:none">
+        <div class="muted bracketStatusLine" id="bracketStatus">-</div>
+      </div>
 
-    <div class="row-left">
-      <button class="btnTiny primary" id="btnAdvanceSelected">Advance Winner</button>
-      <select id="selMatch" style="min-width:360px;"></select>
-      <select id="selWinner" style="min-width:220px;"></select>
-      <span class="muted" id="advanceMsg"></span>
-    </div>
+      <div class="bracketSetupGrid">
+        <div class="bracketEntrantsBox">
+          <div class="mini">Entrants (one per line) or click Use AYPT List in AYPT tab</div>
+          <textarea id="entrantsBox" rows="8" placeholder="Player 1&#10;Player 2&#10;Player 3"></textarea>
+        </div>
 
-    <div class="spacer"></div>
+        <div class="bracketOptionsPanel">
+          <div style="font-weight:900; margin-bottom:8px;">Bracket options</div>
+          <div class="bracketOptionRow">
+            <label class="chk"><input type="checkbox" id="chkDoubleElim" checked> Double Elim</label>
+            <label class="chk"><input type="checkbox" id="chkShuffle"> Shuffle Entrants</label>
+          </div>
+          <div class="mini" style="margin-top:12px;">Tip: Double-elim is the default. BYEs auto-fill.</div>
+          <div class="mini" style="margin-top:6px;">Tip: click a player row in the chart to set winner. Shift-click clears if downstream has not started.</div>
+        </div>
+      </div>
 
-    <div class="row-left">
-      <input id="lateEntrantName" placeholder="Late entrant name" style="width:240px" />
-      <button class="btnTiny primary" id="btnAddLateEntrant">Add Latecomer</button>
-      <span class="muted" id="lateAddMsg">Fills eligible Round 1 BYE spots only.</span>
-    </div>
+      <div class="bracketActionPanel">
+        <div class="mini" style="margin-bottom:8px;">Advance selected match</div>
+        <div class="advanceGrid">
+          <button class="btnTiny primary" id="btnAdvanceSelected">Advance Winner</button>
+          <select id="selMatch"></select>
+          <select id="selWinner"></select>
+          <span class="muted" id="advanceMsg"></span>
+        </div>
+      </div>
 
-    <div class="spacer"></div>
+      <div class="bracketActionPanel">
+        <div class="mini" style="margin-bottom:8px;">Late entrant</div>
+        <div class="lateGrid">
+          <input id="lateEntrantName" placeholder="Late entrant name" />
+          <button class="btnTiny primary" id="btnAddLateEntrant">Add Latecomer</button>
+          <span class="muted" id="lateAddMsg">Fills eligible Round 1 BYE spots only.</span>
+        </div>
+      </div>
 
-    <div class="viewer" id="bracketViewer">
-      <div class="zoomStage" id="bracketZoomStage">
-        <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
+      <div class="viewer" id="bracketViewer">
+        <div class="zoomStage" id="bracketZoomStage">
+          <div id="bracketRoot" class="muted">No bracket loaded yet.</div>
+        </div>
       </div>
     </div>
   </div>
