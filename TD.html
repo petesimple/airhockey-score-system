@@ -279,17 +279,44 @@ v3.0.2 - Spreadsheet Letter Crossovers
   .bad{ color: var(--bad); font-weight: 900; }
 
   .viewer{
-    overflow:auto;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.18);
-    padding:10px;
-  }
+  overflow:auto;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  padding:10px;
+  width:100%;
+  max-width:100%;
+  min-height:70vh;
+  scrollbar-width:auto;
+  scrollbar-color:#00bcd4 #111;
+}
 
-  .zoomStage{
-    transform-origin: top left;
-    display:inline-block;
-  }
+.viewer::-webkit-scrollbar{
+  width:16px;
+  height:16px;
+}
+
+.viewer::-webkit-scrollbar-track{
+  background:#111;
+  border-radius:999px;
+}
+
+.viewer::-webkit-scrollbar-thumb{
+  background:#00bcd4;
+  border-radius:999px;
+  border:3px solid #111;
+}
+
+.viewer::-webkit-scrollbar-corner{
+  background:#111;
+}
+
+.zoomStage{
+  transform-origin: top left;
+  display:inline-block;
+  min-width:max-content;
+  min-height:max-content;
+}
 
   .bracket{
     min-width:1100px;
