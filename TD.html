@@ -3239,12 +3239,41 @@ function nextPow2(n){
   return p;
 }
 
+function getAutoBracketPlayerCount(playerCount){
+  let adjusted = Number(playerCount || 0);
+
+  if(adjusted < 2) return adjusted;
+
+  /*
+    Auto mode preference:
+    If the entrant count is even, pretend one extra BYE slot is needed.
+    This forces the next bracket size up and guarantees at least one
+    opening-round BYE, unless already at the 128 ceiling.
+  */
+  if(adjusted % 2 === 0 && adjusted < 128){
+    adjusted += 1;
+  }
+
+  return adjusted;
+}
+
 function getRequestedBracketSize(playerCount){
   const sel = document.getElementById("bracketSizeSelect");
-  const raw = sel ? sel.value : "128";
-  let size = raw === "auto" ? nextPow2(playerCount) : Number(raw);
+  const raw = sel ? sel.value : "auto";
 
-  if(!size || Number.isNaN(size)) size = nextPow2(playerCount);
+  let size;
+
+  if(raw === "auto"){
+    const adjustedCount = getAutoBracketPlayerCount(playerCount);
+    size = nextPow2(adjustedCount);
+  }else{
+    size = Number(raw);
+  }
+
+  if(!size || Number.isNaN(size)){
+    size = nextPow2(getAutoBracketPlayerCount(playerCount));
+  }
+
   size = Math.max(4, Math.min(128, size));
 
   if(size < playerCount){
