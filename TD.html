@@ -1411,9 +1411,20 @@ body.bracketFullscreenOpen{
       <span><span class="legendDot legendOffline"></span>Offline</span>
     </div>
 
-    <div class="roomGridWrap">
-      <div id="roomCanvasSetup" class="roomCanvas"></div>
-    </div>
+    <div class="roomViewTools">
+  <span class="mini">Room Zoom</span>
+  <button class="btnTiny" id="btnRoomZoomOutSetup" type="button">-</button>
+  <span class="roomZoomReadout" id="roomZoomReadoutSetup">100%</span>
+  <button class="btnTiny" id="btnRoomZoomInSetup" type="button">+</button>
+  <button class="btnTiny" id="btnRoomZoomResetSetup" type="button">100%</button>
+  <button class="btnTiny primary" id="btnRoomFitSetup" type="button">Fit</button>
+</div>
+
+<div class="roomGridWrap" id="roomViewerSetup">
+  <div class="roomZoomStage" id="roomZoomStageSetup">
+    <div id="roomCanvasSetup" class="roomCanvas"></div>
+  </div>
+</div>
 
     <div class="roomHint">
       Setup tips: drag a table to move it. Click a table to cycle Open, Assigned, Playing, Offline. Tap ↻ to rotate a table 90 degrees. Double click a table to rename it. Table layout, rotation, and status are saved on this device.
