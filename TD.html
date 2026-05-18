@@ -1301,9 +1301,20 @@ body.bracketFullscreenOpen{
 
     <div id="assignPanel" class="assignPanel" style="display:none;"></div>
 
-    <div class="roomGridWrap">
-      <div id="roomCanvasLinks" class="roomCanvas"></div>
-    </div>
+    <div class="roomViewTools">
+  <span class="mini">Room Zoom</span>
+  <button class="btnTiny" id="btnRoomZoomOutLinks" type="button">-</button>
+  <span class="roomZoomReadout" id="roomZoomReadoutLinks">100%</span>
+  <button class="btnTiny" id="btnRoomZoomInLinks" type="button">+</button>
+  <button class="btnTiny" id="btnRoomZoomResetLinks" type="button">100%</button>
+  <button class="btnTiny primary" id="btnRoomFitLinks" type="button">Fit</button>
+</div>
+
+<div class="roomGridWrap" id="roomViewerLinks">
+  <div class="roomZoomStage" id="roomZoomStageLinks">
+    <div id="roomCanvasLinks" class="roomCanvas"></div>
+  </div>
+</div>
 
     <div class="roomHint">
       Click Assign Table on a bracket match, then click an open table here. After generating links, mark the table Playing or Open as the room changes.
