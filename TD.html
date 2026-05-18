@@ -2389,6 +2389,123 @@ const ROOM_NAME_KEY = "TD_ROOM_NAME_V1";
 
 let ROOM_STATE = null;
 let pendingAssignMatch = null;
+let roomZoom = 1;
+
+function setRoomZoomPercent(pct, keepCenter = true){
+  const nextZoom = Math.max(0.35, Math.min(2.5, Number(pct || 100) / 100));
+  const oldZoom = roomZoom || 1;
+
+  const viewers = [
+    document.getElementById("roomViewerLinks"),
+    document.getElementById("roomViewerSetup")
+  ].filter(Boolean);
+
+  const centers = viewers.map(viewer => ({
+    viewer,
+    x: oldZoom ? (viewer.scrollLeft + viewer.clientWidth / 2) / oldZoom : 0,
+    y: oldZoom ? (viewer.scrollTop + viewer.clientHeight / 2) / oldZoom : 0
+  }));
+
+  roomZoom = nextZoom;
+
+  ["roomZoomStageLinks", "roomZoomStageSetup"].forEach(id => {
+    const stage = document.getElementById(id);
+    if(stage){
+      stage.style.transform = `scale(${roomZoom})`;
+    }
+  });
+
+  ["roomZoomReadoutLinks", "roomZoomReadoutSetup"].forEach(id => {
+    const readout = document.getElementById(id);
+    if(readout){
+      readout.textContent = `${Math.round(roomZoom * 100)}%`;
+    }
+  });
+
+  localStorage.setItem("TD_ROOM_ZOOM", String(Math.round(roomZoom * 100)));
+
+  requestAnimationFrame(() => {
+    if(!keepCenter) return;
+
+    centers.forEach(item => {
+      item.viewer.scrollLeft = Math.max(0, item.x * roomZoom - item.viewer.clientWidth / 2);
+      item.viewer.scrollTop = Math.max(0, item.y * roomZoom - item.viewer.clientHeight / 2);
+    });
+  });
+}
+
+function roomZoomIn(){
+  setRoomZoomPercent((roomZoom * 100) + 10);
+}
+
+function roomZoomOut(){
+  setRoomZoomPercent((roomZoom * 100) - 10);
+}
+
+function resetRoomZoom(){
+  setRoomZoomPercent(100, false);
+}
+
+function fitRoomView(which = "links"){
+  const viewer = document.getElementById(which === "setup" ? "roomViewerSetup" : "roomViewerLinks");
+  const canvas = document.getElementById(which === "setup" ? "roomCanvasSetup" : "roomCanvasLinks");
+
+  if(!viewer || !canvas) return;
+
+  const availableW = Math.max(300, viewer.clientWidth - 28);
+  const availableH = Math.max(240, viewer.clientHeight - 28);
+  const neededW = canvas.offsetWidth || 1000;
+  const neededH = canvas.offsetHeight || 620;
+
+  const targetPct = Math.floor(Math.min(availableW / neededW, availableH / neededH) * 100);
+  const clamped = Math.max(35, Math.min(250, targetPct));
+
+  setRoomZoomPercent(clamped, false);
+
+  viewer.scrollLeft = 0;
+  viewer.scrollTop = 0;
+}
+
+function wireRoomZoomTools(){
+  const pairs = [
+    ["btnRoomZoomInLinks", roomZoomIn],
+    ["btnRoomZoomOutLinks", roomZoomOut],
+    ["btnRoomZoomResetLinks", resetRoomZoom],
+    ["btnRoomFitLinks", () => fitRoomView("links")],
+    ["btnRoomZoomInSetup", roomZoomIn],
+    ["btnRoomZoomOutSetup", roomZoomOut],
+    ["btnRoomZoomResetSetup", resetRoomZoom],
+    ["btnRoomFitSetup", () => fitRoomView("setup")]
+  ];
+
+  pairs.forEach(([id, fn]) => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("click", fn);
+  });
+
+  ["roomViewerLinks", "roomViewerSetup"].forEach(id => {
+    const viewer = document.getElementById(id);
+    if(!viewer) return;
+
+    viewer.addEventListener("wheel", e => {
+      if(e.ctrlKey || e.metaKey){
+        e.preventDefault();
+
+        if(e.deltaY < 0) roomZoomIn();
+        else roomZoomOut();
+      }
+
+      if(e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+        viewer.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive:false });
+  });
+
+  const saved = parseInt(localStorage.getItem("TD_ROOM_ZOOM") || "100", 10);
+  setRoomZoomPercent(isFinite(saved) ? saved : 100, false);
+}
+  
 
 function defaultRoomState(){
   return {
