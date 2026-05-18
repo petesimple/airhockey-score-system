@@ -5524,8 +5524,9 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   if(btnRoomRefreshLinks) btnRoomRefreshLinks.addEventListener("click", renderRoomViews);
 
   renderRoomViews();
+  wireRoomZoomTools();
 
-  BRACKET_STATE = loadBracketState();
+BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
     propagateWinners();
     renderBracket();
