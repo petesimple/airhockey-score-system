@@ -1910,11 +1910,15 @@ function generateMatchLink() {
   if (ref) generatedUrl += `&ref=${ref}`;
 
   const matchSheetBase = 'https://petesimple.github.io/AHMS/';
-  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}`;
+
+  const roomMap = encodeRoomMapForAHMS(table);
+  const roomMapParam = roomMap ? `&roomMap=${roomMap}` : "";
+
+  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
 
   generatedMatchSheetUrl = matchSheetUrl;
-  generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}`;
-
+  generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
+  
   const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
   matchSheetLink.style.display = 'inline-block';
