@@ -2403,6 +2403,39 @@ function findRoomTableByNumber(number){
   return getRoomTables().find(t => String(t.number || "").trim() === n);
 }
 
+function buildRoomMapPayload(selectedTableNumber){
+  const selected = String(selectedTableNumber || "").trim();
+
+  const tables = getRoomTables()
+    .filter(t => t.active !== false)
+    .map(t => ({
+      number: String(t.number || ""),
+      x: Number(t.x || 0),
+      y: Number(t.y || 0),
+      rotation: Number(t.rotation || 0),
+      selected: String(t.number || "").trim() === selected
+    }));
+
+  return {
+    version: 1,
+    roomName: localStorage.getItem(ROOM_NAME_KEY) || "",
+    selectedTable: selected,
+    canvasWidth: 1000,
+    canvasHeight: 620,
+    tables
+  };
+}
+
+function encodeRoomMapForAHMS(selectedTableNumber){
+  try{
+    const payload = buildRoomMapPayload(selectedTableNumber);
+    return encodeURIComponent(JSON.stringify(payload));
+  }catch(e){
+    console.warn("Room map payload failed:", e);
+    return "";
+  }
+}  
+
 function tableStatusLabel(status){
   if(status === "assigned") return "Assigned";
   if(status === "playing") return "Playing";
