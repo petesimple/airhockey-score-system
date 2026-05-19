@@ -1507,7 +1507,7 @@ body.bracketFullscreenOpen{
                 <option value="16">16</option>
                 <option value="32">32</option>
                 <option value="64">64</option>
-                <option value="128" selected>128</option>
+                <option value="128">128</option>
               </select>
             </label>
           </div>
@@ -1929,6 +1929,9 @@ document.addEventListener("click", (e)=>{
 let generatedUrl = '';
 let generatedMatchSheetUrl = '';
 let generatedLocalAHMSUrl = '';
+let currentBracketCallNumber = '';
+let currentBracketMatchId = '';
+let currentBracketLane = '';
 let currentPage = 1;
 const pageSize = 25;
 
@@ -1938,6 +1941,9 @@ function generateMatchLink() {
   const p1 = encodeURIComponent(p1Raw);
   const p2 = encodeURIComponent(p2Raw);
   const match = $('#matchLength').value;
+  const matchNum = currentBracketCallNumber || "";
+  const bracketMatchId = currentBracketMatchId || "";
+  const bracketLane = currentBracketLane || "";
   const table = $('#tableNumber').value.trim();
   const refRaw = $('#refName').value.trim();
   const ref = encodeURIComponent(refRaw);
@@ -1962,11 +1968,16 @@ function generateMatchLink() {
   const roomMap = encodeRoomMapForAHMS(table);
   const roomMapParam = roomMap ? `&roomMap=${roomMap}` : "";
 
-  const matchSheetUrl = `${matchSheetBase}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
+  const bracketParams =
+  `${matchNum ? `&matchNum=${encodeURIComponent(matchNum)}` : ""}` +
+  `${bracketMatchId ? `&bracketMatchId=${encodeURIComponent(bracketMatchId)}` : ""}` +
+  `${bracketLane ? `&bracketLane=${encodeURIComponent(bracketLane)}` : ""}`;
 
-  generatedMatchSheetUrl = matchSheetUrl;
-  generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
-  
+const matchSheetUrl = `${matchSheetBase}?match=${match}${bracketParams}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
+
+generatedMatchSheetUrl = matchSheetUrl;
+generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
+    
   const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
   matchSheetLink.style.display = 'inline-block';
@@ -1984,10 +1995,11 @@ function generateMatchLink() {
   }
 
   const extraNote = `
-    ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
-    ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ''}
-    <p><strong>Match ID:</strong> ${esc(matchId)}</p>
-  `;
+  ${matchNum ? `<p><strong>Tournament Match Number:</strong> Match ${esc(matchNum)}</p>` : ''}
+  ${table ? `<p><strong>Table Assignment:</strong> Table ${esc(table)}</p>` : ''}
+  ${refRaw ? `<p><strong>Referee:</strong> ${esc(refRaw)}</p>` : ''}
+  <p><strong>Match ID:</strong> ${esc(matchId)}</p>
+`;
 
   $('#result').innerHTML = `
     <p><strong>Match Link:</strong></p>
@@ -2018,18 +2030,21 @@ function generateMatchLink() {
   addToMatchLog(readableMatch, generatedUrl);
 
   const payload = {
-    timestamp: new Date().toISOString(),
-    source: 'TD',
-    matchId,
-    p1: p1Raw,
-    p2: p2Raw,
-    matchType: `Best of ${match}`,
-    table: table || '',
-    referee: refRaw || '',
-    scoreboardUrl: generatedUrl,
-    matchSheetUrl: matchSheetUrl,
-    localAHMSUrl: generatedLocalAHMSUrl
-  };
+  timestamp: new Date().toISOString(),
+  source: 'TD',
+  matchId,
+  matchNum,
+  bracketMatchId,
+  bracketLane,
+  p1: p1Raw,
+  p2: p2Raw,
+  matchType: `Best of ${match}`,
+  table: table || '',
+  referee: refRaw || '',
+  scoreboardUrl: generatedUrl,
+  matchSheetUrl: matchSheetUrl,
+  localAHMSUrl: generatedLocalAHMSUrl
+};
 
   if(isSafeMode()){
     showCloudStatus("Safe Mode: match log not posted.", true);
@@ -2041,7 +2056,8 @@ function generateMatchLink() {
   scoreboardUrl: generatedUrl,
   matchSheetUrl: generatedMatchSheetUrl,
   localAHMSUrl: generatedLocalAHMSUrl,
-  matchType: match
+  matchType: match,
+  callNumber: matchNum
 });
 }
 
@@ -2513,10 +2529,10 @@ function defaultRoomState(){
   return {
     version: 1,
     tables: [
-      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
-      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
-      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" },
-      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"" }
+      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
+      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
+      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
+      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" }
     ]
   };
 }
@@ -2544,7 +2560,8 @@ function loadRoomState(){
   scoreboardUrl:"",
   matchSheetUrl:"",
   localAHMSUrl:"",
-  matchType:""
+  matchType:"",
+  callNumber:""
 }, t));
 
     return parsed;
@@ -2649,6 +2666,7 @@ function cycleTableStatus(table){
     table.matchSheetUrl = "";
     table.localAHMSUrl = "";
     table.matchType = "";
+    table.callNumber = "";
   }
 
   saveRoomState();
@@ -2666,12 +2684,13 @@ function renderRoomTableEl(table, mode){
   el.dataset.mode = mode;
 
   const players = [table.p1, table.p2].filter(Boolean).join(" vs ");
+const callLabel = table.callNumber ? `Match ${table.callNumber}` : "";
 
   el.innerHTML = `
     ${mode === "setup" ? `<button type="button" class="roomRotateBtn" title="Rotate table" data-rotate-table="${esc(table.id)}">↻</button>` : ""}
     <div class="roomTableNum">Table ${esc(table.number || "")}</div>
     <div class="roomTableStatus">${esc(tableStatusLabel(table.status))}</div>
-    <div class="roomTablePlayers">${esc(players || "Ready")}</div>
+    <div class="roomTablePlayers">${esc(callLabel ? `${callLabel}: ${players || "Ready"}` : (players || "Ready"))}</div>
   `;
 
   if(mode === "setup"){
@@ -2823,7 +2842,8 @@ function addRoomTable(){
     scoreboardUrl: "",
     matchSheetUrl: "",
     localAHMSUrl: "",
-    matchType: ""
+    matchType: "",
+    callNumber:""
   });
 
   saveRoomState();
@@ -2857,6 +2877,7 @@ function clearRoomStatuses(){
     t.matchSheetUrl = "";
     t.localAHMSUrl = "";
     t.matchType = "";
+    table.callNumber = "";
   });
 
   saveRoomState();
@@ -2963,6 +2984,7 @@ function assignPendingMatchToTable(tableId){
   table.p2 = m.p2 || "";
   table.matchId = m.id || "";
   table.matchLane = pendingAssignMatch.lane || "";
+  table.callNumber = m.callNumber || "";
 
   saveRoomState();
 
@@ -2970,6 +2992,8 @@ function assignPendingMatchToTable(tableId){
   document.getElementById("player2").value = m.p2 || "";
   document.getElementById("tableNumber").value = table.number || "";
   document.getElementById("refName").value = "";
+
+  setCurrentBracketMatchContext(m, pendingAssignMatch.lane || "");
 
   generateMatchLink();
 
@@ -3013,6 +3037,9 @@ function restoreMatchDetailsFromTable(tableId){
   generatedUrl = table.scoreboardUrl || "";
   generatedMatchSheetUrl = table.matchSheetUrl || "";
   generatedLocalAHMSUrl = table.localAHMSUrl || "";
+  currentBracketCallNumber = table.callNumber ? String(table.callNumber) : "";
+  currentBracketMatchId = table.matchId ? String(table.matchId) : "";
+  currentBracketLane = table.matchLane ? String(table.matchLane) : "";
 
   const matchSheetLink = document.getElementById("matchSheetLink");
   if(matchSheetLink && generatedMatchSheetUrl){
@@ -3048,11 +3075,12 @@ function restoreMatchDetailsFromTable(tableId){
   const result = document.getElementById("result");
   if(result && generatedUrl){
     result.innerHTML = `
-      <p><strong>Match Link:</strong></p>
-      <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
-      <p><strong>Table Assignment:</strong> Table ${esc(table.number || "")}</p>
-      <p><strong>Match ID:</strong> ${esc(table.matchId || "")}</p>
-    `;
+  <p><strong>Match Link:</strong></p>
+  <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
+  ${table.callNumber ? `<p><strong>Tournament Match Number:</strong> Match ${esc(table.callNumber)}</p>` : ""}
+  <p><strong>Table Assignment:</strong> Table ${esc(table.number || "")}</p>
+  <p><strong>Match ID:</strong> ${esc(table.matchId || "")}</p>
+`;
   }
 
   const qr = document.getElementById("qrcode");
@@ -3158,6 +3186,7 @@ function clearStaleTableMatch(tableId){
   table.matchSheetUrl = "";
   table.localAHMSUrl = "";
   table.matchType = "";
+  table.callNumber = "";
 
   saveRoomState();
   renderRoomViews();
@@ -3252,6 +3281,7 @@ function markTableOpen(tableId){
   table.matchSheetUrl = "";
   table.localAHMSUrl = "";
   table.matchType = "";
+  table.callNumber = "";
 
   saveRoomState();
   renderRoomViews();
@@ -3290,6 +3320,7 @@ function markTableOffline(tableId){
   table.matchSheetUrl = "";
   table.localAHMSUrl = "";
   table.matchType = "";
+  table.callNumber = "";
 
   saveRoomState();
   renderRoomViews();
@@ -3310,6 +3341,7 @@ function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId, urls = {})
   table.matchSheetUrl = urls.matchSheetUrl || table.matchSheetUrl || "";
   table.localAHMSUrl = urls.localAHMSUrl || table.localAHMSUrl || "";
   table.matchType = urls.matchType || table.matchType || "";
+  table.callNumber = urls.callNumber || table.callNumber || "";
 
   saveRoomState();
   renderRoomViews();
@@ -3387,6 +3419,12 @@ function assignCallNumbersToReadyMatches(){
 
 function matchCallLabel(m){
   return m && m.callNumber ? `Match ${m.callNumber}` : "Match Pending";
+}
+
+function setCurrentBracketMatchContext(match, lane = ""){
+  currentBracketCallNumber = match && match.callNumber ? String(match.callNumber) : "";
+  currentBracketMatchId = match && match.id ? String(match.id) : "";
+  currentBracketLane = lane || "";
 }
 
 function saveBracketState(){
@@ -4786,7 +4824,9 @@ function wireBracketChartEditing(){
       if(!m) return;
 
       document.getElementById("player1").value = m.p1 || "";
-      document.getElementById("player2").value = m.p2 || "";
+	  document.getElementById("player2").value = m.p2 || "";
+
+	  setCurrentBracketMatchContext(m, lane);
 
       const status = document.getElementById("cloudSyncStatus");
       if(status){
