@@ -1548,7 +1548,8 @@ body.bracketFullscreenOpen{
     <button class="btnTiny" id="btnBracketZoomIn" type="button">+</button>
     <button class="btnTiny" id="btnBracketZoomReset" type="button">100%</button>
     <button class="btnTiny primary" id="btnBracketFitWidth" type="button">Fit Width</button>
-    <button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
+<button class="btnTiny primary" id="btnJumpFinals" type="button">Jump to Finals</button>
+<button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
   </div>
 </div>
 
@@ -4966,6 +4967,19 @@ function fitBracketWidth(){
   viewer.scrollTop = 0;
 }
 
+function jumpToFinals(){
+  const viewer = document.getElementById("bracketViewer");
+  const finals = document.querySelector(".finalsLane");
+
+  if(!viewer || !finals) return;
+
+  finals.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center"
+  });
+}
+
 function toggleBracketFullscreen(){
   const tab = document.getElementById("tabBrackets");
   const btn = document.getElementById("btnBracketFullscreen");
@@ -4993,6 +5007,7 @@ function wireBracketViewTools(){
   const zout = document.getElementById("btnBracketZoomOut");
   const zreset = document.getElementById("btnBracketZoomReset");
   const fit = document.getElementById("btnBracketFitWidth");
+  const jumpFinals = document.getElementById("btnJumpFinals");
   const full = document.getElementById("btnBracketFullscreen");
   const viewer = getBracketViewer();
 
@@ -5000,6 +5015,7 @@ function wireBracketViewTools(){
   if(zout) zout.addEventListener("click", bracketZoomOut);
   if(zreset) zreset.addEventListener("click", resetBracketZoom);
   if(fit) fit.addEventListener("click", fitBracketWidth);
+  if(jumpFinals) jumpFinals.addEventListener("click", jumpToFinals);
   if(full) full.addEventListener("click", toggleBracketFullscreen);
 
   if(viewer){
