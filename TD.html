@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v3.0.11 - Seven Game Score Fields
+Tournament Director v3.0.12 - Room Stats in Settings
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1292,6 +1292,11 @@ body.bracketFullscreenOpen{
     padding:8px 6px;
   }
 }
+
+#roomStatsPanel{
+  margin-top:10px;
+}
+
 </style>
 </head>
 
@@ -1384,47 +1389,51 @@ body.bracketFullscreenOpen{
   </div>
 </div>
 
-<div class="assignPanel" id="roomStatsPanel">
-  <div class="row-left" style="justify-content:space-between;">
-    <div>
-      <div style="font-weight:1000;">Room Timing Stats</div>
-      <div class="mini">Tracks called time, playing time, and total table time when a table is cleared back to Open.</div>
-    </div>
-    <div class="roomStatsMiniBtnRow">
-      <button class="btnTiny primary" id="btnRoomStatsRefresh" type="button">Refresh Stats</button>
-      <button class="btnTiny" id="btnRoomStatsExport" type="button">Export CSV</button>
-      <button class="btnTiny danger" id="btnRoomStatsClear" type="button">Clear Stats</button>
-    </div>
-  </div>
-
-  <div id="roomStatsSummary" class="roomStatsGrid"></div>
-
-  <div class="roomStatsTableWrap">
-    <table id="roomStatsTable">
-      <thead>
-        <tr>
-          <th>Table</th>
-          <th>Match</th>
-          <th>Players</th>
-          <th>Called</th>
-          <th>Playing</th>
-          <th>Total</th>
-          <th>Started</th>
-          <th>Ended</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
-
 <div class="roomHint">
   Click Assign Table on a bracket match, then click an open table here. After generating links, mark the table Playing or Open as the room changes.
 </div>
   </div>
 
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
-    <summary class="clicky">Settings</summary>
+  <summary class="clicky">Settings</summary>
+
+    <details class="block" style="max-width:900px;margin:14px auto" open>
+      <summary class="clicky">Room Timing Stats</summary>
+
+      <div class="assignPanel" id="roomStatsPanel">
+        <div class="row-left" style="justify-content:space-between;">
+          <div>
+            <div style="font-weight:1000;">Room Timing Stats</div>
+            <div class="mini">Tracks called time, playing time, and total table time when a table is cleared back to Open.</div>
+          </div>
+          <div class="roomStatsMiniBtnRow">
+            <button class="btnTiny primary" id="btnRoomStatsRefresh" type="button">Refresh Stats</button>
+            <button class="btnTiny" id="btnRoomStatsExport" type="button">Export CSV</button>
+            <button class="btnTiny danger" id="btnRoomStatsClear" type="button">Clear Stats</button>
+          </div>
+        </div>
+
+        <div id="roomStatsSummary" class="roomStatsGrid"></div>
+
+        <div class="roomStatsTableWrap">
+          <table id="roomStatsTable">
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Match</th>
+                <th>Players</th>
+                <th>Called</th>
+                <th>Playing</th>
+                <th>Total</th>
+                <th>Started</th>
+                <th>Ended</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
 
     <details class="block" style="max-width:900px;margin:14px auto">
       <summary class="clicky">TD Safe Mode</summary>
@@ -1756,7 +1765,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.11 - Seven Game Score Fields";
+const TD_BUILD = "v3.0.12 - Room Stats in Settings";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
