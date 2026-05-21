@@ -458,43 +458,43 @@ Tournament Director v3.0.10 - Fullscreen Links Fix
   }
 
   .slot{
-    display:grid;
-    grid-template-columns: 1fr 44px 44px;
-    gap:8px;
-    align-items:center;
-    margin-bottom:8px;
-    padding:8px;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,.10);
-    background:rgba(0,0,0,.20);
-  }
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) minmax(88px, auto);
+  gap:10px;
+  align-items:center;
+  margin-bottom:8px;
+  padding:8px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.20);
+}
 
   .slot:last-child{ margin-bottom:0; }
   .name{ font-weight:900; font-size:13px; line-height:1.1; }
   .seed{ font-size:11px; color:rgba(255,255,255,.55); margin-top:2px; }
 
-  .scoreBox{
-    width:44px;
-    text-align:center;
-    padding:8px 6px;
-    border-radius:10px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10);
-    color:#fff;
-    font-weight:900;
-  }
+  .scoreBox,
+.scoreInput{
+  width:100%;
+  min-width:88px;
+  max-width:118px;
+  text-align:center;
+  padding:8px 8px;
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.10);
+  color:#fff;
+  font-weight:900;
+  font-size:18px;
+  line-height:1.1;
+  outline:none;
+  font-variant-numeric: tabular-nums;
+}
 
-  .scoreInput{
-    width:44px;
-    text-align:center;
-    padding:8px 6px;
-    border-radius:10px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10);
-    color:#fff;
-    font-weight:900;
-    outline:none;
-  }
+.scoreBox{
+  overflow:visible;
+  white-space:nowrap;
+}
 
   .scoreInput:focus{
     border-color: rgba(0,234,255,.7);
@@ -1276,12 +1276,22 @@ body.bracketFullscreenOpen{
   }
 
   @media (max-width: 720px){
-    body{ padding:10px; }
-    .card{ padding:12px; }
-    #logo{ height:120px !important; }
-    .slot{ grid-template-columns:1fr 44px; }
-    .slot > div:last-child{ display:none; }
+  body{ padding:10px; }
+  .card{ padding:12px; }
+  #logo{ height:120px !important; }
+
+  .slot{
+    grid-template-columns:minmax(0, 1fr) minmax(76px, auto);
   }
+
+  .scoreBox,
+  .scoreInput{
+    min-width:76px;
+    max-width:104px;
+    font-size:16px;
+    padding:8px 6px;
+  }
+}
 </style>
 </head>
 
@@ -1746,7 +1756,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.10 - Fullscreen Links Fix";
+const TD_BUILD = "v3.0.11 - Seven Game Score Fields";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4998,15 +5008,16 @@ function renderSlot(match, lane, which, editable){
     ${
       canEdit
         ? `<input
-             class="scoreInput"
-             inputmode="numeric"
-             pattern="[0-9]*"
-             placeholder="-"
-             value="${esc(score)}"
-             data-lane="${esc(lane)}"
-             data-id="${esc(id)}"
-             data-which="${esc(which)}"
-           />`
+     class="scoreInput"
+     inputmode="numeric"
+     pattern="[0-9]*"
+     maxlength="7"
+     placeholder="-"
+     value="${esc(score)}"
+     data-lane="${esc(lane)}"
+     data-id="${esc(id)}"
+     data-which="${esc(which)}"
+   />`
         : `<div class="scoreBox">${esc(score)}</div>`
     }
 
@@ -5229,7 +5240,7 @@ function wireBracketChartEditing(){
 
     if(!m) return;
 
-    const v = (inp.value || "").replace(/[^\d]/g, "");
+    const v = (inp.value || "").replace(/[^\d]/g, "").slice(0, 7);
     inp.value = v;
 
     if(which === "p1") m.s1 = v;
