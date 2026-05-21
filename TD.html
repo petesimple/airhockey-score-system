@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v3.0.9 - Room Timers
+Tournament Director v3.0.10 - Fullscreen Links Fix
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1639,6 +1639,7 @@ body.bracketFullscreenOpen{
     <button class="btnTiny" id="btnBracketZoomReset" type="button">100%</button>
     <button class="btnTiny primary" id="btnBracketFitWidth" type="button">Fit Width</button>
 <button class="btnTiny primary" id="btnJumpFinals" type="button">Jump to Finals</button>
+<button class="btnTiny primary" id="btnBracketGoLinks" type="button">Links Page</button>
 <button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
   </div>
 </div>
@@ -1745,7 +1746,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.9 - Room Timers";
+const TD_BUILD = "v3.0.10 - Fullscreen Links Fix";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2003,9 +2004,38 @@ function jsonp(url, params = {}, timeoutMs = 12000){
   TABS
 ========================================================= */
 function setTab(id){
+  const bracketTab = document.getElementById("tabBrackets");
+  const fullBtn = document.getElementById("btnBracketFullscreen");
+
+  if(id !== "tabBrackets" && bracketTab && bracketTab.classList.contains("bracketFullscreen")){
+    bracketTab.classList.remove("bracketFullscreen");
+    document.body.classList.remove("bracketFullscreenOpen");
+
+    if(fullBtn){
+      fullBtn.textContent = "Fullscreen";
+    }
+  }
+
   document.querySelectorAll(".tabbtn").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
   document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("active", p.id === id));
   localStorage.setItem("TD_ACTIVE_TAB", id);
+
+  if(id === "tabMatch"){
+    requestAnimationFrame(() => {
+      renderRoomViews();
+      renderRoomStats();
+    });
+  }
+
+  if(id === "tabBrackets"){
+    requestAnimationFrame(() => {
+      const viewer = getBracketViewer && getBracketViewer();
+      if(viewer){
+        viewer.scrollLeft = viewer.scrollLeft;
+        viewer.scrollTop = viewer.scrollTop;
+      }
+    });
+  }
 }
 
 document.addEventListener("click", (e)=>{
@@ -5410,6 +5440,7 @@ function wireBracketViewTools(){
   const zreset = document.getElementById("btnBracketZoomReset");
   const fit = document.getElementById("btnBracketFitWidth");
   const jumpFinals = document.getElementById("btnJumpFinals");
+  const goLinks = document.getElementById("btnBracketGoLinks");
   const full = document.getElementById("btnBracketFullscreen");
   const viewer = getBracketViewer();
 
@@ -5418,6 +5449,7 @@ function wireBracketViewTools(){
   if(zreset) zreset.addEventListener("click", resetBracketZoom);
   if(fit) fit.addEventListener("click", fitBracketWidth);
   if(jumpFinals) jumpFinals.addEventListener("click", jumpToFinals);
+  if(goLinks) goLinks.addEventListener("click", () => setTab("tabMatch"));
   if(full) full.addEventListener("click", toggleBracketFullscreen);
 
   if(viewer){
