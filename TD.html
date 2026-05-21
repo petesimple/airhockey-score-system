@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v3.0.8 - Bracket Call Numbers
+Tournament Director v3.0.9 - Room Timers
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -752,6 +752,62 @@ Tournament Director v3.0.8 - Bracket Call Numbers
     margin:10px 0;
   }
 
+.roomTableTimer{
+  font-size:11px;
+  margin-top:5px;
+  padding:3px 7px;
+  border-radius:999px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.88);
+  font-weight:900;
+  letter-spacing:.2px;
+}
+
+.roomStatsGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:10px;
+  margin-top:12px;
+}
+
+.roomStatCard{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.24);
+  border-radius:14px;
+  padding:12px;
+  text-align:left;
+}
+
+.roomStatValue{
+  font-size:1.45em;
+  font-weight:1000;
+  color:#00eaff;
+  line-height:1.1;
+}
+
+.roomStatLabel{
+  font-size:12px;
+  color:rgba(255,255,255,.66);
+  margin-top:4px;
+}
+
+.roomStatsTableWrap{
+  margin-top:12px;
+  overflow:auto;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.roomStatsMiniBtnRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+  margin-top:10px;
+}
+
   .legendDot{
     width:12px;
     height:12px;
@@ -1318,9 +1374,43 @@ body.bracketFullscreenOpen{
   </div>
 </div>
 
-    <div class="roomHint">
-      Click Assign Table on a bracket match, then click an open table here. After generating links, mark the table Playing or Open as the room changes.
+<div class="assignPanel" id="roomStatsPanel">
+  <div class="row-left" style="justify-content:space-between;">
+    <div>
+      <div style="font-weight:1000;">Room Timing Stats</div>
+      <div class="mini">Tracks called time, playing time, and total table time when a table is cleared back to Open.</div>
     </div>
+    <div class="roomStatsMiniBtnRow">
+      <button class="btnTiny primary" id="btnRoomStatsRefresh" type="button">Refresh Stats</button>
+      <button class="btnTiny" id="btnRoomStatsExport" type="button">Export CSV</button>
+      <button class="btnTiny danger" id="btnRoomStatsClear" type="button">Clear Stats</button>
+    </div>
+  </div>
+
+  <div id="roomStatsSummary" class="roomStatsGrid"></div>
+
+  <div class="roomStatsTableWrap">
+    <table id="roomStatsTable">
+      <thead>
+        <tr>
+          <th>Table</th>
+          <th>Match</th>
+          <th>Players</th>
+          <th>Called</th>
+          <th>Playing</th>
+          <th>Total</th>
+          <th>Started</th>
+          <th>Ended</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="roomHint">
+  Click Assign Table on a bracket match, then click an open table here. After generating links, mark the table Playing or Open as the room changes.
+</div>
   </div>
 
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
@@ -1655,7 +1745,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v3.0.8 - Bracket Call Numbers";
+const TD_BUILD = "v3.0.9 - Room Timers";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2058,7 +2148,9 @@ generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table
   matchSheetUrl: generatedMatchSheetUrl,
   localAHMSUrl: generatedLocalAHMSUrl,
   matchType: match,
-  callNumber: matchNum
+  callNumber: matchNum,
+  bracketMatchId,
+  bracketLane
 });
 }
 
@@ -2530,11 +2622,11 @@ function defaultRoomState(){
   return {
     version: 1,
     tables: [
-      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
-      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
-      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" },
-      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"" }
-    ]
+      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" }
+      ]
   };
 }
 
@@ -2557,12 +2649,16 @@ function loadRoomState(){
   p1:"",
   p2:"",
   matchId:"",
+  generatedMatchId:"",
   matchLane:"",
   scoreboardUrl:"",
   matchSheetUrl:"",
   localAHMSUrl:"",
   matchType:"",
-  callNumber:""
+  callNumber:"",
+  assignedAt:"",
+  playingAt:"",
+  lastStatusAt:""
 }, t));
 
     return parsed;
@@ -2630,6 +2726,123 @@ function tableStatusLabel(status){
   return "Open";
 }
 
+const ROOM_STATS_KEY = "TD_ROOM_TIMING_STATS_V1";
+let roomTimerInterval = null;
+
+function nowIso(){
+  return new Date().toISOString();
+}
+
+function msBetween(a, b){
+  if(!a) return 0;
+  const start = new Date(a).getTime();
+  const end = b ? new Date(b).getTime() : Date.now();
+  if(!isFinite(start) || !isFinite(end)) return 0;
+  return Math.max(0, end - start);
+}
+
+function fmtDuration(ms){
+  ms = Math.max(0, Number(ms || 0));
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+
+  if(h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  return `${m}:${String(s).padStart(2,"0")}`;
+}
+
+function getTableLiveTiming(table){
+  const status = table.status || "open";
+  const now = new Date().toISOString();
+
+  const calledMs =
+    status === "assigned"
+      ? msBetween(table.assignedAt, now)
+      : status === "playing"
+        ? msBetween(table.assignedAt, table.playingAt || now)
+        : 0;
+
+  const playingMs =
+    status === "playing"
+      ? msBetween(table.playingAt, now)
+      : 0;
+
+  return {
+    calledMs,
+    playingMs,
+    totalMs: calledMs + playingMs
+  };
+}
+
+function getRoomStats(){
+  try{
+    const arr = JSON.parse(localStorage.getItem(ROOM_STATS_KEY) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }catch{
+    return [];
+  }
+}
+
+function saveRoomStats(arr){
+  localStorage.setItem(ROOM_STATS_KEY, JSON.stringify(arr || []));
+}
+
+function clearTableAssignmentFields(table){
+  table.p1 = "";
+  table.p2 = "";
+  table.matchId = "";
+  table.generatedMatchId = "";
+  table.matchLane = "";
+  table.scoreboardUrl = "";
+  table.matchSheetUrl = "";
+  table.localAHMSUrl = "";
+  table.matchType = "";
+  table.callNumber = "";
+  table.assignedAt = "";
+  table.playingAt = "";
+  table.lastStatusAt = "";
+}
+
+function finalizeTableTiming(table, reason = "cleared"){
+  if(!table) return;
+
+  const hasMatch = table.p1 || table.p2 || table.matchId || table.callNumber;
+  const hadTiming = table.assignedAt || table.playingAt;
+
+  if(!hasMatch || !hadTiming) return;
+
+  const endedAt = nowIso();
+  const calledMs = table.playingAt
+    ? msBetween(table.assignedAt, table.playingAt)
+    : msBetween(table.assignedAt, endedAt);
+
+  const playingMs = table.playingAt
+    ? msBetween(table.playingAt, endedAt)
+    : 0;
+
+  const record = {
+    id: `roomstat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    tableNumber: table.number || "",
+    matchId: table.matchId || "",
+    matchLane: table.matchLane || "",
+    callNumber: table.callNumber || "",
+    p1: table.p1 || "",
+    p2: table.p2 || "",
+    assignedAt: table.assignedAt || "",
+    playingAt: table.playingAt || "",
+    endedAt,
+    calledMs,
+    playingMs,
+    totalMs: calledMs + playingMs,
+    reason
+  };
+
+  const stats = getRoomStats();
+  stats.unshift(record);
+  saveRoomStats(stats);
+}
+
 function isTableRotated(table){
   return Number(table.rotation || 0) % 180 === 90;
 }
@@ -2656,22 +2869,41 @@ function rotateRoomTable(tableId){
 function cycleTableStatus(table){
   const order = ["open", "assigned", "playing", "offline"];
   const idx = order.indexOf(table.status || "open");
-  table.status = order[(idx + 1) % order.length];
+  const nextStatus = order[(idx + 1) % order.length];
 
-  if(table.status === "open" || table.status === "offline"){
-    table.p1 = "";
-    table.p2 = "";
-    table.matchId = "";
-    table.matchLane = "";
-    table.scoreboardUrl = "";
-    table.matchSheetUrl = "";
-    table.localAHMSUrl = "";
-    table.matchType = "";
-    table.callNumber = "";
+  setTableStatus(table, nextStatus);
+}
+
+function setTableStatus(table, nextStatus){
+  if(!table) return;
+
+  const prevStatus = table.status || "open";
+  const stamp = nowIso();
+
+  if((nextStatus === "open" || nextStatus === "offline") && prevStatus !== "open" && prevStatus !== "offline"){
+    finalizeTableTiming(table, nextStatus);
+  }
+
+  table.status = nextStatus;
+  table.lastStatusAt = stamp;
+
+  if(nextStatus === "assigned"){
+    if(!table.assignedAt) table.assignedAt = stamp;
+    table.playingAt = "";
+  }
+
+  if(nextStatus === "playing"){
+    if(!table.assignedAt) table.assignedAt = stamp;
+    if(!table.playingAt) table.playingAt = stamp;
+  }
+
+  if(nextStatus === "open" || nextStatus === "offline"){
+    clearTableAssignmentFields(table);
   }
 
   saveRoomState();
   renderRoomViews();
+  renderRoomStats();
 }
 
 function renderRoomTableEl(table, mode){
@@ -2685,13 +2917,23 @@ function renderRoomTableEl(table, mode){
   el.dataset.mode = mode;
 
   const players = [table.p1, table.p2].filter(Boolean).join(" vs ");
-const callLabel = table.callNumber ? `Match ${table.callNumber}` : "";
+  const callLabel = table.callNumber ? `Match ${table.callNumber}` : "";
+  const timing = getTableLiveTiming(table);
+
+  let timerLabel = "";
+  if(table.status === "assigned"){
+  timerLabel = `Called ${fmtDuration(timing.calledMs)}`;
+  }
+  if(table.status === "playing"){
+  timerLabel = `Playing ${fmtDuration(timing.playingMs)}`;
+  }
 
   el.innerHTML = `
     ${mode === "setup" ? `<button type="button" class="roomRotateBtn" title="Rotate table" data-rotate-table="${esc(table.id)}">↻</button>` : ""}
     <div class="roomTableNum">Table ${esc(table.number || "")}</div>
     <div class="roomTableStatus">${esc(tableStatusLabel(table.status))}</div>
     <div class="roomTablePlayers">${esc(callLabel ? `${callLabel}: ${players || "Ready"}` : (players || "Ready"))}</div>
+    ${timerLabel ? `<div class="roomTableTimer">${esc(timerLabel)}</div>` : ""}
   `;
 
   if(mode === "setup"){
@@ -2839,12 +3081,16 @@ function addRoomTable(){
     p1: "",
     p2: "",
     matchId: "",
+    generatedMatchId:"",
     matchLane: "",
     scoreboardUrl: "",
     matchSheetUrl: "",
     localAHMSUrl: "",
     matchType: "",
-    callNumber:""
+    callNumber:"",
+    assignedAt:"",
+    playingAt:"",
+    lastStatusAt:""
   });
 
   saveRoomState();
@@ -2869,20 +3115,17 @@ function clearRoomStatuses(){
   if(!ROOM_STATE) ROOM_STATE = loadRoomState();
 
   getRoomTables().forEach(t=>{
+    if(t.status === "assigned" || t.status === "playing"){
+      finalizeTableTiming(t, "bulk-clear");
+    }
+
     t.status = "open";
-    t.p1 = "";
-    t.p2 = "";
-    t.matchId = "";
-    t.matchLane = "";
-    t.scoreboardUrl = "";
-    t.matchSheetUrl = "";
-    t.localAHMSUrl = "";
-    t.matchType = "";
-    t.callNumber = "";
+    clearTableAssignmentFields(t);
   });
 
   saveRoomState();
   renderRoomViews();
+  renderRoomStats();
 
   const msg = document.getElementById("roomSetupMsg");
   if(msg) msg.textContent = "All table statuses cleared.";
@@ -2916,15 +3159,22 @@ function renderAssignPanel(){
   if(!panel) return;
 
   if(!pendingAssignMatch){
+    if(panel.dataset.keepWhenIdle === "1"){
+      return;
+    }
+
     panel.style.display = "none";
     panel.innerHTML = "";
     return;
   }
 
+  panel.dataset.keepWhenIdle = "0";
+
   const m = findMatch(pendingAssignMatch.lane, pendingAssignMatch.id);
 
   if(!m){
     pendingAssignMatch = null;
+    panel.dataset.keepWhenIdle = "0";
     panel.style.display = "none";
     panel.innerHTML = "";
     return;
@@ -2962,9 +3212,19 @@ function renderAssignPanel(){
   if(cancel){
     cancel.addEventListener("click", ()=>{
       pendingAssignMatch = null;
+      panel.dataset.keepWhenIdle = "0";
       renderAssignPanel();
     });
   }
+}
+
+function closeAssignPanel(){
+  const panel = document.getElementById("assignPanel");
+  if(!panel) return;
+
+  panel.dataset.keepWhenIdle = "0";
+  panel.style.display = "none";
+  panel.innerHTML = "";
 }
 
 function assignPendingMatchToTable(tableId){
@@ -2980,14 +3240,13 @@ function assignPendingMatchToTable(tableId){
     if(!ok) return;
   }
 
-  table.status = "assigned";
   table.p1 = m.p1 || "";
   table.p2 = m.p2 || "";
   table.matchId = m.id || "";
   table.matchLane = pendingAssignMatch.lane || "";
   table.callNumber = m.callNumber || "";
 
-  saveRoomState();
+  setTableStatus(table, "assigned");
 
   document.getElementById("player1").value = m.p1 || "";
   document.getElementById("player2").value = m.p2 || "";
@@ -3003,6 +3262,7 @@ function assignPendingMatchToTable(tableId){
 
   const panel = document.getElementById("assignPanel");
   if(panel){
+  	panel.dataset.keepWhenIdle = "1";
     panel.style.display = "block";
     panel.innerHTML = `
       <div class="ok" style="font-weight:1000;">Assigned to Table ${esc(table.number)}</div>
@@ -3013,6 +3273,7 @@ function assignPendingMatchToTable(tableId){
         <button class="btnTiny" onclick="markTableOpen('${esc(table.id)}')">Mark Open</button>
         <button class="btnTiny" onclick="copyLink()">Copy Scoreboard</button>
         <button class="btnTiny" onclick="copyLocalAHMSInfo()">Copy AHMS</button>
+        <button class="btnTiny danger" onclick="closeAssignPanel()">Close</button>
       </div>
     `;
   }
@@ -3080,7 +3341,8 @@ function restoreMatchDetailsFromTable(tableId){
   <a href="${generatedUrl}" target="_blank">${generatedUrl}</a>
   ${table.callNumber ? `<p><strong>Tournament Match Number:</strong> Match ${esc(table.callNumber)}</p>` : ""}
   <p><strong>Table Assignment:</strong> Table ${esc(table.number || "")}</p>
-  <p><strong>Match ID:</strong> ${esc(table.matchId || "")}</p>
+  ${table.matchId ? `<p><strong>Bracket Match ID:</strong> ${esc(table.matchId)}</p>` : ""}
+${table.generatedMatchId ? `<p><strong>Generated Match ID:</strong> ${esc(table.generatedMatchId)}</p>` : ""}
 `;
   }
 
@@ -3103,6 +3365,7 @@ function renderQuickTableTools(tableId){
 
   if(!table || !panel) return;
 
+  panel.dataset.keepWhenIdle = "1";
   panel.style.display = "block";
   panel.innerHTML = `
     <div class="row-left" style="justify-content:space-between;">
@@ -3124,6 +3387,7 @@ function renderQuickTableTools(tableId){
   const close = document.getElementById("btnCloseTableTools");
   if(close){
     close.addEventListener("click", ()=>{
+      panel.dataset.keepWhenIdle = "0";
       panel.style.display = "none";
       panel.innerHTML = "";
     });
@@ -3178,28 +3442,20 @@ function clearStaleTableMatch(tableId){
   const table = findRoomTable(tableId);
   if(!table) return;
 
-  table.status = "open";
-  table.p1 = "";
-  table.p2 = "";
-  table.matchId = "";
-  table.matchLane = "";
-  table.scoreboardUrl = "";
-  table.matchSheetUrl = "";
-  table.localAHMSUrl = "";
-  table.matchType = "";
-  table.callNumber = "";
-
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "open");
 
   const panel = document.getElementById("assignPanel");
   if(panel){
-    panel.style.display = "block";
-    panel.innerHTML = `
-      <div class="ok" style="font-weight:1000;">Table ${esc(table.number)} cleared.</div>
-      <div class="mini">Old assignment removed. This table is open again.</div>
-    `;
-  }
+  panel.dataset.keepWhenIdle = "1";
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <div class="ok" style="font-weight:1000;">Table ${esc(table.number)} cleared.</div>
+    <div class="mini">Old assignment removed. This table is open again.</div>
+    <div class="roomStatusTools">
+      <button class="btnTiny danger" onclick="closeAssignPanel()">Close</button>
+    </div>
+  `;
+}
 }
 
 function jumpToBracketMatch(ref){
@@ -3273,79 +3529,225 @@ function markTableOpen(tableId){
   const table = findRoomTable(tableId);
   if(!table) return;
 
-  table.status = "open";
-  table.p1 = "";
-  table.p2 = "";
-  table.matchId = "";
-  table.matchLane = "";
-  table.scoreboardUrl = "";
-  table.matchSheetUrl = "";
-  table.localAHMSUrl = "";
-  table.matchType = "";
-  table.callNumber = "";
-
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "open");
 }
 
 function markTableAssigned(tableId){
   const table = findRoomTable(tableId);
   if(!table) return;
 
-  table.status = "assigned";
-
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "assigned");
 }
 
 function markTablePlaying(tableId){
   const table = findRoomTable(tableId);
   if(!table) return;
 
-  table.status = "playing";
-
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "playing");
 }
 
 function markTableOffline(tableId){
   const table = findRoomTable(tableId);
   if(!table) return;
 
-  table.status = "offline";
-  table.p1 = "";
-  table.p2 = "";
-  table.matchId = "";
-  table.matchLane = "";
-  table.scoreboardUrl = "";
-  table.matchSheetUrl = "";
-  table.localAHMSUrl = "";
-  table.matchType = "";
-  table.callNumber = "";
-
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "offline");
 }
 
-function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, matchId, urls = {}){
+function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, generatedMatchId, urls = {}){
   if(!tableNumber) return;
 
   const table = findRoomTableByNumber(tableNumber);
   if(!table) return;
 
-  table.status = "assigned";
   table.p1 = p1 || "";
   table.p2 = p2 || "";
-  table.matchId = matchId || "";
-  table.matchLane = table.matchLane || "";
+
+  // Keep the bracket match id if one already exists.
+  // The generated weekly match id belongs to the scoreboard/AHMS link, not bracket navigation.
+  table.matchId = urls.bracketMatchId || table.matchId || "";
+  table.matchLane = urls.bracketLane || table.matchLane || "";
+
+  // Store generated match id separately for display/export later if needed.
+  table.generatedMatchId = generatedMatchId || table.generatedMatchId || "";
+
   table.scoreboardUrl = urls.scoreboardUrl || table.scoreboardUrl || "";
   table.matchSheetUrl = urls.matchSheetUrl || table.matchSheetUrl || "";
   table.localAHMSUrl = urls.localAHMSUrl || table.localAHMSUrl || "";
   table.matchType = urls.matchType || table.matchType || "";
   table.callNumber = urls.callNumber || table.callNumber || "";
 
-  saveRoomState();
-  renderRoomViews();
+  setTableStatus(table, "assigned");
+}
+
+function summarizeRoomStats(){
+  const stats = getRoomStats();
+
+  const playerMap = new Map();
+
+  stats.forEach(r => {
+    [r.p1, r.p2].filter(Boolean).forEach(name => {
+      const key = normalizeName(name).toLowerCase();
+      if(!key) return;
+
+      if(!playerMap.has(key)){
+        playerMap.set(key, {
+          name,
+          matches:0,
+          calledMs:0,
+          playingMs:0,
+          totalMs:0
+        });
+      }
+
+      const p = playerMap.get(key);
+      p.matches += 1;
+      p.calledMs += Number(r.calledMs || 0);
+      p.playingMs += Number(r.playingMs || 0);
+      p.totalMs += Number(r.totalMs || 0);
+    });
+  });
+
+  const players = Array.from(playerMap.values()).sort((a,b)=>b.totalMs - a.totalMs);
+
+  const longestTotal = stats.slice().sort((a,b)=>Number(b.totalMs || 0) - Number(a.totalMs || 0))[0] || null;
+  const longestCalled = stats.slice().sort((a,b)=>Number(b.calledMs || 0) - Number(a.calledMs || 0))[0] || null;
+  const longestPlaying = stats.slice().sort((a,b)=>Number(b.playingMs || 0) - Number(a.playingMs || 0))[0] || null;
+
+  const totals = stats.reduce((acc, r)=>{
+    acc.calledMs += Number(r.calledMs || 0);
+    acc.playingMs += Number(r.playingMs || 0);
+    acc.totalMs += Number(r.totalMs || 0);
+    return acc;
+  }, { calledMs:0, playingMs:0, totalMs:0 });
+
+  return {
+    stats,
+    players,
+    longestTotal,
+    longestCalled,
+    longestPlaying,
+    totals
+  };
+}
+
+function renderRoomStats(){
+  const summaryEl = document.getElementById("roomStatsSummary");
+  const tbody = document.querySelector("#roomStatsTable tbody");
+
+  if(!summaryEl || !tbody) return;
+
+  const data = summarizeRoomStats();
+  const stats = data.stats;
+
+  const avgTotal = stats.length ? data.totals.totalMs / stats.length : 0;
+  const slowestPlayer = data.players[0] || null;
+
+  summaryEl.innerHTML = `
+    <div class="roomStatCard">
+      <div class="roomStatValue">${esc(stats.length)}</div>
+      <div class="roomStatLabel">Completed table sessions</div>
+    </div>
+
+    <div class="roomStatCard">
+      <div class="roomStatValue">${esc(fmtDuration(avgTotal))}</div>
+      <div class="roomStatLabel">Average total table time</div>
+    </div>
+
+    <div class="roomStatCard">
+      <div class="roomStatValue">${esc(data.longestPlaying ? fmtDuration(data.longestPlaying.playingMs) : "0:00")}</div>
+      <div class="roomStatLabel">Longest playing time${data.longestPlaying ? `, Table ${esc(data.longestPlaying.tableNumber)}` : ""}</div>
+    </div>
+
+    <div class="roomStatCard">
+      <div class="roomStatValue">${esc(slowestPlayer ? slowestPlayer.name : "None")}</div>
+      <div class="roomStatLabel">${slowestPlayer ? `${slowestPlayer.matches} match sessions, ${fmtDuration(slowestPlayer.totalMs)} total` : "No player timing yet"}</div>
+    </div>
+  `;
+
+  tbody.innerHTML = "";
+
+  stats.forEach(r => {
+    const tr = document.createElement("tr");
+    const matchLabel = r.callNumber ? `Match ${r.callNumber}` : (r.matchId || "");
+    const players = [r.p1, r.p2].filter(Boolean).join(" vs ");
+
+    tr.innerHTML = `
+      <td>${esc(r.tableNumber || "")}</td>
+      <td>${esc(matchLabel)}</td>
+      <td>${esc(players)}</td>
+      <td>${esc(fmtDuration(r.calledMs))}</td>
+      <td>${esc(fmtDuration(r.playingMs))}</td>
+      <td>${esc(fmtDuration(r.totalMs))}</td>
+      <td>${esc(fmtLocal(r.assignedAt || ""))}</td>
+      <td>${esc(fmtLocal(r.endedAt || ""))}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function exportRoomStatsCSV(){
+  const stats = getRoomStats();
+
+  if(!stats.length){
+    alert("No room timing stats to export yet.");
+    return;
+  }
+
+  const header = [
+    "Table",
+    "Call Number",
+    "Match ID",
+    "Player 1",
+    "Player 2",
+    "Called Duration",
+    "Playing Duration",
+    "Total Duration",
+    "Called MS",
+    "Playing MS",
+    "Total MS",
+    "Assigned At",
+    "Playing At",
+    "Ended At"
+  ];
+
+  const rows = stats.map(r => [
+    r.tableNumber || "",
+    r.callNumber || "",
+    r.matchId || "",
+    r.p1 || "",
+    r.p2 || "",
+    fmtDuration(r.calledMs),
+    fmtDuration(r.playingMs),
+    fmtDuration(r.totalMs),
+    r.calledMs || 0,
+    r.playingMs || 0,
+    r.totalMs || 0,
+    r.assignedAt || "",
+    r.playingAt || "",
+    r.endedAt || ""
+  ]);
+
+  const csv = [header, ...rows].map(row => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = `TD_Room_Timing_Stats_${new Date().toISOString().slice(0,10)}.csv`;
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+}
+
+function clearRoomStats(){
+  if(!confirm("Clear all saved room timing stats?")) return;
+
+  localStorage.removeItem(ROOM_STATS_KEY);
+  renderRoomStats();
 }
 
 /* =========================================================
@@ -5709,6 +6111,35 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   renderRoomViews();
   wireRoomZoomTools();
+  
+  renderRoomStats();
+
+const btnRoomStatsRefresh = document.getElementById("btnRoomStatsRefresh");
+if(btnRoomStatsRefresh) btnRoomStatsRefresh.addEventListener("click", renderRoomStats);
+
+const btnRoomStatsExport = document.getElementById("btnRoomStatsExport");
+if(btnRoomStatsExport) btnRoomStatsExport.addEventListener("click", exportRoomStatsCSV);
+
+const btnRoomStatsClear = document.getElementById("btnRoomStatsClear");
+if(btnRoomStatsClear) btnRoomStatsClear.addEventListener("click", clearRoomStats);
+
+if(roomTimerInterval) clearInterval(roomTimerInterval);
+roomTimerInterval = setInterval(() => {
+  const active = document.activeElement;
+  const isInteracting =
+    active &&
+    (
+      active.tagName === "INPUT" ||
+      active.tagName === "TEXTAREA" ||
+      active.tagName === "SELECT"
+    );
+
+  if(!isInteracting){
+    renderRoomViews();
+  }
+
+  renderRoomStats();
+}, 1000);
 
   BRACKET_STATE = loadBracketState();
   if(BRACKET_STATE){
