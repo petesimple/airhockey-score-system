@@ -1663,9 +1663,10 @@ body.bracketFullscreenOpen{
     <button class="btnTiny" id="btnBracketZoomIn" type="button">+</button>
     <button class="btnTiny" id="btnBracketZoomReset" type="button">100%</button>
     <button class="btnTiny primary" id="btnBracketFitWidth" type="button">Fit Width</button>
-<button class="btnTiny primary" id="btnJumpFinals" type="button">Jump to Finals</button>
-<button class="btnTiny primary" id="btnBracketGoLinks" type="button">Links Page</button>
-<button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
+	<button class="btnTiny primary" id="btnJumpNextMatch" type="button">Next Match</button>
+	<button class="btnTiny primary" id="btnJumpFinals" type="button">Jump to Finals</button>
+	<button class="btnTiny primary" id="btnBracketGoLinks" type="button">Links Page</button>
+	<button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
   </div>
 </div>
 
@@ -5707,6 +5708,89 @@ function jumpToFinals(){
   });
 }
 
+function findNextPlayableMatch(){
+  if(!BRACKET_STATE) return null;
+
+  const matches = getMatchesInCallOrder()
+    .filter(({ lane, m }) => {
+      if(!m) return false;
+      if(m.winner) return false;
+      if(!isRealBracketName(m.p1) || !isRealBracketName(m.p2)) return false;
+
+      const table = getTableForBracketMatch(m.id, lane);
+
+      if(table && table.status === "playing") return false;
+
+      return true;
+    })
+    .sort((a, b) => Number(a.m.callNumber || 999999) - Number(b.m.callNumber || 999999));
+
+  return matches[0] || null;
+}
+
+function jumpToNextMatch(){
+  if(!BRACKET_STATE){
+    alert("No bracket loaded.");
+    return;
+  }
+
+  const next = findNextPlayableMatch();
+
+  if(!next){
+    const msg = "No next playable match found.";
+    const status = document.getElementById("bracketStatus");
+    if(status) status.textContent = msg;
+    alert(msg);
+    return;
+  }
+
+  setTab("tabBrackets");
+
+  requestAnimationFrame(() => {
+    const key = `${next.lane}|${next.m.id}`;
+    const card = document.querySelector(`.match[data-match-key="${CSS.escape(key)}"]`);
+
+    if(!card){
+      const status = document.getElementById("bracketStatus");
+      if(status) status.textContent = "Next match exists but is not visible yet.";
+      return;
+    }
+
+    document.querySelectorAll(".match.matchFocus").forEach(el => el.classList.remove("matchFocus"));
+
+    card.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "center"
+    });
+
+    setTimeout(() => {
+      card.classList.add("matchFocus");
+
+      const scoreInput = card.querySelector(".scoreInput");
+      if(scoreInput){
+        scoreInput.focus();
+        scoreInput.select();
+      }
+
+      setTimeout(() => {
+        card.classList.remove("matchFocus");
+      }, 2800);
+    }, 350);
+
+    const picker = document.getElementById("selMatch");
+    if(picker){
+      picker.value = key;
+      picker.dispatchEvent(new Event("change"));
+    }
+
+    const status = document.getElementById("bracketStatus");
+    if(status){
+      status.textContent = `Focused ${matchCallLabel(next.m)}: ${next.m.p1} vs ${next.m.p2}`;
+    }
+  });
+}
+
 function toggleBracketFullscreen(){
   const tab = document.getElementById("tabBrackets");
   const btn = document.getElementById("btnBracketFullscreen");
@@ -5734,6 +5818,7 @@ function wireBracketViewTools(){
   const zout = document.getElementById("btnBracketZoomOut");
   const zreset = document.getElementById("btnBracketZoomReset");
   const fit = document.getElementById("btnBracketFitWidth");
+  const jumpNextMatch = document.getElementById("btnJumpNextMatch");
   const jumpFinals = document.getElementById("btnJumpFinals");
   const goLinks = document.getElementById("btnBracketGoLinks");
   const full = document.getElementById("btnBracketFullscreen");
@@ -5743,6 +5828,7 @@ function wireBracketViewTools(){
   if(zout) zout.addEventListener("click", bracketZoomOut);
   if(zreset) zreset.addEventListener("click", resetBracketZoom);
   if(fit) fit.addEventListener("click", fitBracketWidth);
+  if(jumpNextMatch) jumpNextMatch.addEventListener("click", jumpToNextMatch);
   if(jumpFinals) jumpFinals.addEventListener("click", jumpToFinals);
   if(goLinks) goLinks.addEventListener("click", () => setTab("tabMatch"));
   if(full) full.addEventListener("click", toggleBracketFullscreen);
