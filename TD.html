@@ -4121,10 +4121,15 @@ async function cloudLoadBracket(){
 
   const tid = getTournamentId();
 
-  const data = await jsonp(BRACKETS_ENDPOINT, {
-    action: "bracketRowsGet",
-    tournamentId: tid
+  const url =
+    `${BRACKETS_ENDPOINT}?action=bracketRowsGet&tournamentId=${encodeURIComponent(tid)}&t=${Date.now()}`;
+
+  const resp = await fetch(url, {
+    method: "GET",
+    cache: "no-store"
   });
+
+  const data = await resp.json();
 
   if(!data || !data.ok){
     throw new Error((data && data.message) || "Cloud load failed");
@@ -4136,7 +4141,7 @@ async function cloudLoadBracket(){
 
   return rows;
 }
-
+	
 let publishTimer = null;
 
 function schedulePublish(){
