@@ -6286,48 +6286,121 @@ function getChampionData(state){
   return null;
 }
 
+function collectEliminations(state){
+  const elim = [];
+
+  if(!state) return elim;
+
+  const pushElim = (m) => {
+    if(!m || !m.winner || !m.loser) return;
+
+    const loserName = m.loser === "p1" ? m.p1 : m.p2;
+    const winnerName = m.winner === "p1" ? m.p1 : m.p2;
+
+    if(!loserName || loserName === "BYE" || loserName === "TBD") return;
+    if(!winnerName || winnerName === "BYE" || winnerName === "TBD") return;
+
+    elim.push({
+      name: loserName,
+      eliminatedBy: winnerName,
+      matchId: m.id || ""
+    });
+  };
+
+  (state.losersRounds || []).forEach(round => {
+    round.forEach(pushElim);
+  });
+
+  (state.grandFinal || []).forEach(pushElim);
+
+  const seen = new Map();
+
+  elim.forEach(e => {
+    seen.set(e.name.toLowerCase(), e);
+  });
+
+  return Array.from(seen.values());
+}
+
 function buildPlacements(state){
   const entrants = (state.entrants || []).filter(n => n && n !== "BYE");
   const champData = getChampionData(state);
   const placements = [];
 
-  if(champData && champData.champ) placements.push({ place: 1, name: champData.champ });
-  if(champData && champData.runner) placements.push({ place: 2, name: champData.runner });
+  if(champData && champData.champ){
+    placements.push({
+      place: 1,
+      name: champData.champ,
+      eliminatedBy: "",
+      matchId: champData.finalMatchId || "",
+      note: "Champion"
+    });
+  }
 
-  const taken = new Set(placements.map(p => p.name.toLowerCase()));
-  const eliminated = collectEliminations(state).filter(e => !taken.has(e.name.toLowerCase())).reverse();
+  if(champData && champData.runner){
+    placements.push({
+      place: 2,
+      name: champData.runner,
+      eliminatedBy: champData.champ || "",
+      matchId: champData.finalMatchId || "",
+      note: "Runner up"
+    });
+  }
+
+  const taken = new Set(placements.map(p => String(p.name || "").toLowerCase()));
+
+  const eliminated = collectEliminations(state)
+    .filter(e => !taken.has(String(e.name || "").toLowerCase()))
+    .reverse();
 
   let nextPlace = placements.length + 1;
 
-  for(const e of eliminated){
-    placements.push({ place: nextPlace++, name: e.name, eliminatedBy: e.eliminatedBy, matchId: e.matchId });
-  }
+  eliminated.forEach(e => {
+    placements.push({
+      place: nextPlace++,
+      name: e.name,
+      eliminatedBy: e.eliminatedBy,
+      matchId: e.matchId,
+      note: ""
+    });
+  });
 
-  const placedSet = new Set(placements.map(p => p.name.toLowerCase()));
-  const leftovers = entrants.filter(n => !placedSet.has(n.toLowerCase()));
+  const placedSet = new Set(placements.map(p => String(p.name || "").toLowerCase()));
 
-  for(const n of leftovers){
-    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded. In progress?" });
-  }
+  entrants.forEach(name => {
+    if(!placedSet.has(String(name || "").toLowerCase())){
+      placements.push({
+        place: nextPlace++,
+        name,
+        eliminatedBy: "",
+        matchId: "",
+        note: "No elimination recorded"
+      });
+    }
+  });
 
   return placements;
 }
 
 function renderResults(){
-  const state = loadBracketState();
+  const state = BRACKET_STATE || loadBracketState();
 
   if(!state){
-    $('#resultsStatus').textContent = "No bracket state.";
+    const resultsStatus = document.getElementById("resultsStatus");
+    if(resultsStatus) resultsStatus.textContent = "No bracket state.";
     return;
   }
 
   RESULTS = buildPlacements(state);
 
-  const tbody = $('#resultsTable tbody');
+  const tbody = document.querySelector("#resultsTable tbody");
+  if(!tbody) return;
+
   tbody.innerHTML = "";
 
-  RESULTS.forEach(r=>{
+  RESULTS.forEach(r => {
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
       <td>${esc(r.place)}</td>
       <td>${esc(r.name || "")}</td>
@@ -6335,10 +6408,17 @@ function renderResults(){
       <td>${esc(r.matchId || "")}</td>
       <td>${esc(r.note || "")}</td>
     `;
+
     tbody.appendChild(tr);
   });
 
-  $('#resultsStatus').textContent = `Built results for ${RESULTS.length} players.`;
+  const resultsStatus = document.getElementById("resultsStatus");
+  if(resultsStatus){
+    const champ = RESULTS.find(r => Number(r.place) === 1);
+    resultsStatus.textContent = champ
+      ? `Built results for ${RESULTS.length} players. Winner: ${champ.name}`
+      : `Built results for ${RESULTS.length} players.`;
+  }
 }
 
 function exportResultsCSV(){
@@ -6346,16 +6426,16 @@ function exportResultsCSV(){
   if(!RESULTS.length) return alert("No results to export.");
 
   const header = ["Place","Player","Eliminated By","Match Id","Note"];
-  const lines = [header.join(",")];
+  const lines = [header.map(csvCell).join(",")];
 
   for(const p of RESULTS){
     lines.push([
       p.place ?? "",
-      csvCell(p.name ?? ""),
-      csvCell(p.eliminatedBy ?? ""),
-      csvCell(p.matchId ?? ""),
-      csvCell(p.note ?? "")
-    ].join(","));
+      p.name ?? "",
+      p.eliminatedBy ?? "",
+      p.matchId ?? "",
+      p.note ?? ""
+    ].map(csvCell).join(","));
   }
 
   const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
@@ -6374,6 +6454,7 @@ function exportResultsCSV(){
 
 function exportResultsJSON(){
   if(!RESULTS.length) renderResults();
+  if(!RESULTS.length) return alert("No results to export.");
 
   const blob = new Blob([JSON.stringify(RESULTS, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
