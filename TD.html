@@ -5703,10 +5703,15 @@ async function renderFullBracket(){
   const tid = getTournamentId();
 
   try{
-    const data = await jsonp(BRACKETS_ENDPOINT, {
-      action: "bracketRowsGet",
-      tournamentId: tid
-    });
+    const url =
+  `${BRACKETS_ENDPOINT}?action=bracketRowsGet&tournamentId=${encodeURIComponent(tid)}&t=${Date.now()}`;
+
+const resp = await fetch(url, {
+  method: "GET",
+  cache: "no-store"
+});
+
+const data = await resp.json();
 
     if(!data || !data.ok){
       throw new Error((data && data.message) || "Cloud fetch failed");
