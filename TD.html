@@ -3922,6 +3922,98 @@ function loadBracketState(){
   }
 }
 
+function getTableForBracketMatch(matchId, lane){
+  return getRoomTables().find(t =>
+    String(t.matchId || "") === String(matchId || "") &&
+    String(t.matchLane || "") === String(lane || "")
+  ) || null;
+}
+
+function getBracketMatchStatus(m, lane){
+  const table = getTableForBracketMatch(m.id, lane);
+
+  if(m.winner) return "complete";
+  if(table && table.status === "playing") return "playing";
+  if(table && table.status === "assigned") return "assigned";
+  if(isCallableMatch(m)) return "ready";
+
+  return "pending";
+}
+
+function bracketStateToCloudRows(){
+  if(!BRACKET_STATE) return [];
+
+  const tid = getTournamentId();
+  const now = new Date().toISOString();
+  const rows = [];
+
+  function getWinnerName(m){
+    if(m.winner === "p1") return m.p1 || "";
+    if(m.winner === "p2") return m.p2 || "";
+    return "";
+  }
+
+  function getLoserName(m){
+    if(m.loser === "p1") return m.p1 || "";
+    if(m.loser === "p2") return m.p2 || "";
+    return "";
+  }
+
+  function findFeedTarget(lane, matchId, which){
+    if(!BRACKET_STATE || !BRACKET_STATE.feeds) return "";
+    const feed = BRACKET_STATE.feeds[`${lane}|${matchId}|${which}`];
+    if(!feed) return "";
+    return `${feed.lane}|${feed.id}|${feed.which}`;
+  }
+
+  function addMatch(lane, roundNumber, m){
+    const table = getTableForBracketMatch(m.id, lane);
+
+    rows.push({
+      tournamentId: tid,
+      status: getBracketMatchStatus(m, lane),
+      bracketSize: BRACKET_STATE.bracketSize || "",
+      roundType: lane,
+      roundNumber: roundNumber,
+      matchId: m.id || "",
+      callNumber: m.callNumber || "",
+      tableNumber: table ? table.number || "" : "",
+      p1: m.p1 || "",
+      p2: m.p2 || "",
+      score1: m.s1 || "",
+      score2: m.s2 || "",
+      winner: getWinnerName(m),
+      loser: getLoserName(m),
+      nextMatchWinner: m.winner ? findFeedTarget(lane, m.id, m.winner) : "",
+      nextMatchLoser: m.loser ? findFeedTarget(lane, m.id, m.loser) : "",
+      matchSheetUrl: table ? table.matchSheetUrl || "" : "",
+      scoreboardUrl: table ? table.scoreboardUrl || "" : "",
+      localAHMSUrl: table ? table.localAHMSUrl || "" : "",
+      assignedAt: table ? table.assignedAt || "" : "",
+      playingAt: table ? table.playingAt || "" : "",
+      completedAt: m.winner ? now : "",
+      updatedAt: now,
+      createdAt: BRACKET_STATE.createdAt ? new Date(BRACKET_STATE.createdAt).toISOString() : now,
+      source: "TD",
+      notes: m.label || ""
+    });
+  }
+
+  (BRACKET_STATE.winnersRounds || []).forEach((round, idx) => {
+    round.forEach(m => addMatch("W", idx + 1, m));
+  });
+
+  (BRACKET_STATE.losersRounds || []).forEach((round, idx) => {
+    round.forEach(m => addMatch("L", idx + 1, m));
+  });
+
+  (BRACKET_STATE.grandFinal || []).forEach((m, idx) => {
+    addMatch("GF", idx + 1, m);
+  });
+
+  return rows;
+}
+	
 function defaultTournamentId(){
   const d = new Date();
   const yyyy = d.getFullYear();
