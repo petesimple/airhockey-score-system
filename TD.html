@@ -2063,6 +2063,20 @@ document.addEventListener("click", (e)=>{
   setTab(b.dataset.tab);
 });
 
+function openLiveBracket(){
+  const url = new URL("brackets.html", window.location.href).href;
+
+  const popup = window.open(
+    url,
+    "AHSS_Live_Bracket",
+    "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes"
+  );
+
+  if(!popup){
+    window.location.href = url;
+  }
+}
+	
 /* =========================================================
   MATCH LINK / QR
 ========================================================= */
