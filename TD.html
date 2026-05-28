@@ -5660,22 +5660,74 @@ async function renderFullBracket(){
   const tid = getTournamentId();
 
   try{
-    const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
+    const data = await jsonp(BRACKETS_ENDPOINT, {
+      action: "bracketRowsGet",
+      tournamentId: tid
+    });
 
-    if(!data || !data.ok) throw new Error((data && data.message) || "Cloud fetch failed");
+    if(!data || !data.ok){
+      throw new Error((data && data.message) || "Cloud fetch failed");
+    }
 
-    if(!data.row || !data.row.bracketJson){
-      root.innerHTML = `<div class="muted">No bracket published yet for <b>${esc(tid)}</b>.</div>`;
+    const rows = data.rows || [];
+
+    if(!rows.length){
+      root.innerHTML = `<div class="muted">No bracket rows published yet for <b>${esc(tid)}</b>.</div>`;
       $('#fullLast').textContent = "Last update: -";
       return;
     }
 
-    const state = JSON.parse(data.row.bracketJson);
+    root.innerHTML = `
+      <div class="card" style="max-width:none; margin:0;">
+        <div class="row-left" style="justify-content:space-between;">
+          <div>
+            <div style="font-weight:1000;font-size:1.15em;">Live Bracket Rows</div>
+            <div class="mini">${esc(tid)} | ${esc(rows.length)} matches published</div>
+          </div>
+          <div class="pill">Brackets Sheet Live</div>
+        </div>
 
-    root.innerHTML = "";
-    root.appendChild(buildBracketChart(state, false));
+        <div class="spacer"></div>
+
+        <div style="overflow:auto; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Call</th>
+                <th>Round</th>
+                <th>Match</th>
+                <th>Table</th>
+                <th>Player 1</th>
+                <th>Score</th>
+                <th>Player 2</th>
+                <th>Winner</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td>${esc(r.status || "")}</td>
+                  <td>${esc(r.callNumber || "")}</td>
+                  <td>${esc((r.roundType || "") + (r.roundNumber || ""))}</td>
+                  <td>${esc(r.matchId || "")}</td>
+                  <td>${esc(r.tableNumber || "")}</td>
+                  <td>${esc(r.p1 || "")}</td>
+                  <td>${esc((r.score1 || "") + (r.score1 || r.score2 ? " - " : "") + (r.score2 || ""))}</td>
+                  <td>${esc(r.p2 || "")}</td>
+                  <td>${esc(r.winner || "")}</td>
+                  <td>${esc(fmtLocal(r.updatedAt || ""))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
 
     $('#fullLast').textContent = "Last update: " + new Date().toLocaleTimeString();
+
   }catch(e){
     console.warn(e);
     root.innerHTML = `<div class="muted">Live load failed: ${esc(e.message || e)}</div>`;
