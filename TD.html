@@ -5663,7 +5663,7 @@ function setFullZoomPercent(pct){
 
 function fullFit(){
   const viewer = $('#fullViewer');
-  const content = $('#fullRoot .bracket');
+  const content = $('#fullRoot .bracket') || $('#fullRoot .card') || $('#fullRoot table');
 
   if(!viewer || !content) return;
 
