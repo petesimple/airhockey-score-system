@@ -4116,6 +4116,23 @@ async function cloudLoadBracket(){
   return rows;
 }
 
+let publishTimer = null;
+
+function schedulePublish(){
+  if(!BRACKETS_CLOUD_ENABLED) return;
+  if(isSafeMode()) return;
+
+  clearTimeout(publishTimer);
+  publishTimer = setTimeout(async ()=>{
+    try{
+      if(BRACKET_STATE) await cloudSaveBracket(BRACKET_STATE);
+    }catch(e){
+      console.warn(e);
+      $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
+    }
+  }, 700);
+}
+	
 function schedulePublish(){
   if(!BRACKETS_CLOUD_ENABLED) return;
   if(isSafeMode()) return;
