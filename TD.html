@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.2 - 0/F/B
+Tournament Director v4.0.3 - Finals Logic
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1300,9 +1300,82 @@ body.bracketFullscreenOpen{
   margin-top:10px;
 }
 
+.tournamentCompleteOverlay{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(6px);
+}
+
+.tournamentCompleteBox{
+  width:min(92vw, 440px);
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.18);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0,234,255,.25), transparent 42%),
+    #161616;
+  box-shadow:0 25px 80px rgba(0,0,0,.65);
+  padding:22px;
+  text-align:center;
+  animation:winnerPop .35s ease-out;
+}
+
+.tournamentCompleteTitle{
+  font-size:1.5em;
+  font-weight:1000;
+  color:#00eaff;
+  margin-bottom:8px;
+}
+
+.tournamentCompleteName{
+  font-size:2em;
+  font-weight:1000;
+  margin:12px 0;
+  color:#fff;
+  text-shadow:0 0 18px rgba(0,234,255,.55);
+}
+
+.tournamentCompleteSub{
+  color:rgba(255,255,255,.72);
+  font-size:.95em;
+  margin-bottom:16px;
+}
+
+.tournamentCompleteBtns{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.confettiPiece{
+  position:fixed;
+  top:-20px;
+  width:10px;
+  height:16px;
+  border-radius:3px;
+  z-index:100001;
+  animation:confettiFall 1.9s linear forwards;
+}
+
+@keyframes winnerPop{
+  from{ transform:scale(.86); opacity:0; }
+  to{ transform:scale(1); opacity:1; }
+}
+
+@keyframes confettiFall{
+  0%{ transform:translateY(-20px) rotate(0deg); opacity:1; }
+  100%{ transform:translateY(105vh) rotate(720deg); opacity:0; }
+}
+
 </style>
 </head>
 
+<body>
 <body>
 <div id="tdGate">
   <div class="td-gate-inner">
@@ -1312,6 +1385,18 @@ body.bracketFullscreenOpen{
     <div><button class="td-gate-btn" onclick="unlockTD()">Unlock</button></div>
     <div id="tdGateMsg" class="td-gate-msg"></div>
     <div class="td-hint">Tip: code is 4 digits</div>
+  </div>
+</div>
+
+<div id="tournamentCompleteOverlay" class="tournamentCompleteOverlay">
+  <div class="tournamentCompleteBox">
+    <div class="tournamentCompleteTitle">Tournament Complete?</div>
+    <div class="tournamentCompleteSub">Please confirm before we crown the champion.</div>
+    <div id="tournamentCompleteName" class="tournamentCompleteName">Winner</div>
+    <div class="tournamentCompleteBtns">
+      <button class="btnTiny primary" id="btnConfirmTournamentWinner" type="button">OK</button>
+      <button class="btnTiny danger" id="btnCancelTournamentWinner" type="button">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1772,7 +1857,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.2 - 0/F/B";
+const TD_BUILD = "v4.0.3 - Finals Logic";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4663,7 +4748,7 @@ function propagateWinners(){
       const gf1Winner = winnerName(gf1);
       const gf1Loser = loserName(gf1);
 
-      if(isRealBracketName(gf1Winner) && isRealBracketName(gf1Loser)){
+      if(isRealBracketName(gf1Winner) && isRealBracketName(gf1Loser) && gf1Winner !== wChamp){
         gf2.p1 = gf1Loser;
         gf2.p2 = gf1Winner;
       }
@@ -4975,6 +5060,7 @@ function advanceWinner(){
   msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
 
   schedulePublish();
+  maybePromptTournamentComplete();
 }
 
 /* =========================================================
@@ -5363,13 +5449,76 @@ function visibleWindowForRounds(rounds){
 
 function shouldShowFinals(state){
   const gf = state && state.grandFinal ? state.grandFinal : [];
-  if(gf.some(isMatchVisibleOnChart)) return true;
+  const gf1 = gf[0];
+  const gf2 = gf[1];
+
+  if(gf1 && isMatchVisibleOnChart(gf1)) return true;
+  if(gf2 && shouldShowGrandFinalReset(state) && isMatchVisibleOnChart(gf2)) return true;
 
   const winnersLast = state.winnersRounds && state.winnersRounds[state.winnersRounds.length - 1] ? state.winnersRounds[state.winnersRounds.length - 1][0] : null;
   const losersLastRound = state.losersRounds && state.losersRounds[state.losersRounds.length - 1] ? state.losersRounds[state.losersRounds.length - 1] : [];
   const losersLast = losersLastRound.length ? losersLastRound[losersLastRound.length - 1] : null;
 
   return !!(winnersLast && winnersLast.winner) || !!(losersLast && losersLast.winner);
+}
+
+function getWinnerNameFromMatch(m){
+  if(!m || !m.winner) return "";
+  return m.winner === "p1" ? m.p1 : m.p2;
+}
+
+function getLoserNameFromMatch(m){
+  if(!m || !m.loser) return "";
+  return m.loser === "p1" ? m.p1 : m.p2;
+}
+
+function getWinnersSideChampion(){
+  if(!BRACKET_STATE || !BRACKET_STATE.winnersRounds) return "";
+  const lastW = BRACKET_STATE.winnersRounds[BRACKET_STATE.winnersRounds.length - 1];
+  const match = lastW && lastW[0] ? lastW[0] : null;
+  return getWinnerNameFromMatch(match);
+}
+
+function shouldShowGrandFinalReset(state){
+  if(!state || !state.grandFinal || !state.grandFinal[0]) return false;
+
+  const gf1 = state.grandFinal[0];
+  if(!gf1.winner) return false;
+
+  const winnersChamp = getWinnersSideChampion();
+  const gf1Winner = getWinnerNameFromMatch(gf1);
+
+  return !!(winnersChamp && gf1Winner && gf1Winner !== winnersChamp);
+}
+
+function getTournamentWinnerCandidate(){
+  if(!BRACKET_STATE || !BRACKET_STATE.grandFinal) return null;
+
+  const gf1 = BRACKET_STATE.grandFinal[0];
+  const gf2 = BRACKET_STATE.grandFinal[1];
+
+  if(gf2 && gf2.winner){
+    return {
+      name: getWinnerNameFromMatch(gf2),
+      match: gf2,
+      matchId: gf2.id
+    };
+  }
+
+  if(gf1 && gf1.winner){
+    const winnersChamp = getWinnersSideChampion();
+    const gf1Winner = getWinnerNameFromMatch(gf1);
+
+    if(winnersChamp && gf1Winner === winnersChamp){
+      return {
+        name: gf1Winner,
+        match: gf1,
+        matchId: gf1.id
+      };
+    }
+  }
+
+  return null;
 }
 
 function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
@@ -5465,9 +5614,16 @@ function buildBracketChart(state, editable=false){
   gfCol.innerHTML = `<div class="chartColumnTitle">Grand Final <span class="flowArrow">★</span></div>`;
 
   if(finalsVisible){
-    (state.grandFinal || []).forEach(m => {
-      if(isMatchVisibleOnChart(m)) gfCol.appendChild(renderMatchCard(m,"GF", editable));
-    });
+    const gf1 = state.grandFinal && state.grandFinal[0] ? state.grandFinal[0] : null;
+    const gf2 = state.grandFinal && state.grandFinal[1] ? state.grandFinal[1] : null;
+
+    if(gf1 && isMatchVisibleOnChart(gf1)){
+      gfCol.appendChild(renderMatchCard(gf1, "GF", editable));
+    }
+
+    if(gf2 && shouldShowGrandFinalReset(state) && isMatchVisibleOnChart(gf2)){
+      gfCol.appendChild(renderMatchCard(gf2, "GF", editable));
+    }
   }else{
     gfCol.innerHTML += `<div class="chartPlaceholder">Grand Final appears when the winners champ and losers champ are ready.</div>`;
   }
@@ -5494,6 +5650,78 @@ function renderBracket(){
 
   root.innerHTML = "";
   root.appendChild(buildBracketChart(BRACKET_STATE, true));
+}
+
+let pendingTournamentWinner = null;
+
+function maybePromptTournamentComplete(){
+  const candidate = getTournamentWinnerCandidate();
+
+  if(!candidate || !candidate.name) return;
+
+  if(BRACKET_STATE.tournamentCompleteConfirmed) return;
+
+  pendingTournamentWinner = candidate;
+
+  const overlay = document.getElementById("tournamentCompleteOverlay");
+  const nameEl = document.getElementById("tournamentCompleteName");
+
+  if(nameEl){
+    nameEl.textContent = `Is ${candidate.name} the winner?`;
+  }
+
+  if(overlay){
+    overlay.style.display = "flex";
+  }
+}
+
+function closeTournamentCompletePrompt(){
+  pendingTournamentWinner = null;
+
+  const overlay = document.getElementById("tournamentCompleteOverlay");
+  if(overlay){
+    overlay.style.display = "none";
+  }
+}
+
+function launchConfetti(){
+  const colors = ["#00eaff", "#3ddc84", "#ffd54f", "#ff5a5a", "#ffffff", "#1976d2", "#d32f2f"];
+
+  for(let i = 0; i < 90; i++){
+    const piece = document.createElement("div");
+    piece.className = "confettiPiece";
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = `${Math.random() * .45}s`;
+    piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+    document.body.appendChild(piece);
+
+    setTimeout(() => {
+      piece.remove();
+    }, 2600);
+  }
+}
+
+function confirmTournamentWinner(){
+  if(!pendingTournamentWinner || !BRACKET_STATE) return;
+
+  BRACKET_STATE.tournamentCompleteConfirmed = true;
+  BRACKET_STATE.tournamentWinner = pendingTournamentWinner.name;
+  BRACKET_STATE.tournamentCompletedAt = new Date().toISOString();
+
+  saveBracketState();
+  closeTournamentCompletePrompt();
+  launchConfetti();
+
+  renderResults();
+
+  setTimeout(() => {
+    setTab("tabResults");
+    const status = document.getElementById("resultsStatus");
+    if(status){
+      status.textContent = `Tournament complete. Winner: ${BRACKET_STATE.tournamentWinner}`;
+    }
+  }, 900);
 }
 
 /* =========================================================
@@ -5594,6 +5822,7 @@ function wireBracketChartEditing(){
       renderBracket();
       buildMatchPicker();
       schedulePublish();
+      maybePromptTournamentComplete();
 
       $('#bracketStatus').textContent = "Cleared result. Downstream not started.";
       return;
@@ -6521,6 +6750,16 @@ const btnOpenLiveBracket = document.getElementById("btnOpenLiveBracket");
   $('#btnBuildResults').addEventListener("click", renderResults);
   $('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
   $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
+
+  const btnConfirmTournamentWinner = document.getElementById("btnConfirmTournamentWinner");
+  if(btnConfirmTournamentWinner){
+    btnConfirmTournamentWinner.addEventListener("click", confirmTournamentWinner);
+  }
+
+  const btnCancelTournamentWinner = document.getElementById("btnCancelTournamentWinner");
+  if(btnCancelTournamentWinner){
+    btnCancelTournamentWinner.addEventListener("click", closeTournamentCompletePrompt);
+  }
 
   $('#btnArchiveSaveCurrent').addEventListener("click", saveCurrentBracketToArchive);
   $('#btnArchiveExportAll').addEventListener("click", exportFullArchive);
