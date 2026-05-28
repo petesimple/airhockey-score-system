@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#121212">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AHSS - Double Elimination Brackets</title>
+
+  <title>AHSS Live Bracket</title>
 
   <style>
     :root{
@@ -21,135 +22,104 @@
       --good:#3ddc84;
       --warn:#f2c94c;
       --bad:#ff5252;
+      --accent:#00bcd4;
       --radius:14px;
       --shadow:0 14px 40px rgba(0,0,0,.45);
     }
 
-    *{ box-sizing:border-box; }
-    html,body{
-      margin:0;
-      padding:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family: Arial, sans-serif;
-      touch-action: manipulation;
+    *{
+      box-sizing:border-box;
     }
 
-    .wrap{
-      max-width:1200px;
-      margin:0 auto;
-      padding:18px 16px 80px;
+    html,
+    body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Arial, sans-serif;
+      overflow:hidden;
+      touch-action:manipulation;
+    }
+
+    .page{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      padding:12px;
+      gap:12px;
     }
 
     .topbar{
+      flex:0 0 auto;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:14px;
       flex-wrap:wrap;
-      margin-bottom:14px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:10px 12px;
     }
 
     .brand{
       display:flex;
       align-items:center;
       gap:12px;
+      min-width:280px;
     }
+
     .brand img{
-      max-width:160px;
+      max-width:120px;
       height:auto;
+      display:block;
     }
+
     .brand h1{
       margin:0;
       font-size:18px;
       letter-spacing:.3px;
+      color:#00eaff;
     }
+
     .brand .sub{
       margin:2px 0 0;
       color:rgba(255,255,255,.65);
       font-size:13px;
     }
 
-    .card{
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-
-    .card-h{
-      padding:12px 14px;
-      border-bottom:1px solid rgba(255,255,255,.08);
+    .toolbar{
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      gap:10px;
+      justify-content:flex-end;
+      gap:8px;
       flex-wrap:wrap;
-      background:linear-gradient(180deg, rgba(255,255,255,.04), transparent);
-    }
-    .card-h h2{
-      margin:0;
-      font-size:15px;
-      letter-spacing:.3px;
     }
 
-    .card-b{ padding:14px; }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-    }
-    @media (min-width: 980px){
-      .grid{ grid-template-columns: 420px 1fr; align-items:start; }
-    }
-
-    .controls{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-
-    .row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    label{
-      display:block;
-      font-size:12px;
-      color:rgba(255,255,255,.72);
-      margin-bottom:6px;
-    }
-
-    select, input[type="number"], textarea{
-      width:100%;
-      background:var(--panel2);
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.12);
-      color:var(--text);
-      border-radius:12px;
-      padding:10px 12px;
-      outline:none;
-      font-size:14px;
-    }
-
-    textarea{
-      min-height:160px;
-      resize:vertical;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      line-height:1.35;
+      color:#fff;
+      font-size:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
     }
 
     .btn{
       border:none;
       border-radius:12px;
-      padding:10px 12px;
+      padding:9px 11px;
       cursor:pointer;
-      font-weight:800;
-      font-size:13px;
+      font-weight:900;
+      font-size:12px;
       letter-spacing:.2px;
       display:inline-flex;
       align-items:center;
@@ -158,84 +128,195 @@
       background:#1f1f1f;
       color:#fff;
       border:1px solid rgba(255,255,255,.14);
+      user-select:none;
     }
-    .btn:hover{ opacity:.92; }
-    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .btn:hover{
+      opacity:.92;
+    }
 
     .btn-primary{
-      background: linear-gradient(90deg, var(--teamA), #ffffff, var(--teamB));
+      background:linear-gradient(90deg, var(--teamA), #ffffff, var(--teamB));
       color:#000;
       border:none;
     }
 
-    .btn-ghost{
-      background:transparent;
-      border:1px solid rgba(255,255,255,.14);
-      color:#fff;
-    }
-
-    .pillbar{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:10px;
-    }
-    .pill{
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      color:#fff;
-      font-size:12px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-    .pill .x{
-      width:18px; height:18px;
-      border-radius:50%;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(255,255,255,.10);
-      cursor:pointer;
-      user-select:none;
-      font-weight:900;
-    }
-
-    .status{
-      font-size:12px;
-      color:rgba(255,255,255,.72);
-      margin-top:8px;
-    }
-
-    /* Bracket area */
-    .bracket-wrap{
+    .viewer{
+      flex:1 1 auto;
+      min-height:0;
       overflow:auto;
-      padding-bottom:8px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      padding:10px;
+      scrollbar-width:auto;
+      scrollbar-color:#00bcd4 #111;
+    }
+
+    .viewer::-webkit-scrollbar{
+      width:16px;
+      height:16px;
+    }
+
+    .viewer::-webkit-scrollbar-track{
+      background:#111;
+      border-radius:999px;
+    }
+
+    .viewer::-webkit-scrollbar-thumb{
+      background:#00bcd4;
+      border-radius:999px;
+      border:3px solid #111;
+    }
+
+    .viewer::-webkit-scrollbar-corner{
+      background:#111;
+    }
+
+    .zoomStage{
+      transform-origin:top left;
+      display:inline-block;
+      min-width:max-content;
+      min-height:max-content;
+    }
+
+    .emptyState{
+      max-width:760px;
+      margin:90px auto 0;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:24px;
+      text-align:center;
+      box-shadow:var(--shadow);
+    }
+
+    .emptyState h2{
+      color:#00eaff;
+      margin:0 0 8px;
+      font-size:22px;
+    }
+
+    .emptyState p{
+      color:rgba(255,255,255,.72);
+      line-height:1.45;
+      margin:8px 0;
+    }
+
+    .mini{
+      font-size:12px;
+      color:rgba(255,255,255,.68);
     }
 
     .bracket{
-      min-width:900px;
-      display:flex;
-      gap:22px;
-      padding:10px 6px 6px;
-      align-items:flex-start;
+      min-width:5600px;
+      display:block;
+      padding:18px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        linear-gradient(90deg, rgba(255,90,90,.10), rgba(0,0,0,.08) 33%, rgba(61,220,132,.08) 66%, rgba(0,188,212,.08)),
+        rgba(0,0,0,.18);
+      position:relative;
     }
 
-    .col{
+    .chartHeader{
+      display:grid;
+      grid-template-columns:1fr 1fr 280px;
+      gap:18px;
+      margin-bottom:10px;
+    }
+
+    .chartHeaderBox{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.045);
+      border-radius:14px;
+      padding:10px 12px;
+      font-size:12px;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.78);
+      font-weight:900;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .chartHeaderBox .sub{
+      font-size:11px;
+      text-transform:none;
+      letter-spacing:0;
+      color:rgba(255,255,255,.48);
+    }
+
+    .chartBody{
+      display:grid;
+      grid-template-columns:1fr 1fr 280px;
+      gap:18px;
+      align-items:start;
+    }
+
+    .chartLane{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      background:rgba(0,0,0,.13);
+      min-height:360px;
+      padding:14px;
+      overflow:visible;
+    }
+
+    .chartLane.losersLane{
+      background:linear-gradient(90deg, rgba(255,90,90,.08), rgba(0,0,0,.12));
+    }
+
+    .chartLane.winnersLane{
+      background:linear-gradient(90deg, rgba(0,0,0,.12), rgba(61,220,132,.08));
+    }
+
+    .chartLane.finalsLane{
+      background:linear-gradient(90deg, rgba(0,188,212,.07), rgba(255,213,79,.06));
+    }
+
+    .chartColumns{
+      display:flex;
+      gap:18px;
+      align-items:flex-start;
+      overflow:visible;
+    }
+
+    .chartColumns.reverseFlow{
+      flex-direction:row-reverse;
+    }
+
+    .chartColumn{
+      min-width:240px;
       display:flex;
       flex-direction:column;
       gap:14px;
-      min-width:260px;
     }
 
-    .col-title{
+    .chartColumnTitle{
       font-size:12px;
-      color:rgba(255,255,255,.7);
+      color:rgba(255,255,255,.72);
       letter-spacing:.4px;
       text-transform:uppercase;
-      margin-left:6px;
+      margin:0 0 2px 4px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+
+    .flowArrow{
+      color:rgba(0,234,255,.75);
+      font-size:14px;
+    }
+
+    .flowNote{
+      font-size:11px;
+      color:rgba(255,255,255,.48);
+      text-transform:none;
+      letter-spacing:0;
     }
 
     .match{
@@ -243,6 +324,18 @@
       border:1px solid rgba(255,255,255,.12);
       border-radius:14px;
       padding:10px;
+    }
+
+    .match.complete{
+      border-color:rgba(61,220,132,.38);
+    }
+
+    .match.ready{
+      border-color:rgba(0,234,255,.38);
+    }
+
+    .match.pending{
+      opacity:.75;
     }
 
     .match-head{
@@ -254,6 +347,7 @@
       color:rgba(255,255,255,.75);
       font-size:12px;
     }
+
     .match-head .tag{
       padding:4px 8px;
       border-radius:999px;
@@ -265,10 +359,41 @@
       letter-spacing:.2px;
     }
 
+    .callLabel{
+      font-weight:1000;
+    }
+
+    .callLabel.ready{
+      color:var(--good);
+    }
+
+    .callLabel.pending{
+      color:var(--muted);
+    }
+
+    .statusText{
+      margin-top:5px;
+      text-align:right;
+      font-size:11px;
+      font-weight:900;
+    }
+
+    .statusText.complete{
+      color:var(--good);
+    }
+
+    .statusText.ready{
+      color:#00eaff;
+    }
+
+    .statusText.pending{
+      color:rgba(255,255,255,.48);
+    }
+
     .slot{
       display:grid;
-      grid-template-columns: 1fr 40px 40px;
-      gap:8px;
+      grid-template-columns:minmax(0, 1fr) minmax(88px, auto);
+      gap:10px;
       align-items:center;
       margin-bottom:8px;
       padding:8px;
@@ -277,808 +402,147 @@
       background:rgba(0,0,0,.20);
     }
 
-    .slot:last-child{ margin-bottom:0; }
+    .slot:last-child{
+      margin-bottom:0;
+    }
+
+    .slot.win{
+      border-color:rgba(61,220,132,.55);
+      box-shadow:0 0 0 1px rgba(61,220,132,.18) inset;
+    }
+
+    .slot.lose{
+      opacity:.78;
+      border-color:rgba(255,255,255,.08);
+    }
 
     .name{
       font-weight:900;
       font-size:13px;
       line-height:1.1;
+      word-break:break-word;
     }
+
     .seed{
       font-size:11px;
       color:rgba(255,255,255,.55);
       margin-top:2px;
     }
 
-    .score{
-      width:40px;
+    .scoreBox{
+      width:100%;
+      min-width:88px;
+      max-width:118px;
       text-align:center;
-      padding:8px 6px;
+      padding:8px 8px;
       border-radius:10px;
       background:rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.10);
       color:#fff;
       font-weight:900;
+      font-size:18px;
+      line-height:1.1;
       outline:none;
+      font-variant-numeric:tabular-nums;
+      overflow:visible;
+      white-space:nowrap;
     }
 
-    .btn-mini{
-      padding:8px 10px;
-      border-radius:10px;
-      font-weight:900;
-      font-size:12px;
-      background:#1f1f1f;
-      color:#fff;
-      border:1px solid rgba(255,255,255,.14);
-      cursor:pointer;
-    }
-
-    .btn-win{ background:rgba(61,220,132,.18); border-color:rgba(61,220,132,.35); }
-    .btn-lose{ background:rgba(255,82,82,.12); border-color:rgba(255,82,82,.35); }
-
-    .slot.win{
-      border-color: rgba(61,220,132,.55);
-      box-shadow: 0 0 0 1px rgba(61,220,132,.18) inset;
-    }
-    .slot.lose{
-      opacity:.78;
-      border-color: rgba(255,255,255,.08);
-    }
-
-    .footerbar{
-      position:fixed;
-      left:0; right:0; bottom:0;
-      background:rgba(10,10,12,.92);
-      border-top:1px solid rgba(255,255,255,.10);
-      padding:10px 14px;
-      backdrop-filter: blur(10px);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      z-index:999;
-    }
-    .footerbar .left{
-      font-size:12px;
-      color:rgba(255,255,255,.65);
-      line-height:1.2;
-    }
-    .footerbar .right{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .tiny{
-      font-size:11px;
-      color:rgba(255,255,255,.55);
-    }
-
-    .note{
-      padding:10px 12px;
+    .chartPlaceholder{
+      border:1px dashed rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18);
       border-radius:14px;
-      border:1px dashed rgba(255,255,255,.22);
-      background:rgba(245,192,79,.08);
-      color:#f5c04f;
-      font-weight:800;
-      font-size:13px;
+      padding:14px;
+      color:rgba(255,255,255,.56);
+      font-size:12px;
+      text-align:center;
+      min-width:210px;
     }
 
-    .kbd{
-      padding:2px 6px;
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:6px;
-      background:rgba(255,255,255,.06);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:11px;
-      color:#fff;
+    .footer{
+      flex:0 0 auto;
+      text-align:center;
+      color:rgba(255,255,255,.45);
+      font-size:12px;
+      padding:2px 0 0;
     }
 
-    /* Hide scrollbars gently (still scrollable) */
-    .bracket-wrap::-webkit-scrollbar{ height:10px; }
-    .bracket-wrap::-webkit-scrollbar-thumb{ background:#2c2c2c; border-radius:999px; }
+    @media (max-width:720px){
+      .page{
+        padding:8px;
+      }
+
+      .brand img{
+        max-width:92px;
+      }
+
+      .brand h1{
+        font-size:16px;
+      }
+
+      .brand .sub{
+        font-size:12px;
+      }
+
+      .slot{
+        grid-template-columns:minmax(0, 1fr) minmax(76px, auto);
+      }
+
+      .scoreBox{
+        min-width:76px;
+        max-width:104px;
+        font-size:16px;
+        padding:8px 6px;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
+  <div class="page">
     <div class="topbar">
       <div class="brand">
         <img id="appLogo" src="logo.png" alt="AHSS Logo" />
         <div>
-          <h1>Double Elimination Brackets</h1>
-          <div class="sub">Built for AHSS - pulls tonight’s signups from AYPT Google Sheet</div>
+          <h1>Live Bracket</h1>
+          <div class="sub" id="subtitle">Read only tournament snapshot</div>
         </div>
       </div>
 
-      <div class="row">
-        <a class="btn btn-ghost" href="index.html">Back to AHSS</a>
-        <a class="btn btn-ghost" href="AYPT.html">Open AYPT</a>
+      <div class="toolbar">
+        <span class="pill" id="snapshotInfo">Loading snapshot...</span>
+        <span class="pill" id="refreshInfo">Refresh: 20s</span>
+        <button class="btn" id="btnZoomOut" type="button">Zoom Out</button>
+        <button class="btn" id="btnZoomIn" type="button">Zoom In</button>
+        <button class="btn btn-primary" id="btnFit" type="button">Fit Width</button>
+        <button class="btn btn-primary" id="btnRefresh" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <div class="viewer" id="viewer">
+      <div class="zoomStage" id="zoomStage">
+        <div id="bracketRoot"></div>
       </div>
     </div>
 
-    <div class="grid">
-      <!-- LEFT: Controls -->
-      <div class="controls">
-        <div class="card">
-          <div class="card-h">
-            <h2>Entrants</h2>
-            <div class="tiny">Paste, edit, or load from AYPT sheet</div>
-          </div>
-          <div class="card-b">
-            <div class="row">
-              <button class="btn btn-primary" id="btnLoadAYPT">Load from AYPT Sheet</button>
-              <button class="btn" id="btnClear">Clear</button>
-            </div>
-
-            <div style="margin-top:12px;">
-              <label for="entrantsBox">One name per line</label>
-              <textarea id="entrantsBox" placeholder="Example:
-Sammy Mora
-Connor Cummings
-Brian Q
-..."></textarea>
-              <div class="pillbar" id="entrantPills"></div>
-              <div class="status" id="status">Ready.</div>
-            </div>
-
-            <div style="margin-top:12px;" class="note">
-              Tip - after loading, hit <span class="kbd">Build bracket</span>. You can still edit names before building.
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">
-            <h2>Bracket Options</h2>
-          </div>
-          <div class="card-b">
-            <div class="row">
-              <div style="flex:1; min-width:160px;">
-                <label for="seedMode">Seeding</label>
-                <select id="seedMode">
-                  <option value="random">Random (shuffle)</option>
-                  <option value="alpha">Alphabetical</option>
-                </select>
-              </div>
-
-              <div style="flex:1; min-width:160px;">
-                <label for="maxPlayers">Max players</label>
-                <input id="maxPlayers" type="number" min="2" max="64" step="1" value="16" />
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px;">
-              <button class="btn btn-primary" id="btnBuild">Build bracket</button>
-              <button class="btn" id="btnResetResults">Reset results</button>
-            </div>
-
-            <div class="status" id="buildInfo" style="margin-top:10px;">
-              Double elim - creates Winners + Losers lanes and a Grand Final shell. (This is a practical TD view, not a perfect PDF bracket.)
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Bracket -->
-      <div class="card">
-        <div class="card-h">
-          <h2>Bracket</h2>
-          <div class="tiny">Tap scores - click “Win” to advance</div>
-        </div>
-        <div class="card-b bracket-wrap">
-          <div id="bracketRoot">
-            <div class="status">No bracket yet - load entrants and click Build bracket.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="footerbar">
-    <div class="left">
-      <div><strong>Controls</strong> - click score boxes to type. Use Win button to advance.</div>
-      <div class="tiny">This is built to be fast for tonight - not a full bracket publishing system (yet).</div>
-    </div>
-    <div class="right">
-      <button class="btn" id="btnExportJSON">Export JSON</button>
-      <button class="btn" id="btnImportJSON">Import JSON</button>
-      <button class="btn" id="btnExportResults">Export Results (CSV)</button>
+    <div class="footer">
+      brackets.html read only live view
     </div>
   </div>
 
   <script>
-    // =========================================================
-    // AYPT SHEET CONFIG (same endpoint as AYPT.html)
-    // =========================================================
-    const AYPT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
+    const STATE_KEY = "ahss_brackets_state";
+    const REFRESH_MS = 20000;
+    const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
+    const SCROLL_LEFT_KEY = "AHSS_LIVE_BRACKET_SCROLL_LEFT";
+    const SCROLL_TOP_KEY = "AHSS_LIVE_BRACKET_SCROLL_TOP";
 
-    // JSONP helper (avoids CORS) - same approach as AYPT.html
-    function jsonp(url, params = {}, timeoutMs = 12000){
-      return new Promise((resolve, reject) => {
-        const cb = "BRACKETS_CB_" + Math.random().toString(36).slice(2);
-        params.callback = cb;
-        const qs = new URLSearchParams(params).toString();
+    let liveZoom = 1;
+    let refreshTimer = null;
 
-        const s = document.createElement("script");
-        s.src = `${url}?${qs}`;
-        s.id  = cb;
+    const $ = (sel, root=document) => root.querySelector(sel);
 
-        const timeout = setTimeout(() => { cleanup(); reject(new Error("JSONP timeout")); }, timeoutMs);
-        window[cb] = (data) => { cleanup(); resolve(data); };
-
-        function cleanup(){
-          clearTimeout(timeout);
-          const el = document.getElementById(cb);
-          if(el) el.remove();
-          try { delete window[cb]; } catch(_) { window[cb] = undefined; }
-        }
-        document.body.appendChild(s);
-      });
-    }
-
-    // =========================================================
-    // Theme + logo helpers (reuse AHSS behavior lightly)
-    // =========================================================
-    const THEME_KEYS = {
-      A:'ahss_theme_teamA',
-      B:'ahss_theme_teamB',
-      LOGO:'ahss_custom_logo_data'
-    };
-
-    function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-    function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
-
-    function applySavedTheme(){
-      const a = localStorage.getItem(THEME_KEYS.A);
-      const b = localStorage.getItem(THEME_KEYS.B);
-      if(a) setCssVar('--teamA', a);
-      if(b) setCssVar('--teamB', b);
-      const storedLogo = localStorage.getItem(THEME_KEYS.LOGO);
-      const img = document.getElementById('appLogo');
-      if(storedLogo && img) img.src = storedLogo;
-    }
-
-    // =========================================================
-    // Entrant editing UX
-    // =========================================================
-    const entrantsBox = document.getElementById('entrantsBox');
-    const entrantPills = document.getElementById('entrantPills');
-    const statusEl = document.getElementById('status');
-
-    function parseEntrants(){
-      const raw = (entrantsBox.value || '').split('\n').map(s=>s.trim()).filter(Boolean);
-      // de-dupe case-insensitive
-      const out = [];
-      const seen = new Set();
-      for(const n of raw){
-        const k = n.toLowerCase();
-        if(seen.has(k)) continue;
-        seen.add(k);
-        out.push(n);
-      }
-      return out;
-    }
-
-    function updateEntrantPills(){
-      const list = parseEntrants();
-      entrantPills.innerHTML = '';
-      list.forEach((name, idx) => {
-        const pill = document.createElement('div');
-        pill.className = 'pill';
-        pill.innerHTML = `<span>${escapeHtml(name)}</span><span class="x" title="Remove">×</span>`;
-        pill.querySelector('.x').addEventListener('click', () => {
-          const cur = parseEntrants();
-          cur.splice(idx, 1);
-          entrantsBox.value = cur.join('\n');
-          updateEntrantPills();
-        });
-        entrantPills.appendChild(pill);
-      });
-      statusEl.textContent = `${list.length} entrant(s) in box.`;
-    }
-
-    entrantsBox.addEventListener('input', () => updateEntrantPills());
-
-    // =========================================================
-    // Load from AYPT Sheet (JSONP list=1)
-    // =========================================================
-    async function loadFromAYPT(){
-      statusEl.textContent = "Loading from AYPT Google Sheet…";
-
-      try{
-        const data = await jsonp(AYPT_SCRIPT_URL, { list: "1" });
-        if(!data || !data.ok) throw new Error((data && data.message) || "Load failed");
-
-        const rows = data.rows || [];
-        if(!rows.length){
-          statusEl.textContent = "AYPT sheet returned 0 rows.";
-          return;
-        }
-
-        // Build names from fields: firstName / lastName (as used in your AYPT admin UI)
-        const names = rows
-          .map(r => `${String(r.firstName || "").trim()} ${String(r.lastName || "").trim()}`.trim())
-          .filter(n => n && n !== "");
-
-        // Optional: paid-only
-        // const names = rows
-        //   .filter(r => !!r.paid)
-        //   .map(r => `${String(r.firstName||"").trim()} ${String(r.lastName||"").trim()}`.trim())
-        //   .filter(Boolean);
-
-        // De-dupe case-insensitive
-        const out = [];
-        const seen = new Set();
-        for(const n of names){
-          const key = n.toLowerCase();
-          if(seen.has(key)) continue;
-          seen.add(key);
-          out.push(n);
-        }
-
-        entrantsBox.value = out.join('\n');
-        updateEntrantPills();
-        statusEl.textContent = `Loaded ${out.length} players from AYPT Sheet. Tap "Build bracket".`;
-      } catch(err){
-        console.error(err);
-        statusEl.textContent = `Failed to load from AYPT Sheet: ${err.message || err}`;
-      }
-    }
-
-    // =========================================================
-    // Bracket engine (practical double-elim shell)
-    // =========================================================
-    const bracketRoot = document.getElementById('bracketRoot');
-    const seedModeEl = document.getElementById('seedMode');
-    const maxPlayersEl = document.getElementById('maxPlayers');
-
-    // State saved for export/import
-    let BRACKET_STATE = null;
-
-    function nextPow2(n){
-      let p = 1;
-      while(p < n) p <<= 1;
-      return p;
-    }
-
-    function seededList(list, mode){
-      const a = [...list];
-      if(mode === 'alpha'){
-        a.sort((x,y)=>x.localeCompare(y));
-      } else {
-        shuffle(a);
-      }
-      return a;
-    }
-
-    function shuffle(a){
-      for(let i=a.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    function makeMatch(id, label, p1=null, p2=null){
-      return {
-        id,
-        label,
-        p1, p2,
-        s1: "",
-        s2: "",
-        winner: null, // 'p1' or 'p2'
-        loser: null
-      };
-    }
-
-    function buildBracket(){
-      const entrants = parseEntrants();
-      const maxP = clamp(parseInt(maxPlayersEl.value||"16",10), 2, 64);
-      const trimmed = entrants.slice(0, maxP);
-
-      if(trimmed.length < 2){
-        bracketRoot.innerHTML = `<div class="status">Need at least 2 entrants.</div>`;
-        return;
-      }
-
-      const seeded = seededList(trimmed, seedModeEl.value);
-      const bracketSize = nextPow2(seeded.length);
-      const byes = bracketSize - seeded.length;
-
-      const slots = [...seeded];
-      for(let i=0;i<byes;i++) slots.push("BYE");
-
-      // Winners Round 1 matches
-      const wr1 = [];
-      for(let i=0;i<bracketSize;i+=2){
-        const m = makeMatch(`W1-${i/2+1}`, `W R1 - M${i/2+1}`, slots[i], slots[i+1]);
-        wr1.push(m);
-      }
-
-      // Winners Round 2+ (shell only, we will populate as winners advance)
-      const winnersRounds = [];
-      winnersRounds.push(wr1);
-
-      let roundSize = wr1.length;
-      let r = 2;
-      while(roundSize > 1){
-        roundSize = Math.ceil(roundSize/2);
-        const round = [];
-        for(let i=0;i<roundSize;i++){
-          round.push(makeMatch(`W${r}-${i+1}`, `W R${r} - M${i+1}`));
-        }
-        winnersRounds.push(round);
-        r++;
-      }
-
-      // Losers (shell) - not exact bracket mapping for every bracket size,
-      // but practical: a lane of matches that fills with losers as play proceeds.
-      // We'll create enough loser rounds to keep it usable.
-      const losersRounds = [];
-      const loserRoundsCount = Math.max(2, (winnersRounds.length - 1) * 2);
-      for(let lr=1; lr<=loserRoundsCount; lr++){
-        const count = Math.max(1, Math.ceil(bracketSize / Math.pow(2, Math.ceil(lr/2)+1)));
-        const round = [];
-        for(let i=0;i<count;i++){
-          round.push(makeMatch(`L${lr}-${i+1}`, `L R${lr} - M${i+1}`));
-        }
-        losersRounds.push(round);
-      }
-
-      const gf1 = makeMatch("GF-1", "Grand Final", null, null);
-      const gf2 = makeMatch("GF-2", "Grand Final Reset (if needed)", null, null);
-
-      BRACKET_STATE = {
-        createdAt: Date.now(),
-        bracketSize,
-        entrants: trimmed,
-        seeded,
-        winnersRounds,
-        losersRounds,
-        grandFinal: [gf1, gf2]
-      };
-
-      // Auto-advance BYE matches in W R1
-      winnersRounds[0].forEach(m=>{
-        if(m.p1 === "BYE" && m.p2 !== "BYE"){ setWinner(m, "p2", true); }
-        else if(m.p2 === "BYE" && m.p1 !== "BYE"){ setWinner(m, "p1", true); }
-      });
-
-      renderBracket();
-      document.getElementById('buildInfo').textContent =
-        `Built for ${trimmed.length} players (bracket size ${bracketSize}, ${byes} bye(s)).`;
-    }
-
-    function renderBracket(){
-      if(!BRACKET_STATE){
-        bracketRoot.innerHTML = `<div class="status">No bracket yet.</div>`;
-        return;
-      }
-
-      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
-
-      const bracketEl = document.createElement('div');
-      bracketEl.className = 'bracket';
-
-      // Winners columns
-      winnersRounds.forEach((round, idx) => {
-        const col = document.createElement('div');
-        col.className = 'col';
-        col.innerHTML = `<div class="col-title">Winners - Round ${idx+1}</div>`;
-        round.forEach(m => col.appendChild(renderMatchCard(m, "W")));
-        bracketEl.appendChild(col);
-      });
-
-      // Losers columns
-      losersRounds.forEach((round, idx) => {
-        const col = document.createElement('div');
-        col.className = 'col';
-        col.innerHTML = `<div class="col-title">Losers - Round ${idx+1}</div>`;
-        round.forEach(m => col.appendChild(renderMatchCard(m, "L")));
-        bracketEl.appendChild(col);
-      });
-
-      // Grand final column
-      const gfCol = document.createElement('div');
-      gfCol.className = 'col';
-      gfCol.innerHTML = `<div class="col-title">Finals</div>`;
-      grandFinal.forEach(m => gfCol.appendChild(renderMatchCard(m, "G")));
-      bracketEl.appendChild(gfCol);
-
-      bracketRoot.innerHTML = '';
-      bracketRoot.appendChild(bracketEl);
-    }
-
-    function renderMatchCard(match, lane){
-      const card = document.createElement('div');
-      card.className = 'match';
-      card.dataset.matchId = match.id;
-
-      const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
-      card.innerHTML = `
-        <div class="match-head">
-          <div>${escapeHtml(match.label)}</div>
-          <div class="tag">${tagText}</div>
-        </div>
-      `;
-
-      const s1 = renderSlot(match, "p1");
-      const s2 = renderSlot(match, "p2");
-      card.appendChild(s1);
-      card.appendChild(s2);
-
-      const actions = document.createElement('div');
-      actions.className = 'row';
-      actions.style.marginTop = "10px";
-      actions.innerHTML = `
-        <button class="btn-mini btn-win" data-win="p1">Win - Top</button>
-        <button class="btn-mini btn-win" data-win="p2">Win - Bottom</button>
-        <button class="btn-mini btn-lose" data-clear="1">Clear</button>
-      `;
-      actions.querySelector('[data-win="p1"]').addEventListener('click', () => winMatch(match.id, "p1"));
-      actions.querySelector('[data-win="p2"]').addEventListener('click', () => winMatch(match.id, "p2"));
-      actions.querySelector('[data-clear="1"]').addEventListener('click', () => clearMatch(match.id));
-      card.appendChild(actions);
-
-      // Auto-disable win buttons if missing players
-      const wp1 = actions.querySelector('[data-win="p1"]');
-      const wp2 = actions.querySelector('[data-win="p2"]');
-      if(!match.p1 || match.p1 === "BYE") wp1.disabled = true;
-      if(!match.p2 || match.p2 === "BYE") wp2.disabled = true;
-
-      return card;
-    }
-
-    function renderSlot(match, which){
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-
-      const name = (which === "p1" ? match.p1 : match.p2) || "TBD";
-      const scoreKey = which === "p1" ? "s1" : "s2";
-
-      if(match.winner === which) slot.classList.add('win');
-      if(match.winner && match.winner !== which) slot.classList.add('lose');
-
-      slot.innerHTML = `
-        <div>
-          <div class="name">${escapeHtml(name)}</div>
-          <div class="seed">${escapeHtml(match.id)} - ${which.toUpperCase()}</div>
-        </div>
-        <input class="score" inputmode="numeric" pattern="[0-9]*" value="${escapeHtml(match[scoreKey])}" />
-        <div></div>
-      `;
-
-      const scoreInput = slot.querySelector('.score');
-      scoreInput.addEventListener('input', () => {
-        match[scoreKey] = scoreInput.value.replace(/[^\d]/g,'').slice(0,2);
-        saveState();
-      });
-
-      return slot;
-    }
-
-    // =========================================================
-    // Advance logic (simple + usable)
-    // =========================================================
-    function findMatchById(id){
-      if(!BRACKET_STATE) return null;
-      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
-      for(const r of winnersRounds){
-        for(const m of r) if(m.id === id) return m;
-      }
-      for(const r of losersRounds){
-        for(const m of r) if(m.id === id) return m;
-      }
-      for(const m of grandFinal){
-        if(m.id === id) return m;
-      }
-      return null;
-    }
-
-    function setWinner(match, which, silent=false){
-      match.winner = which;
-      match.loser = (which === "p1" ? "p2" : "p1");
-      if(!silent) saveState();
-    }
-
-    function winMatch(matchId, which){
-      const m = findMatchById(matchId);
-      if(!m) return;
-
-      // block nonsense
-      const winnerName = (which === "p1" ? m.p1 : m.p2);
-      const loserName  = (which === "p1" ? m.p2 : m.p1);
-      if(!winnerName || winnerName === "TBD" || winnerName === "BYE") return;
-
-      setWinner(m, which);
-
-      // Determine lane type by ID prefix
-      if(m.id.startsWith("W")){
-        advanceInWinners(m, winnerName, loserName);
-      } else if(m.id.startsWith("L")){
-        advanceInLosers(m, winnerName, loserName);
-      } else if(m.id.startsWith("GF")){
-        advanceInFinals(m, winnerName, loserName);
-      }
-
-      renderBracket();
-    }
-
-    function clearMatch(matchId){
-      const m = findMatchById(matchId);
-      if(!m) return;
-      m.s1 = "";
-      m.s2 = "";
-      m.winner = null;
-      m.loser = null;
-      saveState();
-      renderBracket();
-    }
-
-    function advanceInWinners(match, winnerName, loserName){
-      const { winnersRounds, losersRounds, grandFinal } = BRACKET_STATE;
-
-      // Parse W{round}-{index}
-      const mm = match.id.match(/^W(\d+)-(\d+)$/);
-      if(!mm) return;
-      const roundNum = parseInt(mm[1],10);
-      const idx = parseInt(mm[2],10) - 1;
-
-      // Winners advance to next winners round
-      const nextRound = winnersRounds[roundNum]; // since roundNum is 1-based; next is index = roundNum
-      if(nextRound){
-        const nextIdx = Math.floor(idx/2);
-        const target = nextRound[nextIdx];
-        if(target){
-          // Place into p1 if empty else p2
-          if(!target.p1) target.p1 = winnerName;
-          else if(!target.p2) target.p2 = winnerName;
-        }
-      } else {
-        // Winner of winners bracket goes to Grand Final p1
-        const gf = grandFinal[0];
-        if(!gf.p1) gf.p1 = winnerName;
-      }
-
-      // Loser drops into first available Losers match slot (simple TD flow)
-      const drop = findFirstAvailableSlot(losersRounds);
-      if(drop){
-        if(!drop.p1) drop.p1 = loserName;
-        else if(!drop.p2) drop.p2 = loserName;
-      }
-
-      saveState();
-    }
-
-    function advanceInLosers(match, winnerName, loserName){
-      const { losersRounds, grandFinal } = BRACKET_STATE;
-
-      // Winner advances to next Losers round slot
-      const mm = match.id.match(/^L(\d+)-(\d+)$/);
-      if(!mm) return;
-      const roundNum = parseInt(mm[1],10);
-      const idx = parseInt(mm[2],10) - 1;
-
-      const nextRound = losersRounds[roundNum]; // next is index = roundNum
-      if(nextRound){
-        const nextIdx = Math.floor(idx/2);
-        const target = nextRound[nextIdx];
-        if(target){
-          if(!target.p1) target.p1 = winnerName;
-          else if(!target.p2) target.p2 = winnerName;
-        }
-      } else {
-        // last loser winner goes to Grand Final p2
-        const gf = grandFinal[0];
-        if(!gf.p2) gf.p2 = winnerName;
-      }
-
-      // Loser is eliminated (no further action)
-      saveState();
-    }
-
-    function advanceInFinals(match, winnerName, loserName){
-      const { grandFinal } = BRACKET_STATE;
-      // GF-1: if losers bracket winner beats winners bracket champ, trigger reset GF-2
-      // GF-2: winner is champion
-      if(match.id === "GF-1"){
-        // If p2 wins (losers champ beats winners champ), schedule reset match with same players
-        // If p1 wins, champion done.
-        if(match.winner === "p2"){
-          const reset = grandFinal[1];
-          reset.p1 = match.p1;
-          reset.p2 = match.p2;
-        } else {
-          // champion, clear reset
-          grandFinal[1].p1 = null;
-          grandFinal[1].p2 = null;
-          grandFinal[1].winner = null;
-          grandFinal[1].loser = null;
-          grandFinal[1].s1 = "";
-          grandFinal[1].s2 = "";
-        }
-      }
-      saveState();
-    }
-
-    function findFirstAvailableSlot(rounds){
-      for(const r of rounds){
-        for(const m of r){
-          if(!m.p1 || !m.p2) return m;
-        }
-      }
-      return null;
-    }
-
-    // =========================================================
-    // Export / Import
-    // =========================================================
-    function saveState(){
-      try{
-        localStorage.setItem('ahss_brackets_state', JSON.stringify(BRACKET_STATE));
-      }catch(e){
-        // ignore
-      }
-    }
-
-    function loadState(){
-      try{
-        const raw = localStorage.getItem('ahss_brackets_state');
-        if(!raw) return false;
-        const s = JSON.parse(raw);
-        if(!s || !s.winnersRounds) return false;
-        BRACKET_STATE = s;
-        return true;
-      }catch(e){
-        return false;
-      }
-    }
-
-    function exportJSON(){
-      if(!BRACKET_STATE){
-        alert('No bracket to export.');
-        return;
-      }
-      const blob = new Blob([JSON.stringify(BRACKET_STATE, null, 2)], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `AHSS_Brackets_${new Date().toISOString().slice(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function importJSON(){
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'application/json';
-      input.onchange = async () => {
-        const file = input.files && input.files[0];
-        if(!file) return;
-        try{
-          const text = await file.text();
-          const s = JSON.parse(text);
-          if(!s || !s.winnersRounds) throw new Error('Not a brackets export');
-          BRACKET_STATE = s;
-          saveState();
-          renderBracket();
-          document.getElementById('buildInfo').textContent = 'Imported bracket state.';
-        }catch(e){
-          alert('Import failed: ' + (e.message || e));
-        }
-      };
-      input.click();
-    }
-
-    // =========================================================
-    // Utilities
-    // =========================================================
-    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-    function escapeHtml(s){
+    function esc(s){
       return String(s ?? "")
         .replace(/&/g,"&amp;")
         .replace(/</g,"&lt;")
@@ -1087,196 +551,491 @@ Brian Q
         .replace(/'/g,"&#39;");
     }
 
-    // =========================================================
-    // Buttons wiring
-    // =========================================================
-    document.getElementById('btnLoadAYPT').addEventListener('click', loadFromAYPT);
-    document.getElementById('btnClear').addEventListener('click', () => {
-      entrantsBox.value = '';
-      updateEntrantPills();
-    });
-
-    document.getElementById('btnBuild').addEventListener('click', () => {
-      buildBracket();
-      saveState();
-    });
-
-    document.getElementById('btnResetResults').addEventListener('click', () => {
-      if(!BRACKET_STATE) return;
-      if(!confirm('Reset all match results (scores + winners) but keep bracket structure?')) return;
-
-      const wipe = (m) => { m.s1=""; m.s2=""; m.winner=null; m.loser=null; };
-
-      BRACKET_STATE.winnersRounds.forEach(r=>r.forEach(wipe));
-      BRACKET_STATE.losersRounds.forEach(r=>r.forEach(wipe));
-      BRACKET_STATE.grandFinal.forEach(wipe);
-
-      saveState();
-      renderBracket();
-    });
-
-    document.getElementById('btnExportJSON').addEventListener('click', exportJSON);
-    document.getElementById('btnImportJSON').addEventListener('click', importJSON);
-    document.getElementById('btnExportResults').addEventListener('click', exportResultsCSV);
-
-    function getChampionData(){
-  if(!BRACKET_STATE || !BRACKET_STATE.grandFinal) return null;
-
-  const gf1 = BRACKET_STATE.grandFinal[0];
-  const gf2 = BRACKET_STATE.grandFinal[1];
-
-  // If GF-2 has players and a winner, that overrides GF-1
-  const finalMatch = (gf2 && gf2.p1 && gf2.p2 && gf2.winner) ? gf2 : (gf1 && gf1.winner ? gf1 : null);
-  if(!finalMatch) return null;
-
-  const champ = finalMatch.winner === "p1" ? finalMatch.p1 : finalMatch.p2;
-  const runner = finalMatch.winner === "p1" ? finalMatch.p2 : finalMatch.p1;
-
-  return { champ, runner, finalMatchId: finalMatch.id };
-}
-
-function collectEliminations(){
-  // We treat "loser of any L-match" as eliminated (simple + practical).
-  // This yields a usable elimination order for placements like 3rd/4th/etc.
-  if(!BRACKET_STATE) return [];
-
-  const elim = [];
-  const pushElim = (m) => {
-    if(!m || !m.winner || !m.loser) return;
-    const loserName = (m.loser === "p1" ? m.p1 : m.p2);
-    const winnerName = (m.winner === "p1" ? m.p1 : m.p2);
-    if(!loserName || loserName === "BYE" || loserName === "TBD") return;
-    elim.push({
-      name: loserName,
-      eliminatedBy: winnerName || "",
-      matchId: m.id || "",
-      when: Date.now()
-    });
-  };
-
-  // Losers bracket eliminations
-  (BRACKET_STATE.losersRounds || []).forEach(r => r.forEach(pushElim));
-
-  // De-dupe (keep last occurrence)
-  const map = new Map();
-  elim.forEach(e => map.set(e.name.toLowerCase(), e));
-  return Array.from(map.values());
-}
-
-function buildPlacements(){
-  if(!BRACKET_STATE) return [];
-
-  const entrants = (BRACKET_STATE.entrants || []).filter(n => n && n !== "BYE");
-  const champData = getChampionData();
-
-  // Default placements list
-  const placements = [];
-
-  if(champData && champData.champ){
-    placements.push({ place: 1, name: champData.champ });
-  }
-  if(champData && champData.runner){
-    placements.push({ place: 2, name: champData.runner });
-  }
-
-  // Remaining placements by “latest eliminations first”
-  const eliminated = collectEliminations();
-
-  // Remove champ/runner if present
-  const taken = new Set((placements.map(p => p.name.toLowerCase())));
-  const remainingElims = eliminated
-    .filter(e => !taken.has(e.name.toLowerCase()))
-    .reverse(); // last eliminated = higher placement
-
-  let nextPlace = placements.length + 1;
-  for(const e of remainingElims){
-    placements.push({ place: nextPlace++, name: e.name, eliminatedBy: e.eliminatedBy, matchId: e.matchId });
-  }
-
-  // Add anyone never eliminated / never placed (in-progress or edge cases)
-  const placedSet = new Set(placements.map(p => p.name.toLowerCase()));
-  const leftovers = entrants.filter(n => !placedSet.has(n.toLowerCase()));
-  for(const n of leftovers){
-    placements.push({ place: nextPlace++, name: n, note: "No elimination recorded (in progress?)" });
-  }
-
-  return placements;
-}
-
-function exportResultsCSV(){
-  if(!BRACKET_STATE){
-    alert("No bracket loaded.");
-    return;
-  }
-
-  const placements = buildPlacements();
-  const champData = getChampionData();
-
-  // If no champion yet, still export what we have.
-  const header = ["Place","Player","Eliminated By","Match Id","Note"];
-  const lines = [header.join(",")];
-
-  for(const p of placements){
-    const row = [
-      p.place ?? "",
-      csvCell(p.name ?? ""),
-      csvCell(p.eliminatedBy ?? ""),
-      csvCell(p.matchId ?? ""),
-      csvCell(p.note ?? "")
-    ];
-    lines.push(row.join(","));
-  }
-
-  // Add a little meta footer as comments (CSV-safe)
-  lines.push("");
-  lines.push(csvCell("# BracketSize: " + (BRACKET_STATE.bracketSize || "")));
-  lines.push(csvCell("# Created: " + new Date(BRACKET_STATE.createdAt || Date.now()).toLocaleString()));
-  lines.push(csvCell("# ChampionKnown: " + (!!(champData && champData.champ))));
-
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `AHSS_Tournament_Results_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function csvCell(v){
-  const s = String(v ?? "");
-  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-  return s;
-}
-
-    // =========================================================
-    // Init
-    // =========================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      applySavedTheme();
-
-      // Restore entrants from last session (optional)
-      const last = localStorage.getItem('ahss_brackets_entrants');
-      if(last){
-        entrantsBox.value = last;
+    function fmtLocal(ts){
+      if(!ts) return "";
+      try{
+        return new Date(ts).toLocaleString();
+      }catch{
+        return String(ts);
       }
-      updateEntrantPills();
+    }
 
-      entrantsBox.addEventListener('change', () => {
-        localStorage.setItem('ahss_brackets_entrants', entrantsBox.value || '');
+    function isRealBracketName(name){
+      return !!name && name !== "TBD" && name !== "BYE";
+    }
+
+    function matchCallLabel(m){
+      return m && m.callNumber ? `Match ${m.callNumber}` : "Match Pending";
+    }
+
+    function isMatchVisibleOnChart(m){
+      if(!m) return false;
+      if(m.winner) return true;
+      return isRealBracketName(m.p1) || isRealBracketName(m.p2);
+    }
+
+    function roundHasVisibleMatch(round){
+      return (round || []).some(isMatchVisibleOnChart);
+    }
+
+    function visibleWindowForRounds(rounds){
+      if(!rounds || !rounds.length) return [];
+
+      return rounds.map((round, idx) => ({
+        round,
+        idx,
+        isFuture: !roundHasVisibleMatch(round)
+      }));
+    }
+
+    function shouldShowFinals(state){
+      const gf = state && state.grandFinal ? state.grandFinal : [];
+
+      if(gf.some(isMatchVisibleOnChart)){
+        return true;
+      }
+
+      const winnersLast =
+        state.winnersRounds &&
+        state.winnersRounds[state.winnersRounds.length - 1]
+          ? state.winnersRounds[state.winnersRounds.length - 1][0]
+          : null;
+
+      const losersLastRound =
+        state.losersRounds &&
+        state.losersRounds[state.losersRounds.length - 1]
+          ? state.losersRounds[state.losersRounds.length - 1]
+          : [];
+
+      const losersLast = losersLastRound.length ? losersLastRound[losersLastRound.length - 1] : null;
+
+      return !!(winnersLast && winnersLast.winner) || !!(losersLast && losersLast.winner);
+    }
+
+    function loadBracketState(){
+      try{
+        const raw = localStorage.getItem(STATE_KEY);
+
+        if(!raw){
+          return null;
+        }
+
+        const state = JSON.parse(raw);
+
+        if(!state || !state.winnersRounds){
+          return null;
+        }
+
+        return state;
+      }catch(e){
+        console.warn("Unable to load bracket state:", e);
+        return null;
+      }
+    }
+
+    function countMatches(state){
+      let total = 0;
+
+      (state.winnersRounds || []).forEach(round => total += round.length);
+      (state.losersRounds || []).forEach(round => total += round.length);
+      (state.grandFinal || []).forEach(() => total += 1);
+
+      return total;
+    }
+
+    function getMatchStatus(m){
+      if(!m) return "pending";
+      if(m.winner) return "complete";
+      if(isRealBracketName(m.p1) && isRealBracketName(m.p2)) return "ready";
+      return "pending";
+    }
+
+    function getStatusText(status){
+      if(status === "complete") return "Complete";
+      if(status === "ready") return "Ready";
+      return "Pending";
+    }
+
+    function renderSlot(match, lane, which){
+      const slot = document.createElement("div");
+      slot.className = "slot";
+
+      if(match.winner === which){
+        slot.classList.add("win");
+      }
+
+      if(match.winner && match.winner !== which){
+        slot.classList.add("lose");
+      }
+
+      const rawName = (which === "p1" ? match.p1 : match.p2) || "TBD";
+      const otherName = (which === "p1" ? match.p2 : match.p1) || "TBD";
+      const waitingBye = rawName === "TBD" && isRealBracketName(otherName);
+      const displayName = waitingBye ? "BYE" : rawName;
+      const score = which === "p1" ? (match.s1 ?? "") : (match.s2 ?? "");
+      const id = match.id || "";
+
+      slot.innerHTML = `
+        <div>
+          <div class="name">${esc(displayName)}</div>
+          <div class="seed">${esc(id)} ${which.toUpperCase()}</div>
+        </div>
+        <div class="scoreBox">${esc(score)}</div>
+      `;
+
+      return slot;
+    }
+
+    function renderMatchCard(match, lane){
+      const card = document.createElement("div");
+      const status = getMatchStatus(match);
+
+      card.className = `match ${status}`;
+
+      const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
+
+      const routeLabel = match.goldenCrossoverLabel
+        ? ` <span class="mini" style="color:#00eaff;">${esc(match.goldenCrossoverLabel)}</span>`
+        : "";
+
+      const callLabel = matchCallLabel(match);
+      const callClass = match.callNumber ? "ready" : "pending";
+
+      card.innerHTML = `
+        <div class="match-head">
+          <div>
+            <div class="callLabel ${callClass}">${esc(callLabel)}</div>
+            <div>${esc(match.label || match.id || "")}${routeLabel}</div>
+          </div>
+          <div>
+            <div class="tag">${tagText}</div>
+            <div class="statusText ${status}">${esc(getStatusText(status))}</div>
+          </div>
+        </div>
+      `;
+
+      card.appendChild(renderSlot(match, lane, "p1"));
+      card.appendChild(renderSlot(match, lane, "p2"));
+
+      return card;
+    }
+
+    function buildUnifiedRoundColumn(round, idx, lane, isFuture=false){
+      const col = document.createElement("div");
+      col.className = "chartColumn";
+
+      const laneName = lane === "W" ? "Winners" : "Losers";
+      const arrow = lane === "W" ? "→" : (isFuture ? "…" : "←");
+      const note = isFuture ? "next" : (lane === "W" ? "right" : "left");
+
+      col.innerHTML = `
+        <div class="chartColumnTitle">
+          ${esc(laneName)} R${esc(idx + 1)}
+          <span class="flowArrow">${esc(arrow)}</span>
+          <span class="flowNote">${esc(note)}</span>
+        </div>
+      `;
+
+      if(isFuture){
+        col.innerHTML += `<div class="chartPlaceholder">Waiting for feeder match or BYE.</div>`;
+        return col;
+      }
+
+      round.forEach(m => {
+        if(isMatchVisibleOnChart(m)){
+          col.appendChild(renderMatchCard(m, lane));
+        }
       });
 
-      // Load existing bracket state if present
-      if(loadState()){
-        renderBracket();
-        document.getElementById('buildInfo').textContent = 'Restored bracket state from this device.';
+      return col;
+    }
+
+    function buildBracketChart(state){
+      const bracketEl = document.createElement("div");
+      bracketEl.className = "bracket";
+
+      const losersVisible = visibleWindowForRounds(state.losersRounds || []);
+      const winnersVisible = visibleWindowForRounds(state.winnersRounds || []);
+      const finalsVisible = shouldShowFinals(state);
+
+      bracketEl.innerHTML = `
+        <div class="chartHeader">
+          <div class="chartHeaderBox">
+            <span>Losers Side</span>
+            <span class="sub">flows left</span>
+          </div>
+          <div class="chartHeaderBox">
+            <span>Winners Side</span>
+            <span class="sub">flows right</span>
+          </div>
+          <div class="chartHeaderBox">
+            <span>Finals</span>
+            <span class="sub">reconnects</span>
+          </div>
+        </div>
+      `;
+
+      const body = document.createElement("div");
+      body.className = "chartBody";
+
+      const losersLane = document.createElement("div");
+      losersLane.className = "chartLane losersLane";
+
+      const losersCols = document.createElement("div");
+      losersCols.className = "chartColumns reverseFlow";
+
+      if(losersVisible.length){
+        losersVisible.forEach(item => {
+          losersCols.appendChild(buildUnifiedRoundColumn(item.round, item.idx, "L", item.isFuture));
+        });
+      }else{
+        losersCols.innerHTML = `<div class="chartPlaceholder">Losers side appears when a player drops from winners.</div>`;
       }
+
+      losersLane.appendChild(losersCols);
+
+      const winnersLane = document.createElement("div");
+      winnersLane.className = "chartLane winnersLane";
+
+      const winnersCols = document.createElement("div");
+      winnersCols.className = "chartColumns";
+
+      if(winnersVisible.length){
+        winnersVisible.forEach(item => {
+          winnersCols.appendChild(buildUnifiedRoundColumn(item.round, item.idx, "W", item.isFuture));
+        });
+      }else{
+        winnersCols.innerHTML = `<div class="chartPlaceholder">No active winners matches yet.</div>`;
+      }
+
+      winnersLane.appendChild(winnersCols);
+
+      const finalsLane = document.createElement("div");
+      finalsLane.className = "chartLane finalsLane";
+
+      const finalsCols = document.createElement("div");
+      finalsCols.className = "chartColumns";
+
+      const gfCol = document.createElement("div");
+      gfCol.className = "chartColumn";
+      gfCol.innerHTML = `<div class="chartColumnTitle">Grand Final <span class="flowArrow">★</span></div>`;
+
+      if(finalsVisible){
+        (state.grandFinal || []).forEach(m => {
+          if(isMatchVisibleOnChart(m)){
+            gfCol.appendChild(renderMatchCard(m, "GF"));
+          }
+        });
+      }else{
+        gfCol.innerHTML += `<div class="chartPlaceholder">Grand Final appears when the winners champ and losers champ are ready.</div>`;
+      }
+
+      finalsCols.appendChild(gfCol);
+      finalsLane.appendChild(finalsCols);
+
+      body.appendChild(losersLane);
+      body.appendChild(winnersLane);
+      body.appendChild(finalsLane);
+
+      bracketEl.appendChild(body);
+
+      return bracketEl;
+    }
+
+    function renderEmptyState(){
+      const root = $("#bracketRoot");
+
+      root.innerHTML = `
+        <div class="emptyState">
+          <h2>No bracket snapshot found</h2>
+          <p>
+            Open Tournament Director in this same browser, build or load a bracket,
+            then come back to this page.
+          </p>
+          <p class="mini">
+            This page is read only and uses the saved local bracket snapshot.
+          </p>
+        </div>
+      `;
+
+      $("#snapshotInfo").textContent = "No snapshot";
+      $("#subtitle").textContent = "Waiting for Tournament Director bracket data";
+    }
+
+    function renderLiveBracket(){
+      const root = $("#bracketRoot");
+      const state = loadBracketState();
+
+      if(!state){
+        renderEmptyState();
+        $("#refreshInfo").textContent = `Last check: ${new Date().toLocaleTimeString()}`;
+        return;
+      }
+
+      const oldLeft = $("#viewer").scrollLeft;
+      const oldTop = $("#viewer").scrollTop;
+
+      root.innerHTML = "";
+      root.appendChild(buildBracketChart(state));
+
+      const entrants = Array.isArray(state.entrants) ? state.entrants.length : 0;
+      const size = state.bracketSize || "";
+      const matches = countMatches(state);
+
+      $("#snapshotInfo").textContent = `${entrants} entrants | Size ${size} | ${matches} matches`;
+      $("#refreshInfo").textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+      $("#subtitle").textContent = state.createdAt ? `Snapshot created ${fmtLocal(state.createdAt)}` : "Read only tournament snapshot";
+
+      requestAnimationFrame(() => {
+        $("#viewer").scrollLeft = oldLeft;
+        $("#viewer").scrollTop = oldTop;
+      });
+    }
+
+    function setZoomPercent(pct, keepCenter=true){
+      const viewer = $("#viewer");
+      const stage = $("#zoomStage");
+
+      if(!viewer || !stage) return;
+
+      const oldZoom = liveZoom;
+      const nextZoom = Math.max(0.25, Math.min(2.5, pct / 100));
+
+      let centerX = 0;
+      let centerY = 0;
+
+      if(keepCenter && oldZoom > 0){
+        centerX = (viewer.scrollLeft + viewer.clientWidth / 2) / oldZoom;
+        centerY = (viewer.scrollTop + viewer.clientHeight / 2) / oldZoom;
+      }
+
+      liveZoom = nextZoom;
+      stage.style.transform = `scale(${liveZoom})`;
+      localStorage.setItem(ZOOM_KEY, String(Math.round(liveZoom * 100)));
+
+      requestAnimationFrame(() => {
+        if(keepCenter){
+          viewer.scrollLeft = Math.max(0, centerX * liveZoom - viewer.clientWidth / 2);
+          viewer.scrollTop = Math.max(0, centerY * liveZoom - viewer.clientHeight / 2);
+        }
+      });
+    }
+
+    function zoomIn(){
+      setZoomPercent((liveZoom * 100) + 10);
+    }
+
+    function zoomOut(){
+      setZoomPercent((liveZoom * 100) - 10);
+    }
+
+    function fitWidth(){
+      const viewer = $("#viewer");
+      const stage = $("#zoomStage");
+      const content = $("#bracketRoot .bracket");
+
+      if(!viewer || !stage || !content) return;
+
+      const oldTransform = stage.style.transform;
+      stage.style.transform = "scale(1)";
+
+      const available = Math.max(300, viewer.clientWidth - 28);
+      const needed = content.scrollWidth || content.offsetWidth || 5600;
+      const targetPct = Math.max(25, Math.min(250, Math.floor((available / needed) * 100)));
+
+      stage.style.transform = oldTransform;
+      setZoomPercent(targetPct, false);
+
+      viewer.scrollLeft = 0;
+      viewer.scrollTop = 0;
+    }
+
+    function saveScrollPosition(){
+      const viewer = $("#viewer");
+
+      if(!viewer) return;
+
+      sessionStorage.setItem(SCROLL_LEFT_KEY, String(viewer.scrollLeft));
+      sessionStorage.setItem(SCROLL_TOP_KEY, String(viewer.scrollTop));
+    }
+
+    function restoreScrollPosition(){
+      const viewer = $("#viewer");
+
+      if(!viewer) return;
+
+      const left = parseInt(sessionStorage.getItem(SCROLL_LEFT_KEY) || "0", 10);
+      const top = parseInt(sessionStorage.getItem(SCROLL_TOP_KEY) || "0", 10);
+
+      requestAnimationFrame(() => {
+        viewer.scrollLeft = isFinite(left) ? left : 0;
+        viewer.scrollTop = isFinite(top) ? top : 0;
+      });
+    }
+
+    function wireViewer(){
+      const viewer = $("#viewer");
+
+      if(!viewer) return;
+
+      viewer.addEventListener("scroll", saveScrollPosition);
+
+      viewer.addEventListener("wheel", e => {
+        if(e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+          viewer.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+
+        if(e.ctrlKey || e.metaKey){
+          e.preventDefault();
+
+          if(e.deltaY < 0){
+            zoomIn();
+          }else{
+            zoomOut();
+          }
+        }
+      }, { passive:false });
+    }
+
+    function applySavedTheme(){
+      const a = localStorage.getItem("ahss_theme_teamA");
+      const b = localStorage.getItem("ahss_theme_teamB");
+      const logo = localStorage.getItem("ahss_custom_logo_data");
+      const img = $("#appLogo");
+
+      if(a) document.documentElement.style.setProperty("--teamA", a);
+      if(b) document.documentElement.style.setProperty("--teamB", b);
+      if(logo && img) img.src = logo;
+    }
+
+    function startAutoRefresh(){
+      if(refreshTimer){
+        clearInterval(refreshTimer);
+      }
+
+      refreshTimer = setInterval(() => {
+        renderLiveBracket();
+      }, REFRESH_MS);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      applySavedTheme();
+
+      $("#btnRefresh").addEventListener("click", renderLiveBracket);
+      $("#btnZoomIn").addEventListener("click", zoomIn);
+      $("#btnZoomOut").addEventListener("click", zoomOut);
+      $("#btnFit").addEventListener("click", fitWidth);
+
+      wireViewer();
+
+      const savedZoom = parseInt(localStorage.getItem(ZOOM_KEY) || "100", 10);
+      setZoomPercent(isFinite(savedZoom) ? savedZoom : 100, false);
+
+      renderLiveBracket();
+      restoreScrollPosition();
+      startAutoRefresh();
     });
   </script>
-
-  <div style="text-align:center; margin-top:22px; padding-bottom:80px; color:rgba(255,255,255,.45); font-size:12px;">
-    v1.0 - brackets.html (AHSS)
-  </div>
 </body>
 </html>
