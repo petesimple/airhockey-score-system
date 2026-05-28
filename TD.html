@@ -8,7 +8,7 @@ Tournament Director v4.0.1 - Forfeit and Match Score Entry
 - Adds Room Control panel on Links tab
 - Adds Assign Table and Fill Links buttons to bracket matches
 - Adds Live button for brackets.html
-- Requires score entry before advancing a match winner
+- Requires score entry before advancing a played match winner, with BYE matches exempt
 - Allows F in score fields to mark a forfeit
 - Color codes table status:
   Open = green
@@ -4080,7 +4080,13 @@ function matchHasForfeit(m){
   return isForfeitScore(m.s1) || isForfeitScore(m.s2);
 }
 
+function isByeMatch(m){
+  if(!m) return false;
+  return m.p1 === "BYE" || m.p2 === "BYE";
+}
+
 function requireScoreBeforeAdvance(m){
+  if(isByeMatch(m)) return true;
   if(hasAnyScoreEntered(m)) return true;
 
   const label = m && m.callNumber ? `Match ${m.callNumber}` : (m && m.label ? m.label : "this match");
