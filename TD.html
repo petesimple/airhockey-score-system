@@ -1376,7 +1376,6 @@ body.bracketFullscreenOpen{
 </head>
 
 <body>
-<body>
 <div id="tdGate">
   <div class="td-gate-inner">
     <div class="td-gate-title">Tournament Director - Locked</div>
@@ -5822,7 +5821,6 @@ function wireBracketChartEditing(){
       renderBracket();
       buildMatchPicker();
       schedulePublish();
-      maybePromptTournamentComplete();
 
       $('#bracketStatus').textContent = "Cleared result. Downstream not started.";
       return;
@@ -5837,12 +5835,17 @@ function wireBracketChartEditing(){
 	m.winner = which;
 	m.loser = (which === "p1") ? "p2" : "p1";
 
-    propagateWinners();
-    assignCallNumbersToReadyMatches();
-    saveBracketState();
-    renderBracket();
-    buildMatchPicker();
-    schedulePublish();
+	BRACKET_STATE.tournamentCompleteConfirmed = false;
+	BRACKET_STATE.tournamentWinner = "";
+	BRACKET_STATE.tournamentCompletedAt = "";
+
+	propagateWinners();
+	assignCallNumbersToReadyMatches();
+	saveBracketState();
+	renderBracket();
+	buildMatchPicker();
+	schedulePublish();
+	maybePromptTournamentComplete();
   });
 }
 
@@ -6246,37 +6249,41 @@ function getChampionData(state){
 
   const gf1 = state.grandFinal[0];
   const gf2 = state.grandFinal[1];
-  const finalMatch = (gf2 && gf2.p1 && gf2.p2 && gf2.winner) ? gf2 : (gf1 && gf1.winner ? gf1 : null);
 
-  if(!finalMatch) return null;
+  if(!gf1 || !gf1.winner) return null;
 
-  const champ = finalMatch.winner === "p1" ? finalMatch.p1 : finalMatch.p2;
-  const runner = finalMatch.winner === "p1" ? finalMatch.p2 : finalMatch.p1;
+  const winnersRounds = state.winnersRounds || [];
+  const lastW = winnersRounds[winnersRounds.length - 1];
+  const winnersFinal = lastW && lastW[0] ? lastW[0] : null;
 
-  return { champ, runner, finalMatchId: finalMatch.id || "" };
-}
+  const winnersChamp =
+    winnersFinal && winnersFinal.winner
+      ? (winnersFinal.winner === "p1" ? winnersFinal.p1 : winnersFinal.p2)
+      : "";
 
-function collectEliminations(state){
-  const elim = [];
-  if(!state) return elim;
+  const gf1Winner = gf1.winner === "p1" ? gf1.p1 : gf1.p2;
+  const gf1Loser = gf1.winner === "p1" ? gf1.p2 : gf1.p1;
 
-  const pushElim = (m) => {
-    if(!m || !m.winner || !m.loser) return;
+  if(winnersChamp && gf1Winner === winnersChamp){
+    return {
+      champ: gf1Winner,
+      runner: gf1Loser,
+      finalMatchId: gf1.id || ""
+    };
+  }
 
-    const loserName = (m.loser === "p1" ? m.p1 : m.p2);
-    const winnerName = (m.winner === "p1" ? m.p1 : m.p2);
+  if(gf2 && gf2.winner){
+    const gf2Winner = gf2.winner === "p1" ? gf2.p1 : gf2.p2;
+    const gf2Loser = gf2.winner === "p1" ? gf2.p2 : gf2.p1;
 
-    if(!loserName || loserName === "BYE" || loserName === "TBD") return;
+    return {
+      champ: gf2Winner,
+      runner: gf2Loser,
+      finalMatchId: gf2.id || ""
+    };
+  }
 
-    elim.push({ name: loserName, eliminatedBy: winnerName || "", matchId: m.id || "" });
-  };
-
-  (state.losersRounds || []).forEach(r => r.forEach(pushElim));
-
-  const map = new Map();
-  elim.forEach(e => map.set(e.name.toLowerCase(), e));
-
-  return Array.from(map.values());
+  return null;
 }
 
 function buildPlacements(state){
