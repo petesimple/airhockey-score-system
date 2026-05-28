@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.1 - Forfeit and Match Score Entry
+Tournament Director v4.0.2 - 0/F/B
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -8,8 +8,8 @@ Tournament Director v4.0.1 - Forfeit and Match Score Entry
 - Adds Room Control panel on Links tab
 - Adds Assign Table and Fill Links buttons to bracket matches
 - Adds Live button for brackets.html
-- Requires score entry before advancing a played match winner, with BYE matches exempt
-- Allows F in score fields to mark a forfeit
+- Requires score entry before advancing a played match winner
+- Allows 0/F/B score entry for score, forfeit, and BYE handling
 - Color codes table status:
   Open = green
   Assigned = yellow
@@ -1771,7 +1771,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.1 - Forfeit and Match Score Entry";
+const TD_BUILD = "v4.0.2 - 0/F/B";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4080,6 +4080,15 @@ function matchHasForfeit(m){
   return isForfeitScore(m.s1) || isForfeitScore(m.s2);
 }
 
+function isByeScore(v){
+  return String(v ?? "").trim().toUpperCase() === "B";
+}
+
+function matchHasByeScore(m){
+  if(!m) return false;
+  return isByeScore(m.s1) || isByeScore(m.s2);
+}
+
 function isByeMatch(m){
   if(!m) return false;
   return m.p1 === "BYE" || m.p2 === "BYE";
@@ -4091,7 +4100,7 @@ function requireScoreBeforeAdvance(m){
 
   const label = m && m.callNumber ? `Match ${m.callNumber}` : (m && m.label ? m.label : "this match");
 
-  const msg = `Enter a score or F for forfeit before advancing ${label}.`;
+  const msg = `Enter a score, F for forfeit, or B for BYE before advancing ${label}.`;
 
   const bracketStatus = document.getElementById("bracketStatus");
   if(bracketStatus) bracketStatus.textContent = msg;
@@ -5193,7 +5202,7 @@ function renderMatchCard(match, lane, editable=false){
   `;
 
   card.appendChild(renderSlot(match, lane, "p1", editable));
-card.appendChild(renderSlot(match, lane, "p2", editable));
+  card.appendChild(renderSlot(match, lane, "p2", editable));
 
 if(matchHasForfeit(match)){
   const forfeitNote = document.createElement("div");
@@ -5213,6 +5222,26 @@ if(matchHasForfeit(match)){
     : "Forfeit";
 
   card.appendChild(forfeitNote);
+}
+
+if(matchHasByeScore(match)){
+  const byeNote = document.createElement("div");
+  byeNote.className = "mini";
+  byeNote.style.marginTop = "8px";
+  byeNote.style.color = "#00eaff";
+  byeNote.style.fontWeight = "900";
+
+  const byePlayer = isByeScore(match.s1)
+    ? match.p1
+    : isByeScore(match.s2)
+      ? match.p2
+      : "";
+
+  byeNote.textContent = byePlayer
+    ? `BYE: ${byePlayer}`
+    : "BYE";
+
+  card.appendChild(byeNote);
 }
 
 if(playable){
@@ -5255,9 +5284,9 @@ function renderSlot(match, lane, which, editable){
         ? `<input
      class="scoreInput"
      inputmode="text"
-     pattern="[0-9Ff]*"
-     maxlength="7"
-     placeholder="0/F"
+	 pattern="[0-9FfBb]*"
+	 maxlength="7"
+	 placeholder="0/F/B"
      value="${esc(score)}"
      data-lane="${esc(lane)}"
      data-id="${esc(id)}"
@@ -5485,10 +5514,14 @@ function wireBracketChartEditing(){
 
     if(!m) return;
 
-    let v = (inp.value || "").toUpperCase().replace(/[^0-9F]/g, "").slice(0, 7);
+    let v = (inp.value || "").toUpperCase().replace(/[^0-9FB]/g, "").slice(0, 7);
 
 	if(v.includes("F")){
   	v = "F";
+	}
+
+	if(v.includes("B")){
+  	v = "B";
 	}
     inp.value = v;
 
