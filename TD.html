@@ -4061,13 +4061,34 @@ async function cloudSaveBracket(state){
     return { ok:true, safe:true };
   }
 
-  const tid = getTournamentId();
-  const bracketJson = JSON.stringify(state);
-  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketSave", tournamentId: tid, bracketJson });
+  const rows = bracketStateToCloudRows();
 
-  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud save failed");
+  const body = new URLSearchParams({
+    action: "bracketRowsSave",
+    tournamentId: getTournamentId(),
+    rowsJson: JSON.stringify(rows)
+  });
 
-  $('#bracketStatus').textContent = `Published ✓ (${tid}) @ ${new Date().toLocaleTimeString()}`;
+  const resp = await fetch(BRACKETS_ENDPOINT, {
+    method: "POST",
+    cache: "no-store",
+    body
+  });
+
+  const text = await resp.text();
+  let data = {};
+
+  try{
+    data = JSON.parse(text);
+  }catch{
+    data = { ok: resp.ok, raw: text };
+  }
+
+  if(!data.ok){
+    throw new Error(data.message || "Bracket row publish failed");
+  }
+
+  $('#bracketStatus').textContent = `Published live bracket rows ✓ (${rows.length} matches)`;
   return data;
 }
 
@@ -4078,25 +4099,22 @@ async function cloudLoadBracket(){
   }
 
   const tid = getTournamentId();
-  const data = await jsonp(BRACKETS_ENDPOINT, { action:"bracketGet", tournamentId: tid });
 
-  if(!data || !data.ok) throw new Error((data && data.message) || "Cloud load failed");
+  const data = await jsonp(BRACKETS_ENDPOINT, {
+    action: "bracketRowsGet",
+    tournamentId: tid
+  });
 
-  if(!data.row || !data.row.bracketJson){
-    $('#bracketStatus').textContent = `No cloud bracket found for ${tid}.`;
-    return null;
+  if(!data || !data.ok){
+    throw new Error((data && data.message) || "Cloud load failed");
   }
 
-  const state = JSON.parse(data.row.bracketJson);
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
-  BRACKET_STATE = state;
-  renderBracket();
-  buildMatchPicker();
-  $('#bracketStatus').textContent = `Loaded from cloud ✓ (${tid})`;
-  return state;
-}
+  const rows = data.rows || [];
 
-let publishTimer = null;
+  $('#bracketStatus').textContent = `Cloud has ${rows.length} bracket rows for ${tid}.`;
+
+  return rows;
+}
 
 function schedulePublish(){
   if(!BRACKETS_CLOUD_ENABLED) return;
