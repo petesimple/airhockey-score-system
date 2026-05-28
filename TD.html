@@ -1,12 +1,15 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.0 - Live Brackets
+Tournament Director v4.0.1 - Forfeit and Match Score Entry
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
 - Adds zoom controls for Room Control and Room Setup
 - Adds Room Control panel on Links tab
 - Adds Assign Table and Fill Links buttons to bracket matches
+- Adds Live button for brackets.html
+- Requires score entry before advancing a match winner
+- Allows F in score fields to mark a forfeit
 - Color codes table status:
   Open = green
   Assigned = yellow
@@ -1768,7 +1771,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.0 - Live Brackets";
+const TD_BUILD = "v4.0.1 - Forfeit and Match Score Entry";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4059,6 +4062,41 @@ function hasMatchStarted(m){
   return !!(s1 || s2 || w);
 }
 
+function hasAnyScoreEntered(m){
+  if(!m) return false;
+
+  const s1 = String(m.s1 ?? "").trim();
+  const s2 = String(m.s2 ?? "").trim();
+
+  return !!(s1 || s2);
+}
+
+function isForfeitScore(v){
+  return String(v ?? "").trim().toUpperCase() === "F";
+}
+
+function matchHasForfeit(m){
+  if(!m) return false;
+  return isForfeitScore(m.s1) || isForfeitScore(m.s2);
+}
+
+function requireScoreBeforeAdvance(m){
+  if(hasAnyScoreEntered(m)) return true;
+
+  const label = m && m.callNumber ? `Match ${m.callNumber}` : (m && m.label ? m.label : "this match");
+
+  const msg = `Enter a score or F for forfeit before advancing ${label}.`;
+
+  const bracketStatus = document.getElementById("bracketStatus");
+  if(bracketStatus) bracketStatus.textContent = msg;
+
+  const advanceMsg = document.getElementById("advanceMsg");
+  if(advanceMsg) advanceMsg.textContent = msg;
+
+  alert(msg);
+  return false;
+}
+
 function clearMatchResult(m){
   if(!m) return;
   m.s1 = "";
@@ -4896,6 +4934,8 @@ function advanceWinner(){
   const w = $('#selWinner').value;
   if(!w) return alert("Pick winner.");
 
+  if(!requireScoreBeforeAdvance(m)) return;
+
   if(m.winner === w){
     msg.innerHTML = `<span class="muted">No change. Already set.</span>`;
     return;
@@ -5147,9 +5187,29 @@ function renderMatchCard(match, lane, editable=false){
   `;
 
   card.appendChild(renderSlot(match, lane, "p1", editable));
-  card.appendChild(renderSlot(match, lane, "p2", editable));
+card.appendChild(renderSlot(match, lane, "p2", editable));
 
-  if(playable){
+if(matchHasForfeit(match)){
+  const forfeitNote = document.createElement("div");
+  forfeitNote.className = "mini";
+  forfeitNote.style.marginTop = "8px";
+  forfeitNote.style.color = "#ffd54f";
+  forfeitNote.style.fontWeight = "900";
+
+  const forfeitedPlayer = isForfeitScore(match.s1)
+    ? match.p1
+    : isForfeitScore(match.s2)
+      ? match.p2
+      : "";
+
+  forfeitNote.textContent = forfeitedPlayer
+    ? `Forfeit: ${forfeitedPlayer}`
+    : "Forfeit";
+
+  card.appendChild(forfeitNote);
+}
+
+if(playable){
     const bar = document.createElement("div");
     bar.className = "matchActionBar";
     bar.innerHTML = `
@@ -5188,10 +5248,10 @@ function renderSlot(match, lane, which, editable){
       canEdit
         ? `<input
      class="scoreInput"
-     inputmode="numeric"
-     pattern="[0-9]*"
+     inputmode="text"
+     pattern="[0-9Ff]*"
      maxlength="7"
-     placeholder="-"
+     placeholder="0/F"
      value="${esc(score)}"
      data-lane="${esc(lane)}"
      data-id="${esc(id)}"
@@ -5419,7 +5479,11 @@ function wireBracketChartEditing(){
 
     if(!m) return;
 
-    const v = (inp.value || "").replace(/[^\d]/g, "").slice(0, 7);
+    let v = (inp.value || "").toUpperCase().replace(/[^0-9F]/g, "").slice(0, 7);
+
+	if(v.includes("F")){
+  	v = "F";
+	}
     inp.value = v;
 
     if(which === "p1") m.s1 = v;
@@ -5496,11 +5560,13 @@ function wireBracketChartEditing(){
     }
 
     if(m.winner === which){
-      return;
-    }
+    return;
+	}
 
-    m.winner = which;
-    m.loser = (which === "p1") ? "p2" : "p1";
+	if(!requireScoreBeforeAdvance(m)) return;
+
+	m.winner = which;
+	m.loser = (which === "p1") ? "p2" : "p1";
 
     propagateWinners();
     assignCallNumbersToReadyMatches();
