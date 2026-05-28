@@ -331,7 +331,8 @@
     }
 
     .match.ready{
-      border-color:rgba(0,234,255,.38);
+      border-color:rgba(0,234,255,.9);
+      box-shadow:0 0 0 2px rgba(0,234,255,.12), 0 0 28px rgba(0,234,255,.12);
     }
 
     .match.pending{
@@ -514,6 +515,7 @@
         <span class="pill" id="refreshInfo">Refresh: 20s</span>
         <button class="btn" id="btnZoomOut" type="button">Zoom Out</button>
         <button class="btn" id="btnZoomIn" type="button">Zoom In</button>
+        <button class="btn btn-primary" id="btnFocusActive" type="button">Focus Active</button>
         <button class="btn btn-primary" id="btnFit" type="button">Fit Width</button>
         <button class="btn btn-primary" id="btnRefresh" type="button">Refresh</button>
       </div>
@@ -534,11 +536,10 @@
     const STATE_KEY = "ahss_brackets_state";
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
-    const SCROLL_LEFT_KEY = "AHSS_LIVE_BRACKET_SCROLL_LEFT";
-    const SCROLL_TOP_KEY = "AHSS_LIVE_BRACKET_SCROLL_TOP";
 
     let liveZoom = 1;
     let refreshTimer = null;
+    let shouldAutoFocus = true;
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -553,6 +554,7 @@
 
     function fmtLocal(ts){
       if(!ts) return "";
+
       try{
         return new Date(ts).toLocaleString();
       }catch{
@@ -691,6 +693,9 @@
       const status = getMatchStatus(match);
 
       card.className = `match ${status}`;
+      card.dataset.status = status;
+      card.dataset.matchId = match.id || "";
+      card.dataset.lane = lane;
 
       const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
 
@@ -862,7 +867,7 @@
       $("#subtitle").textContent = "Waiting for Tournament Director bracket data";
     }
 
-    function renderLiveBracket(){
+    function renderLiveBracket(options = {}){
       const root = $("#bracketRoot");
       const state = loadBracketState();
 
@@ -872,8 +877,9 @@
         return;
       }
 
-      const oldLeft = $("#viewer").scrollLeft;
-      const oldTop = $("#viewer").scrollTop;
+      const viewer = $("#viewer");
+      const oldLeft = viewer.scrollLeft;
+      const oldTop = viewer.scrollTop;
 
       root.innerHTML = "";
       root.appendChild(buildBracketChart(state));
@@ -886,10 +892,14 @@
       $("#refreshInfo").textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
       $("#subtitle").textContent = state.createdAt ? `Snapshot created ${fmtLocal(state.createdAt)}` : "Read only tournament snapshot";
 
-      requestAnimationFrame(() => {
-        $("#viewer").scrollLeft = oldLeft;
-        $("#viewer").scrollTop = oldTop;
-      });
+      if(options.focusActive || shouldAutoFocus){
+        setTimeout(focusActiveBracket, 80);
+      }else{
+        requestAnimationFrame(() => {
+          viewer.scrollLeft = oldLeft;
+          viewer.scrollTop = oldTop;
+        });
+      }
     }
 
     function setZoomPercent(pct, keepCenter=true){
@@ -922,14 +932,18 @@
     }
 
     function zoomIn(){
+      shouldAutoFocus = false;
       setZoomPercent((liveZoom * 100) + 10);
     }
 
     function zoomOut(){
+      shouldAutoFocus = false;
       setZoomPercent((liveZoom * 100) - 10);
     }
 
     function fitWidth(){
+      shouldAutoFocus = false;
+
       const viewer = $("#viewer");
       const stage = $("#zoomStage");
       const content = $("#bracketRoot .bracket");
@@ -950,26 +964,41 @@
       viewer.scrollTop = 0;
     }
 
-    function saveScrollPosition(){
+    function focusActiveBracket(){
       const viewer = $("#viewer");
+      const stage = $("#zoomStage");
 
-      if(!viewer) return;
+      if(!viewer || !stage) return;
 
-      sessionStorage.setItem(SCROLL_LEFT_KEY, String(viewer.scrollLeft));
-      sessionStorage.setItem(SCROLL_TOP_KEY, String(viewer.scrollTop));
-    }
+      const readyMatches = Array.from(document.querySelectorAll(".match.ready"));
+      const completeMatches = Array.from(document.querySelectorAll(".match.complete"));
+      const anyMatches = Array.from(document.querySelectorAll(".match"));
 
-    function restoreScrollPosition(){
-      const viewer = $("#viewer");
+      const target =
+        readyMatches[0] ||
+        completeMatches[completeMatches.length - 1] ||
+        anyMatches[0];
 
-      if(!viewer) return;
+      if(!target) return;
 
-      const left = parseInt(sessionStorage.getItem(SCROLL_LEFT_KEY) || "0", 10);
-      const top = parseInt(sessionStorage.getItem(SCROLL_TOP_KEY) || "0", 10);
+      const currentZoom = liveZoom || 1;
+      const targetRect = target.getBoundingClientRect();
+      const viewerRect = viewer.getBoundingClientRect();
+
+      const targetCenterX =
+        (viewer.scrollLeft + (targetRect.left - viewerRect.left) + targetRect.width / 2) / currentZoom;
+
+      const targetCenterY =
+        (viewer.scrollTop + (targetRect.top - viewerRect.top) + targetRect.height / 2) / currentZoom;
+
+      const targetZoomPct = window.innerWidth >= 1500 ? 135 : window.innerWidth >= 1000 ? 125 : 105;
+
+      shouldAutoFocus = true;
+      setZoomPercent(targetZoomPct, false);
 
       requestAnimationFrame(() => {
-        viewer.scrollLeft = isFinite(left) ? left : 0;
-        viewer.scrollTop = isFinite(top) ? top : 0;
+        viewer.scrollLeft = Math.max(0, targetCenterX * liveZoom - viewer.clientWidth / 2);
+        viewer.scrollTop = Math.max(0, targetCenterY * liveZoom - viewer.clientHeight / 2);
       });
     }
 
@@ -978,24 +1007,28 @@
 
       if(!viewer) return;
 
-      viewer.addEventListener("scroll", saveScrollPosition);
-
       viewer.addEventListener("wheel", e => {
         if(e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+          shouldAutoFocus = false;
           viewer.scrollLeft += e.deltaY;
           e.preventDefault();
         }
 
         if(e.ctrlKey || e.metaKey){
           e.preventDefault();
+          shouldAutoFocus = false;
 
           if(e.deltaY < 0){
-            zoomIn();
+            setZoomPercent((liveZoom * 100) + 10);
           }else{
-            zoomOut();
+            setZoomPercent((liveZoom * 100) - 10);
           }
         }
       }, { passive:false });
+
+      viewer.addEventListener("scroll", () => {
+        if(viewer.dataset.programScroll === "1") return;
+      });
     }
 
     function applySavedTheme(){
@@ -1015,25 +1048,28 @@
       }
 
       refreshTimer = setInterval(() => {
-        renderLiveBracket();
+        renderLiveBracket({ focusActive:true });
       }, REFRESH_MS);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
 
-      $("#btnRefresh").addEventListener("click", renderLiveBracket);
+      $("#btnRefresh").addEventListener("click", () => {
+        renderLiveBracket({ focusActive:true });
+      });
+
       $("#btnZoomIn").addEventListener("click", zoomIn);
       $("#btnZoomOut").addEventListener("click", zoomOut);
       $("#btnFit").addEventListener("click", fitWidth);
+      $("#btnFocusActive").addEventListener("click", focusActiveBracket);
 
       wireViewer();
 
       const savedZoom = parseInt(localStorage.getItem(ZOOM_KEY) || "100", 10);
       setZoomPercent(isFinite(savedZoom) ? savedZoom : 100, false);
 
-      renderLiveBracket();
-      restoreScrollPosition();
+      renderLiveBracket({ focusActive:true });
       startAutoRefresh();
     });
   </script>
