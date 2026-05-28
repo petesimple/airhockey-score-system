@@ -6313,6 +6313,11 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     }
   });
 
+const btnOpenLiveBracket = document.getElementById("btnOpenLiveBracket");
+	if(btnOpenLiveBracket){
+  	btnOpenLiveBracket.addEventListener("click", openLiveBracket);
+	}
+	
   $('#btnFullRefresh').addEventListener("click", renderFullBracket);
   $('#btnFullZoomIn').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)+10));
   $('#btnFullZoomOut').addEventListener("click", ()=> setFullZoomPercent((fullZoom*100)-10));
