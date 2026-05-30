@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.4 - Finals Logic + Name Edits
+Tournament Director v4.0.5 - Pachuca Rule
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -9,7 +9,7 @@ Tournament Director v4.0.4 - Finals Logic + Name Edits
 - Adds Assign Table and Fill Links buttons to bracket matches
 - Adds Live button for brackets.html
 - Requires score entry before advancing a played match winner
-- Allows 0/F/B score entry for score, forfeit, and BYE handling
+- Allows score/F entry, with B reserved for actual stored BYE slots only
 - Color codes table status:
   Open = green
   Assigned = yellow
@@ -459,6 +459,75 @@ Tournament Director v4.0.4 - Finals Logic + Name Edits
     font-size:11px;
     letter-spacing:.2px;
   }
+
+.matchStatusBadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:5px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:.35px;
+  text-transform:uppercase;
+}
+
+.matchStatusBadge.ready{
+  color:#3ddc84;
+  border-color:rgba(61,220,132,.65);
+  background:rgba(61,220,132,.10);
+}
+
+.matchStatusBadge.waiting{
+  color:#ffd54f;
+  border-color:rgba(255,213,79,.65);
+  background:rgba(255,213,79,.10);
+}
+
+.matchStatusBadge.bye{
+  color:#00eaff;
+  border-color:rgba(0,234,255,.65);
+  background:rgba(0,234,255,.10);
+}
+
+.matchStatusBadge.complete{
+  color:#fff;
+  border-color:rgba(255,255,255,.35);
+  background:rgba(255,255,255,.10);
+}
+
+.matchStatusBadge.assigned{
+  color:#ffd54f;
+  border-color:rgba(255,213,79,.75);
+  background:rgba(255,213,79,.14);
+}
+
+.matchStatusBadge.playing{
+  color:#ff5a5a;
+  border-color:rgba(255,90,90,.75);
+  background:rgba(255,90,90,.14);
+}
+
+.slot.waitingSlot{
+  border-color:rgba(255,213,79,.35);
+  background:rgba(255,213,79,.07);
+}
+
+.slot.byeSlot{
+  border-color:rgba(0,234,255,.35);
+  background:rgba(0,234,255,.07);
+}
+
+.name.waitingName{
+  color:#ffd54f;
+}
+
+.name.byeName{
+  color:#00eaff;
+}
 
   .slot{
   display:grid;
@@ -1710,7 +1779,7 @@ body.bracketFullscreenOpen{
               </select>
             </label>
           </div>
-          <div class="mini" style="margin-top:12px;">Tip: Auto prefers an opening BYE round by adding one BYE preference slot when the entrant count is even. 128 is still the cap.</div>
+          <div class="mini" style="margin-top:12px;">Tip: True BYE slots are marked as TRUE BYE. Waiting slots are marked Waiting and cannot be called.</div>
           <div class="mini" style="margin-top:6px;">Tip: click a player row in the chart to set winner. Shift-click clears if downstream has not started.</div>
           <div class="seedPreview">Seed order uses the tested 128-style bracket placement: 1 vs 128, 64 vs 65, 32 vs 97, and so on.</div>
         </div>
@@ -1856,7 +1925,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.4 - Finals Logic + Name Edits";
+const TD_BUILD = "v4.0.5 - Pachuca Rule";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2151,6 +2220,7 @@ function setTab(id){
 document.addEventListener("click", (e)=>{
   const b = e.target.closest(".tabbtn");
   if(!b) return;
+  if(!b.dataset.tab) return;
   setTab(b.dataset.tab);
 });
 
@@ -3299,6 +3369,18 @@ function openRoomAssign(matchRef){
 
   if(!m) return alert("Match not found.");
 
+  const state = getPachucaMatchState(m, lane);
+
+  if(!canAssignOrFillMatch(m, lane)){
+    const msg = `${m.label || m.id} is ${state.label}. Pachuca rule: waiting matches cannot be assigned or called.`;
+
+    const bracketStatus = document.getElementById("bracketStatus");
+    if(bracketStatus) bracketStatus.textContent = msg;
+
+    alert(msg);
+    return;
+  }
+
   pendingAssignMatch = { lane, id };
 
   setTab("tabMatch");
@@ -3388,6 +3470,20 @@ function assignPendingMatchToTable(tableId){
   const table = findRoomTable(tableId);
 
   if(!m || !table) return alert("Match or table not found.");
+    const state = getPachucaMatchState(m, pendingAssignMatch.lane);
+
+  if(!canAssignOrFillMatch(m, pendingAssignMatch.lane)){
+    pendingAssignMatch = null;
+    renderAssignPanel();
+
+    const msg = `${m.label || m.id} is ${state.label}. Pachuca rule: waiting matches cannot be assigned or called.`;
+
+    const bracketStatus = document.getElementById("bracketStatus");
+    if(bracketStatus) bracketStatus.textContent = msg;
+
+    alert(msg);
+    return;
+  }
 
   if(table.status === "playing"){
     const ok = confirm(`Table ${table.number} is marked playing. Assign anyway?`);
@@ -3914,6 +4010,156 @@ function isCallableMatch(m){
   return isRealBracketName(m.p1) && isRealBracketName(m.p2);
 }
 
+function isWaitingSlotName(name){
+  return String(name || "").trim() === "TBD";
+}
+
+function isByeSlotName(name){
+  return String(name || "").trim() === "BYE";
+}
+
+function hasWaitingSlot(m){
+  if(!m) return false;
+  return isWaitingSlotName(m.p1) || isWaitingSlotName(m.p2);
+}
+
+function hasTrueByeSlot(m){
+  if(!m) return false;
+  return isByeSlotName(m.p1) || isByeSlotName(m.p2);
+}
+
+function hasOneRealPlayerAndBye(m){
+  if(!m) return false;
+
+  return (
+    (isRealBracketName(m.p1) && isByeSlotName(m.p2)) ||
+    (isRealBracketName(m.p2) && isByeSlotName(m.p1))
+  );
+}
+
+function getWaitingLabelForSlot(match, lane, which){
+  if(!match) return "Waiting";
+
+  const slot = which === "p1" ? "p1" : "p2";
+
+  if(match[slot] !== "TBD") return match[slot] || "TBD";
+
+  const incoming = findIncomingFeedForSlot(lane, match.id, slot);
+
+  if(incoming){
+    const src = findMatch(incoming.lane, incoming.id);
+    if(src && src.callNumber){
+      return `Waiting for Match ${src.callNumber}`;
+    }
+
+    if(src && src.label){
+      return `Waiting for ${src.label}`;
+    }
+
+    return `Waiting for ${incoming.lane} ${incoming.id}`;
+  }
+
+  return "Waiting";
+}
+
+function findIncomingFeedForSlot(targetLane, targetId, targetWhich){
+  if(!BRACKET_STATE || !BRACKET_STATE.feeds) return null;
+
+  for(const [key, feed] of Object.entries(BRACKET_STATE.feeds)){
+    if(
+      feed &&
+      feed.lane === targetLane &&
+      feed.id === targetId &&
+      feed.which === targetWhich
+    ){
+      const parts = key.split("|");
+      return {
+        lane: parts[0] || "",
+        id: parts[1] || "",
+        sourceWhich: parts[2] || ""
+      };
+    }
+  }
+
+  return null;
+}
+
+function getPachucaMatchState(m, lane){
+  const table = m ? getTableForBracketMatch(m.id, lane) : null;
+
+  if(!m){
+    return {
+      type:"pending",
+      label:"Pending",
+      detail:"No match data"
+    };
+  }
+
+  if(m.winner){
+    return {
+      type:"complete",
+      label:"Complete",
+      detail:"Result saved"
+    };
+  }
+
+  if(table && table.status === "playing"){
+    return {
+      type:"playing",
+      label:`Playing Table ${table.number || ""}`.trim(),
+      detail:"Match is in progress"
+    };
+  }
+
+  if(table && table.status === "assigned"){
+    return {
+      type:"assigned",
+      label:`Assigned Table ${table.number || ""}`.trim(),
+      detail:"Match has been called"
+    };
+  }
+
+  if(hasOneRealPlayerAndBye(m)){
+    return {
+      type:"bye",
+      label:"True BYE",
+      detail:"Actual bracket BYE"
+    };
+  }
+
+  if(hasWaitingSlot(m)){
+    return {
+      type:"waiting",
+      label:"Waiting",
+      detail:"Waiting on feeder match"
+    };
+  }
+
+  if(isCallableMatch(m)){
+    return {
+      type:"ready",
+      label:"Ready",
+      detail:"Two players ready"
+    };
+  }
+
+  return {
+    type:"pending",
+    label:"Pending",
+    detail:"Not ready yet"
+  };
+}
+
+function canAssignOrFillMatch(m, lane){
+  const state = getPachucaMatchState(m, lane);
+  return state.type === "ready" || state.type === "assigned" || state.type === "playing";
+}
+
+function canAdvanceMatchNow(m, lane){
+  const state = getPachucaMatchState(m, lane);
+  return state.type === "ready" || state.type === "bye" || state.type === "assigned" || state.type === "playing";
+}
+
 function getNextCallNumber(){
   if(!BRACKET_STATE) return 1;
 
@@ -4035,14 +4281,7 @@ function getTableForBracketMatch(matchId, lane){
 }
 
 function getBracketMatchStatus(m, lane){
-  const table = getTableForBracketMatch(m.id, lane);
-
-  if(m.winner) return "complete";
-  if(table && table.status === "playing") return "playing";
-  if(table && table.status === "assigned") return "assigned";
-  if(isCallableMatch(m)) return "ready";
-
-  return "pending";
+  return getPachucaMatchState(m, lane).type;
 }
 
 function bracketStateToCloudRows(){
@@ -4179,13 +4418,41 @@ function isByeMatch(m){
   return m.p1 === "BYE" || m.p2 === "BYE";
 }
 
-function requireScoreBeforeAdvance(m){
-  if(isByeMatch(m)) return true;
+function requireScoreBeforeAdvance(m, lane=""){
+  const state = getPachucaMatchState(m, lane);
+
+  if(state.type === "waiting" || hasWaitingSlot(m)){
+    const label = m && m.callNumber ? `Match ${m.callNumber}` : (m && m.label ? m.label : "this match");
+    const msg = `${label} is waiting on another match. Pachuca rule: TBD is not a BYE. Do not advance or call this match yet.`;
+
+    const bracketStatus = document.getElementById("bracketStatus");
+    if(bracketStatus) bracketStatus.textContent = msg;
+
+    const advanceMsg = document.getElementById("advanceMsg");
+    if(advanceMsg) advanceMsg.textContent = msg;
+
+    alert(msg);
+    return false;
+  }
+
+  if(state.type === "bye" || hasOneRealPlayerAndBye(m)){
+    const realPlayer = isRealBracketName(m.p1) ? m.p1 : m.p2;
+    const ok = confirm(`Confirm true BYE advance for ${realPlayer}?`);
+
+    if(!ok) return false;
+
+    if(!m.s1 && !m.s2){
+      if(isByeSlotName(m.p1)) m.s1 = "B";
+      if(isByeSlotName(m.p2)) m.s2 = "B";
+    }
+
+    return true;
+  }
+
   if(hasAnyScoreEntered(m)) return true;
 
   const label = m && m.callNumber ? `Match ${m.callNumber}` : (m && m.label ? m.label : "this match");
-
-  const msg = `Enter a score, F for forfeit, or B for BYE before advancing ${label}.`;
+  const msg = `Enter a score or F for forfeit before advancing ${label}. Use B only for an actual stored BYE slot.`;
 
   const bracketStatus = document.getElementById("bracketStatus");
   if(bracketStatus) bracketStatus.textContent = msg;
@@ -4314,20 +4581,6 @@ function schedulePublish(){
   }, 700);
 }
 	
-function schedulePublish(){
-  if(!BRACKETS_CLOUD_ENABLED) return;
-  if(isSafeMode()) return;
-
-  clearTimeout(publishTimer);
-  publishTimer = setTimeout(async ()=>{
-    try{
-      if(BRACKET_STATE) await cloudSaveBracket(BRACKET_STATE);
-    }catch(e){
-      console.warn(e);
-      $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
-    }
-  }, 700);
-}
 
 function nextPow2(n){
   let p=1;
@@ -5162,7 +5415,7 @@ function advanceWinner(){
   const w = $('#selWinner').value;
   if(!w) return alert("Pick winner.");
 
-  if(!requireScoreBeforeAdvance(m)) return;
+  if(!requireScoreBeforeAdvance(m, lane)) return;
 
   if(m.winner === w){
     msg.innerHTML = `<span class="muted">No change. Already set.</span>`;
@@ -5399,8 +5652,9 @@ function renderMatchCard(match, lane, editable=false){
   card.dataset.matchId = match.id || "";
   card.dataset.matchLane = lane;
 
+  const state = getPachucaMatchState(match, lane);
   const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
-  const playable = editable && match.p1 && match.p2 && match.p1 !== "TBD" && match.p2 !== "TBD" && match.p1 !== "BYE" && match.p2 !== "BYE";
+  const playable = editable && canAssignOrFillMatch(match, lane);
   const canEditNames = editable && (isRealBracketName(match.p1) || isRealBracketName(match.p2));
   const routeLabel = match.goldenCrossoverLabel ? ` <span class="mini" style="color:#00eaff;">${esc(match.goldenCrossoverLabel)}</span>` : "";
   const callLabel = matchCallLabel(match);
@@ -5411,6 +5665,7 @@ function renderMatchCard(match, lane, editable=false){
       <div>
         <div class="${callClass}" style="font-weight:1000;">${esc(callLabel)}</div>
         <div>${esc(match.label || match.id || "")}${routeLabel}</div>
+        <div class="matchStatusBadge ${esc(state.type)}" title="${esc(state.detail || "")}">${esc(state.label)}</div>
       </div>
       <div class="tag">${tagText}</div>
     </div>
@@ -5459,6 +5714,16 @@ function renderMatchCard(match, lane, editable=false){
     card.appendChild(byeNote);
   }
 
+  if(state.type === "waiting"){
+    const waitNote = document.createElement("div");
+    waitNote.className = "mini";
+    waitNote.style.marginTop = "8px";
+    waitNote.style.color = "#ffd54f";
+    waitNote.style.fontWeight = "900";
+    waitNote.textContent = "Pachuca rule: this match is waiting, not a BYE.";
+    card.appendChild(waitNote);
+  }
+
   if(playable || canEditNames){
     const bar = document.createElement("div");
     bar.className = "matchActionBar";
@@ -5483,18 +5748,33 @@ function renderSlot(match, lane, which, editable){
   if(match.winner && match.winner !== which) slot.classList.add("lose");
 
   const rawName = (which==="p1"?match.p1:match.p2) || "TBD";
-  const otherName = (which==="p1"?match.p2:match.p1) || "TBD";
-  const waitingBye = rawName === "TBD" && isRealBracketName(otherName);
-  const displayName = waitingBye ? "BYE" : rawName;
   const score = which==="p1" ? (match.s1 ?? "") : (match.s2 ?? "");
   const id = match.id || "";
+
+  let displayName = rawName;
+  let nameClass = "";
+  let seedText = `${id} ${which.toUpperCase()}`;
+
+  if(rawName === "TBD"){
+    displayName = getWaitingLabelForSlot(match, lane, which);
+    nameClass = "waitingName";
+    slot.classList.add("waitingSlot");
+    seedText = `${id} ${which.toUpperCase()} | NOT A BYE`;
+  }
+
+  if(rawName === "BYE"){
+    displayName = "TRUE BYE";
+    nameClass = "byeName";
+    slot.classList.add("byeSlot");
+    seedText = `${id} ${which.toUpperCase()} | Actual BYE slot`;
+  }
 
   const canEdit = editable && rawName !== "TBD" && rawName !== "BYE";
 
   slot.innerHTML = `
     <div>
-      <div class="name">${esc(displayName)}</div>
-      <div class="seed">${esc(id)} ${which.toUpperCase()}</div>
+      <div class="name ${esc(nameClass)}">${esc(displayName)}</div>
+      <div class="seed">${esc(seedText)}</div>
     </div>
 
     ${
@@ -5502,9 +5782,9 @@ function renderSlot(match, lane, which, editable){
         ? `<input
      class="scoreInput"
      inputmode="text"
-	 pattern="[0-9FfBb]*"
-	 maxlength="7"
-	 placeholder="0/F/B"
+     pattern="[0-9FfBb]*"
+     maxlength="7"
+     placeholder="0/F"
      value="${esc(score)}"
      data-lane="${esc(lane)}"
      data-id="${esc(id)}"
@@ -5881,12 +6161,20 @@ function wireBracketChartEditing(){
 	}
 
 	if(v.includes("B")){
-  	v = "B";
-	}
-    inp.value = v;
+  	const slotName = which === "p1" ? m.p1 : m.p2;
 
-    if(which === "p1") m.s1 = v;
-    else m.s2 = v;
+  	if(slotName === "BYE"){
+    	v = "B";
+  	}else{
+    	v = "";
+    	alert("Pachuca rule: B is only allowed on an actual BYE slot. TBD means wait, not BYE.");
+  	  }
+	}
+
+	inp.value = v;
+
+	if(which === "p1") m.s1 = v;
+	else m.s2 = v;
 
     saveBracketState();
     schedulePublish();
@@ -5914,6 +6202,18 @@ function wireBracketChartEditing(){
       const m = findMatch(lane, id);
 
       if(!m) return;
+      
+      const state = getPachucaMatchState(m, lane);
+
+      if(!canAssignOrFillMatch(m, lane)){
+        const msg = `${m.label || m.id} is ${state.label}. Pachuca rule: waiting matches cannot be loaded into Links.`;
+
+        const bracketStatus = document.getElementById("bracketStatus");
+        if(bracketStatus) bracketStatus.textContent = msg;
+
+        alert(msg);
+        return;
+      }
 
       document.getElementById("player1").value = m.p1 || "";
 	  document.getElementById("player2").value = m.p2 || "";
@@ -5968,7 +6268,7 @@ function wireBracketChartEditing(){
     return;
 	}
 
-	if(!requireScoreBeforeAdvance(m)) return;
+	if(!requireScoreBeforeAdvance(m, lane)) return;
 
 	m.winner = which;
 	m.loser = (which === "p1") ? "p2" : "p1";
@@ -6085,11 +6385,11 @@ function findNextPlayableMatch(){
     .filter(({ lane, m }) => {
       if(!m) return false;
       if(m.winner) return false;
-      if(!isRealBracketName(m.p1) || !isRealBracketName(m.p2)) return false;
 
-      const table = getTableForBracketMatch(m.id, lane);
+      const state = getPachucaMatchState(m, lane);
 
-      if(table && table.status === "playing") return false;
+      if(state.type !== "ready" && state.type !== "assigned") return false;
+      if(state.type === "playing") return false;
 
       return true;
     })
