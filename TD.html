@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.5 - Pachuca Rule
+Tournament Director v4.0.6 - Pachuca Ghost BYE Fix
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1925,7 +1925,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.5 - Pachuca Rule";
+const TD_BUILD = "v4.0.6 - Pachuca Ghost BYE Fix";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4807,6 +4807,174 @@ function propagateWinners(){
     m.loser = "";
   }
 
+  function canProduceRealWinner(m){
+    if(!m) return false;
+    if(isRealBracketName(m.p1) || isRealBracketName(m.p2)) return true;
+    if(m.p1 === "TBD" || m.p2 === "TBD") return true;
+    return false;
+  }
+
+  function canProduceRealLoser(m){
+    if(!m) return false;
+
+    const p1Real = isRealBracketName(m.p1);
+    const p2Real = isRealBracketName(m.p2);
+    const p1Tbd = m.p1 === "TBD";
+    const p2Tbd = m.p2 === "TBD";
+
+    if(p1Real && p2Real) return true;
+    if(p1Real && p2Tbd) return true;
+    if(p2Real && p1Tbd) return true;
+    if(p1Tbd && p2Tbd) return true;
+
+    return false;
+  }
+
+  function registerFeed(sourceLane, sourceId, sourceWhich, targetLane, targetId, targetWhich){
+    if(!sourceLane || !sourceId || !sourceWhich || !targetLane || !targetId || !targetWhich) return;
+    BRACKET_STATE.feeds[`${sourceLane}|${sourceId}|${sourceWhich}`] = {
+      lane: targetLane,
+      id: targetId,
+      which: targetWhich
+    };
+  }
+
+  function slotHasIncomingFeed(targetLane, targetId, targetWhich){
+  if(!BRACKET_STATE || !BRACKET_STATE.feeds) return false;
+
+  for(const [key, feed] of Object.entries(BRACKET_STATE.feeds)){
+    if(
+      !feed ||
+      feed.lane !== targetLane ||
+      feed.id !== targetId ||
+      feed.which !== targetWhich
+    ){
+      continue;
+    }
+
+    const parts = key.split("|");
+    const sourceLane = parts[0] || "";
+    const sourceId = parts[1] || "";
+    const sourceMatch = findMatch(sourceLane, sourceId);
+
+    if(!sourceMatch) continue;
+
+    if(targetLane === "L" && sourceLane === "W"){
+      if(canProduceRealLoser(sourceMatch)) return true;
+      continue;
+    }
+
+    if(canProduceRealWinner(sourceMatch)) return true;
+  }
+
+  return false;
+}
+
+  function autoAdvanceTrueBye(m){
+    if(!m || hasMatchStarted(m)) return false;
+
+    const p1Real = isRealBracketName(m.p1);
+    const p2Real = isRealBracketName(m.p2);
+    const p1Bye = m.p1 === "BYE";
+    const p2Bye = m.p2 === "BYE";
+
+    if(p1Real && p2Bye){
+      m.winner = "p1";
+      m.loser = "p2";
+      if(!m.s1 && !m.s2) m.s2 = "B";
+      return true;
+    }
+
+    if(p2Real && p1Bye){
+      m.winner = "p2";
+      m.loser = "p1";
+      if(!m.s1 && !m.s2) m.s1 = "B";
+      return true;
+    }
+
+    return false;
+  }
+
+  function resolveImpossibleLoserWaitingSlots(){
+    let changed = false;
+
+    for(const round of LR){
+      for(const m of round){
+        if(!m || hasMatchStarted(m)) continue;
+
+        ["p1", "p2"].forEach(slot => {
+          if(m[slot] !== "TBD") return;
+
+          const hasFeed = slotHasIncomingFeed("L", m.id, slot);
+
+          if(!hasFeed){
+            m[slot] = "BYE";
+            changed = true;
+          }
+        });
+
+        if(autoAdvanceTrueBye(m)){
+          changed = true;
+        }
+
+        if(m.p1 === "BYE" && m.p2 === "BYE"){
+          m.s1 = "";
+          m.s2 = "";
+          m.winner = "";
+          m.loser = "";
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  function advanceLosersWinnersOnce(){
+    let changed = false;
+
+    for(let r=0; r<LR.length-1; r++){
+      const round = LR[r];
+      const next = LR[r+1];
+
+      for(let i=0; i<round.length; i++){
+        const m = round[i];
+        if(!m) continue;
+
+        let target;
+        let slot;
+
+        if(r % 2 === 0){
+          target = next[i];
+          slot = "p1";
+        }else{
+          target = next[Math.floor(i/2)];
+          slot = i % 2 === 0 ? "p1" : "p2";
+        }
+
+        if(target && canProduceRealWinner(m)){
+          registerFeed("L", m.id, "p1", "L", target.id, slot);
+          registerFeed("L", m.id, "p2", "L", target.id, slot);
+        }
+
+        if(!m.winner) continue;
+
+        const name = winnerName(m);
+        if(!name || name === "BYE" || name === "TBD") continue;
+
+        if(target && !hasMatchStarted(target) && target[slot] !== name){
+          putIfOpen(target, slot, name);
+          changed = true;
+        }
+
+        if(target){
+          registerFeed("L", m.id, m.winner, "L", target.id, slot);
+        }
+      }
+    }
+
+    return changed;
+  }
+
   LR.forEach(round => round.forEach(resetOpenMatch));
 
   if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
@@ -4819,46 +4987,29 @@ function propagateWinners(){
     BRACKET_STATE.grandFinal[1].p2 = "TBD";
   }
 
-  /*
-    Winners bracket progression.
-  */
-  for(let r=0;r<WR.length-1;r++){
+  for(let r=0; r<WR.length-1; r++){
     const round = WR[r];
     const next = WR[r+1];
 
-    for(let i=0;i<round.length;i++){
+    for(let i=0; i<round.length; i++){
       const m = round[i];
       const target = next[Math.floor(i/2)];
-      const slot = (i%2===0) ? "p1" : "p2";
+      const slot = (i % 2 === 0) ? "p1" : "p2";
       const name = m.winner ? winnerName(m) : "TBD";
 
       putIfOpen(target, slot, name);
 
       if(target){
-        BRACKET_STATE.feeds[`W|${m.id}|p1`] = { lane:"W", id: target.id, which: slot };
-        BRACKET_STATE.feeds[`W|${m.id}|p2`] = { lane:"W", id: target.id, which: slot };
+        registerFeed("W", m.id, "p1", "W", target.id, slot);
+        registerFeed("W", m.id, "p2", "W", target.id, slot);
       }
     }
   }
 
   function goldenCrossoverRoute(winnersRoundNumber, sourceIndex, targetCount){
-    /*
-      Spreadsheet-driven crossover model.
-
-      The uploaded 128chart.xls uses letters A through BK as routing keys.
-      For Winners Round 2 and later, each winners-side match owns one source
-      letter. The destination side of the chart shows those letters in the
-      exact target order.
-
-      Example from the 128 sheet:
-      W2 sources are A through AF.
-      The Round 3 destination column shows AF, AE, AD ... A from top to bottom,
-      so W2-M1 (A) drops to the bottom target while W2-M32 (AF) drops to the top.
-
-      This resolver follows that uploaded sheet instead of guessing by formula.
-    */
     if(BRACKET_STATE && Number(BRACKET_STATE.bracketSize) === 128){
       const map = GOLDEN_128_CROSSOVER_MAP[String(winnersRoundNumber)];
+
       if(map && map.source && map.destTopToBottom && map.source.length === targetCount){
         const label = map.source[sourceIndex];
         const targetIndex = map.destTopToBottom.indexOf(label);
@@ -4869,53 +5020,35 @@ function propagateWinners(){
       }
     }
 
-    /*
-      Fallback for smaller test brackets.
-      This keeps 4, 8, 16, 32, and 64 usable while the 128 model follows
-      the uploaded golden chart.
-    */
     if(!targetCount || targetCount <= 1) return { targetIndex: 0, label: "" };
+
     const half = Math.floor(targetCount / 2);
     return { targetIndex: (sourceIndex + half) % targetCount, label: "" };
   }
 
-  /*
-    Winners round losers drop into the proper losers bracket crossover slots.
-
-    W R1 losers fill every slot of Losers R1.
-    W R2 losers cross into Losers R2, one per match, opposite L1 winners.
-    W R3 losers cross into Losers R4, one per match, opposite L3 winners.
-    W R4 losers cross into Losers R6, and so on.
-
-    This is the critical crossover fix for the 128 model.
-  */
-  for(let r=0;r<WR.length;r++){
+  for(let r=0; r<WR.length; r++){
     const round = WR[r];
-    const loserRoundIndex = r === 0 ? 0 : (2*r - 1);
+    const loserRoundIndex = r === 0 ? 0 : (2 * r - 1);
     const targetRound = LR[loserRoundIndex];
 
     if(!targetRound) continue;
 
     let dropIndex = 0;
 
-    for(let i=0;i<round.length;i++){
+    for(let i=0; i<round.length; i++){
       const m = round[i];
-      if(!m.winner || !m.loser) continue;
-
-      const name = loserName(m);
-      if(!name || name === "BYE" || name === "TBD") continue;
+      if(!m) continue;
 
       let target;
       let slot;
 
       if(r === 0){
-        target = targetRound[Math.floor(dropIndex/2)];
+        target = targetRound[Math.floor(dropIndex / 2)];
         slot = dropIndex % 2 === 0 ? "p1" : "p2";
       }else{
         const winnersRoundNumber = r + 1;
         const route = goldenCrossoverRoute(winnersRoundNumber, dropIndex, targetRound.length);
-        const targetIndex = route.targetIndex;
-        target = targetRound[targetIndex];
+        target = targetRound[route.targetIndex];
         slot = "p2";
 
         if(target && route.label){
@@ -4924,59 +5057,40 @@ function propagateWinners(){
         }
       }
 
-      putIfOpen(target, slot, name);
+      if(target && canProduceRealLoser(m)){
+        registerFeed("W", m.id, "p1", "L", target.id, slot);
+        registerFeed("W", m.id, "p2", "L", target.id, slot);
+      }
 
-      if(target){
-        target.crossover = target.crossover || {};
-        target.crossover[slot] = m.id;
-        BRACKET_STATE.feeds[`W|${m.id}|${m.loser}`] = { lane:"L", id: target.id, which: slot };
+      if(m.winner && m.loser){
+        const name = loserName(m);
+
+        if(name && name !== "BYE" && name !== "TBD"){
+          putIfOpen(target, slot, name);
+
+          if(target){
+            target.crossover = target.crossover || {};
+            target.crossover[slot] = m.id;
+            registerFeed("W", m.id, m.loser, "L", target.id, slot);
+          }
+        }
       }
 
       dropIndex++;
     }
   }
 
-  /*
-    Losers bracket winners advance through the losers bracket.
-    Odd visual rounds pair winners together.
-    Even visual rounds carry winners forward to face new drops from the winners bracket.
-  */
-  for(let r=0;r<LR.length-1;r++){
-    const round = LR[r];
-    const next = LR[r+1];
+  let guard = 0;
 
-    for(let i=0;i<round.length;i++){
-      const m = round[i];
-      if(!m.winner) continue;
+  while(guard < 12){
+    const advanced = advanceLosersWinnersOnce();
+    const resolved = resolveImpossibleLoserWaitingSlots();
 
-      const name = winnerName(m);
-      if(!name || name === "BYE" || name === "TBD") continue;
+    if(!advanced && !resolved) break;
 
-      let target;
-      let slot;
-
-      if(r % 2 === 0){
-        target = next[i];
-        slot = "p1";
-      }else{
-        target = next[Math.floor(i/2)];
-        slot = i % 2 === 0 ? "p1" : "p2";
-      }
-
-      putIfOpen(target, slot, name);
-
-      if(target){
-        BRACKET_STATE.feeds[`L|${m.id}|${m.winner}`] = { lane:"L", id: target.id, which: slot };
-      }
-    }
+    guard++;
   }
 
-  /*
-    Finals.
-    Grand Final 1 is winners-side champ vs losers-side champ.
-    Grand Final 2 appears only if the losers-side champ beats the undefeated
-    winners-side champ in Grand Final 1, creating the reset match.
-  */
   const lastW = WR[WR.length-1] && WR[WR.length-1][0];
   const wChamp = lastW && lastW.winner ? winnerName(lastW) : "TBD";
 
@@ -4990,6 +5104,16 @@ function propagateWinners(){
   if(gf1 && !hasMatchStarted(gf1)){
     gf1.p1 = wChamp || "TBD";
     gf1.p2 = lChamp || "TBD";
+
+    if(lastW){
+      registerFeed("W", lastW.id, "p1", "GF", gf1.id, "p1");
+      registerFeed("W", lastW.id, "p2", "GF", gf1.id, "p1");
+    }
+
+    if(lastL){
+      registerFeed("L", lastL.id, "p1", "GF", gf1.id, "p2");
+      registerFeed("L", lastL.id, "p2", "GF", gf1.id, "p2");
+    }
   }
 
   if(gf2 && !hasMatchStarted(gf2)){
@@ -5003,6 +5127,9 @@ function propagateWinners(){
       if(isRealBracketName(gf1Winner) && isRealBracketName(gf1Loser) && gf1Winner !== wChamp){
         gf2.p1 = gf1Loser;
         gf2.p2 = gf1Winner;
+
+        registerFeed("GF", gf1.id, "p1", "GF", gf2.id, "p1");
+        registerFeed("GF", gf1.id, "p2", "GF", gf2.id, "p2");
       }
     }
   }
