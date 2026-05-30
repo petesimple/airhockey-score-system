@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.3 - Finals Logic
+Tournament Director v4.0.4 - Finals Logic + Name Edits
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1856,7 +1856,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.3 - Finals Logic";
+const TD_BUILD = "v4.0.4 - Finals Logic + Name Edits";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4857,6 +4857,134 @@ function canClearWinner(lane, id, which){
   return true;
 }
 
+function sameBracketName(a, b){
+  return normalizeName(a).toLowerCase() === normalizeName(b).toLowerCase();
+}
+
+function replacePlayerNameEverywhere(oldName, newName){
+  if(!BRACKET_STATE) return 0;
+
+  const oldClean = normalizeName(oldName);
+  const newClean = normalizeName(newName);
+
+  if(!oldClean || !newClean) return 0;
+  if(oldClean === "BYE" || oldClean === "TBD") return 0;
+  if(newClean === "BYE" || newClean === "TBD") return 0;
+
+  let count = 0;
+
+  listAllMatches().forEach(({ m }) => {
+    if(sameBracketName(m.p1, oldClean)){
+      m.p1 = newClean;
+      count++;
+    }
+
+    if(sameBracketName(m.p2, oldClean)){
+      m.p2 = newClean;
+      count++;
+    }
+  });
+
+  if(Array.isArray(BRACKET_STATE.entrants)){
+    BRACKET_STATE.entrants = BRACKET_STATE.entrants.map(name =>
+      sameBracketName(name, oldClean) ? newClean : name
+    );
+  }
+
+  if(Array.isArray(BRACKET_STATE.seedOrder)){
+    BRACKET_STATE.seedOrder.forEach(item => {
+      if(item && sameBracketName(item.name, oldClean)){
+        item.name = newClean;
+      }
+    });
+  }
+
+  getRoomTables().forEach(table => {
+    if(sameBracketName(table.p1, oldClean)){
+      table.p1 = newClean;
+      count++;
+    }
+
+    if(sameBracketName(table.p2, oldClean)){
+      table.p2 = newClean;
+      count++;
+    }
+  });
+
+  if(BRACKET_STATE.tournamentWinner && sameBracketName(BRACKET_STATE.tournamentWinner, oldClean)){
+    BRACKET_STATE.tournamentWinner = newClean;
+  }
+
+  return count;
+}
+
+function openEditMatchNames(matchRef){
+  if(!BRACKET_STATE) return alert("No bracket loaded.");
+
+  const [lane, id] = String(matchRef || "").split("|");
+  const m = findMatch(lane, id);
+
+  if(!m) return alert("Match not found.");
+
+  const oldP1 = isRealBracketName(m.p1) ? m.p1 : "";
+  const oldP2 = isRealBracketName(m.p2) ? m.p2 : "";
+
+  if(!oldP1 && !oldP2){
+    return alert("No editable names in this match.");
+  }
+
+  const nextP1 = oldP1
+    ? prompt(`Correct spelling for ${oldP1}:`, oldP1)
+    : null;
+
+  if(nextP1 === null) return;
+
+  const nextP2 = oldP2
+    ? prompt(`Correct spelling for ${oldP2}:`, oldP2)
+    : null;
+
+  if(nextP2 === null) return;
+
+  let changed = 0;
+
+  const cleanP1 = normalizeName(nextP1);
+  const cleanP2 = normalizeName(nextP2);
+
+  if(oldP1 && cleanP1 && cleanP1 !== oldP1){
+    changed += replacePlayerNameEverywhere(oldP1, cleanP1);
+  }
+
+  if(oldP2 && cleanP2 && cleanP2 !== oldP2){
+    changed += replacePlayerNameEverywhere(oldP2, cleanP2);
+  }
+
+  if(!changed){
+    const status = document.getElementById("bracketStatus");
+    if(status) status.textContent = "No name changes made.";
+    return;
+  }
+
+  saveRoomState();
+  propagateWinners();
+  assignCallNumbersToReadyMatches();
+  saveBracketState();
+  renderBracket();
+  buildMatchPicker();
+  renderResults();
+  renderRoomViews();
+  schedulePublish();
+
+  const status = document.getElementById("bracketStatus");
+  if(status){
+    status.textContent = `Name edit saved. Updated ${changed} bracket or room reference${changed === 1 ? "" : "s"}.`;
+  }
+
+  const advanceMsg = document.getElementById("advanceMsg");
+  if(advanceMsg){
+    advanceMsg.textContent = "Name edit saved.";
+  }
+}
+
 /* =========================================================
   LATE ENTRANTS
 ========================================================= */
@@ -5273,6 +5401,7 @@ function renderMatchCard(match, lane, editable=false){
 
   const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
   const playable = editable && match.p1 && match.p2 && match.p1 !== "TBD" && match.p2 !== "TBD" && match.p1 !== "BYE" && match.p2 !== "BYE";
+  const canEditNames = editable && (isRealBracketName(match.p1) || isRealBracketName(match.p2));
   const routeLabel = match.goldenCrossoverLabel ? ` <span class="mini" style="color:#00eaff;">${esc(match.goldenCrossoverLabel)}</span>` : "";
   const callLabel = matchCallLabel(match);
   const callClass = match.callNumber ? "ok" : "muted";
@@ -5290,53 +5419,56 @@ function renderMatchCard(match, lane, editable=false){
   card.appendChild(renderSlot(match, lane, "p1", editable));
   card.appendChild(renderSlot(match, lane, "p2", editable));
 
-if(matchHasForfeit(match)){
-  const forfeitNote = document.createElement("div");
-  forfeitNote.className = "mini";
-  forfeitNote.style.marginTop = "8px";
-  forfeitNote.style.color = "#ffd54f";
-  forfeitNote.style.fontWeight = "900";
+  if(matchHasForfeit(match)){
+    const forfeitNote = document.createElement("div");
+    forfeitNote.className = "mini";
+    forfeitNote.style.marginTop = "8px";
+    forfeitNote.style.color = "#ffd54f";
+    forfeitNote.style.fontWeight = "900";
 
-  const forfeitedPlayer = isForfeitScore(match.s1)
-    ? match.p1
-    : isForfeitScore(match.s2)
-      ? match.p2
-      : "";
+    const forfeitedPlayer = isForfeitScore(match.s1)
+      ? match.p1
+      : isForfeitScore(match.s2)
+        ? match.p2
+        : "";
 
-  forfeitNote.textContent = forfeitedPlayer
-    ? `Forfeit: ${forfeitedPlayer}`
-    : "Forfeit";
+    forfeitNote.textContent = forfeitedPlayer
+      ? `Forfeit: ${forfeitedPlayer}`
+      : "Forfeit";
 
-  card.appendChild(forfeitNote);
-}
+    card.appendChild(forfeitNote);
+  }
 
-if(matchHasByeScore(match)){
-  const byeNote = document.createElement("div");
-  byeNote.className = "mini";
-  byeNote.style.marginTop = "8px";
-  byeNote.style.color = "#00eaff";
-  byeNote.style.fontWeight = "900";
+  if(matchHasByeScore(match)){
+    const byeNote = document.createElement("div");
+    byeNote.className = "mini";
+    byeNote.style.marginTop = "8px";
+    byeNote.style.color = "#00eaff";
+    byeNote.style.fontWeight = "900";
 
-  const byePlayer = isByeScore(match.s1)
-    ? match.p1
-    : isByeScore(match.s2)
-      ? match.p2
-      : "";
+    const byePlayer = isByeScore(match.s1)
+      ? match.p1
+      : isByeScore(match.s2)
+        ? match.p2
+        : "";
 
-  byeNote.textContent = byePlayer
-    ? `BYE: ${byePlayer}`
-    : "BYE";
+    byeNote.textContent = byePlayer
+      ? `BYE: ${byePlayer}`
+      : "BYE";
 
-  card.appendChild(byeNote);
-}
+    card.appendChild(byeNote);
+  }
 
-if(playable){
+  if(playable || canEditNames){
     const bar = document.createElement("div");
     bar.className = "matchActionBar";
+
     bar.innerHTML = `
-      <button class="btnTiny primary" type="button" data-room-assign="${esc(lane)}|${esc(match.id)}">Assign Table</button>
-      <button class="btnTiny" type="button" data-link-fill="${esc(lane)}|${esc(match.id)}">Fill Links</button>
+      ${playable ? `<button class="btnTiny primary" type="button" data-room-assign="${esc(lane)}|${esc(match.id)}">Assign Table</button>` : ""}
+      ${playable ? `<button class="btnTiny" type="button" data-link-fill="${esc(lane)}|${esc(match.id)}">Fill Links</button>` : ""}
+      ${canEditNames ? `<button class="btnTiny" type="button" data-edit-names="${esc(lane)}|${esc(match.id)}">Edit Names</button>` : ""}
     `;
+
     card.appendChild(bar);
   }
 
@@ -5761,6 +5893,12 @@ function wireBracketChartEditing(){
   });
 
   root.addEventListener("click", (e)=>{
+  	const editNamesBtn = e.target.closest("[data-edit-names]");
+    if(editNamesBtn){
+      e.stopPropagation();
+      openEditMatchNames(editNamesBtn.getAttribute("data-edit-names"));
+      return;
+    }
     const assignBtn = e.target.closest("[data-room-assign]");
     if(assignBtn){
       e.stopPropagation();
