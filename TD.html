@@ -4679,11 +4679,69 @@ function makeMatch(id,label,p1,p2){
   };
 }
 
+function getEntrantDuplicateReport(rawNames){
+  const buckets = new Map();
+
+  rawNames.forEach((name, idx) => {
+    const clean = normalizeName(name);
+    const key = clean.toLowerCase();
+
+    if(!key) return;
+
+    if(key === "bye" || key === "tbd"){
+      return;
+    }
+
+    if(!buckets.has(key)){
+      buckets.set(key, []);
+    }
+
+    buckets.get(key).push({
+      line: idx + 1,
+      name: clean
+    });
+  });
+
+  return Array.from(buckets.values()).filter(group => group.length > 1);
+}
+
+function formatDuplicateEntrantMessage(dupes){
+  return dupes.map(group => {
+    const shownName = group[0].name;
+    const lines = group.map(item => `line ${item.line}: ${item.name}`).join("\n");
+    return `${shownName}\n${lines}`;
+  }).join("\n\n");
+}
+
+function confirmNoDuplicateEntrants(rawNames){
+  const duplicates = getEntrantDuplicateReport(rawNames);
+
+  if(!duplicates.length){
+    return true;
+  }
+
+  const msg =
+    "Duplicate entrant names found. Fix these before building the bracket:\n\n" +
+    formatDuplicateEntrantMessage(duplicates);
+
+  const status = document.getElementById("bracketStatus");
+  if(status){
+    status.textContent = "Duplicate entrant names found. Bracket was not built.";
+  }
+
+  alert(msg);
+  return false;
+}
+
 function newBracketFromEntrants(){
   const raw = ($('#entrantsBox').value || "").split("\n").map(s=>s.trim()).filter(Boolean);
 
   if(raw.length < 2) return alert("Need at least 2 entrants.");
   if(raw.length > 128) return alert("This build is capped at 128 entrants.");
+
+  if(!confirmNoDuplicateEntrants(raw)){
+    return;
+  }
 
   let entrantsRaw = raw.slice();
   if($('#chkShuffle').checked) entrantsRaw = shuffle(entrantsRaw);
