@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.6 - Pachuca Ghost BYE Fix
+Tournament Director v4.0.7 - Clean Finish Archive
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1925,7 +1925,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.6 - Pachuca Ghost BYE Fix";
+const TD_BUILD = "v4.0.7 - Clean Finish Archive";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -3353,6 +3353,104 @@ function clearRoomStatuses(){
 
   const msg = document.getElementById("roomSetupMsg");
   if(msg) msg.textContent = "All table statuses cleared.";
+}
+
+function resetLinksPageAfterTournament(){
+  pendingAssignMatch = null;
+
+  currentBracketCallNumber = "";
+  currentBracketMatchId = "";
+  currentBracketLane = "";
+
+  generatedUrl = "";
+  generatedMatchSheetUrl = "";
+  generatedLocalAHMSUrl = "";
+
+  const player1 = document.getElementById("player1");
+  const player2 = document.getElementById("player2");
+  const tableNumber = document.getElementById("tableNumber");
+  const refName = document.getElementById("refName");
+  const matchLength = document.getElementById("matchLength");
+
+  if(player1) player1.value = "";
+  if(player2) player2.value = "";
+  if(tableNumber) tableNumber.value = "";
+  if(refName) refName.value = "";
+  if(matchLength) matchLength.value = "4";
+
+  const matchSheetLink = document.getElementById("matchSheetLink");
+  if(matchSheetLink){
+    matchSheetLink.href = "#";
+    matchSheetLink.style.display = "none";
+  }
+
+  const localDisplay = document.getElementById("localAHMSDisplay");
+  if(localDisplay){
+    localDisplay.innerHTML = "";
+    localDisplay.style.display = "none";
+  }
+
+  const localDisplayBtn = document.getElementById("copyLocalAHMSDisplayBtn");
+  if(localDisplayBtn){
+    localDisplayBtn.style.display = "none";
+    localDisplayBtn.innerText = "Copy Local AHMS Link";
+  }
+
+  const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
+  if(localAHMSBtn){
+    localAHMSBtn.style.display = "none";
+    localAHMSBtn.innerText = "Copy Local AHMS Handoff";
+  }
+
+  const copyBtn = document.getElementById("copyBtn");
+  if(copyBtn){
+    copyBtn.style.display = "none";
+    copyBtn.classList.remove("copied");
+    copyBtn.innerText = "Copy to Clipboard";
+  }
+
+  const result = document.getElementById("result");
+  if(result){
+    result.innerHTML = "";
+  }
+
+  const qr = document.getElementById("qrcode");
+  if(qr){
+    const ctx = qr.getContext("2d");
+    if(ctx){
+      ctx.clearRect(0, 0, qr.width, qr.height);
+    }
+  }
+
+  const cloudStatus = document.getElementById("cloudSyncStatus");
+  if(cloudStatus){
+    cloudStatus.style.display = "none";
+    cloudStatus.textContent = "";
+  }
+
+  const assignPanel = document.getElementById("assignPanel");
+  if(assignPanel){
+    assignPanel.dataset.keepWhenIdle = "0";
+    assignPanel.style.display = "none";
+    assignPanel.innerHTML = "";
+  }
+
+  if(!ROOM_STATE){
+    ROOM_STATE = loadRoomState();
+  }
+
+  getRoomTables().forEach(table => {
+    if(table.status === "assigned" || table.status === "playing"){
+      finalizeTableTiming(table, "tournament-complete");
+    }
+
+    table.status = "open";
+    clearTableAssignmentFields(table);
+  });
+
+  saveRoomState();
+  renderRoomViews();
+  renderRoomStats();
 }
 
 function saveRoomName(){
@@ -5708,6 +5806,58 @@ function saveCurrentBracketToArchive(){
   $('#archiveStatus').textContent = `Saved current bracket to archive: ${title}`;
 }
 
+function autoArchiveCompletedBracket(){
+  if(!BRACKET_STATE){
+    return null;
+  }
+
+  const archive = loadArchive();
+  const tournamentId = getTournamentId();
+  const title = tournamentId || `Tournament ${new Date().toLocaleDateString()}`;
+  const now = new Date().toISOString();
+
+  if(BRACKET_STATE.autoArchivedId){
+    const existing = archive.find(item => item.id === BRACKET_STATE.autoArchivedId);
+
+    if(existing){
+      existing.title = title;
+      existing.tournamentId = tournamentId;
+      existing.savedAt = now;
+      existing.completedAt = BRACKET_STATE.tournamentCompletedAt || now;
+      existing.winner = BRACKET_STATE.tournamentWinner || "";
+      existing.autoSaved = true;
+      existing.state = JSON.parse(JSON.stringify(BRACKET_STATE));
+
+      saveArchive(archive);
+      renderArchive();
+
+      return existing;
+    }
+  }
+
+  const id = `arch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+
+  const item = {
+    id,
+    title,
+    tournamentId,
+    savedAt: now,
+    completedAt: BRACKET_STATE.tournamentCompletedAt || now,
+    winner: BRACKET_STATE.tournamentWinner || "",
+    autoSaved: true,
+    state: JSON.parse(JSON.stringify(BRACKET_STATE))
+  };
+
+  archive.push(item);
+
+  BRACKET_STATE.autoArchivedId = id;
+
+  saveArchive(archive);
+  renderArchive();
+
+  return item;
+}
+
 function loadArchiveItem(id){
   const archive = loadArchive();
   const item = archive.find(x => x.id === id);
@@ -6305,17 +6455,26 @@ function confirmTournamentWinner(){
   BRACKET_STATE.tournamentWinner = pendingTournamentWinner.name;
   BRACKET_STATE.tournamentCompletedAt = new Date().toISOString();
 
+  const archivedItem = autoArchiveCompletedBracket();
+
   saveBracketState();
   closeTournamentCompletePrompt();
   launchConfetti();
 
   renderResults();
+  resetLinksPageAfterTournament();
+
+  const archiveStatus = document.getElementById("archiveStatus");
+  if(archiveStatus && archivedItem){
+    archiveStatus.textContent = `Tournament archived automatically: ${archivedItem.title}`;
+  }
 
   setTimeout(() => {
     setTab("tabResults");
+
     const status = document.getElementById("resultsStatus");
     if(status){
-      status.textContent = `Tournament complete. Winner: ${BRACKET_STATE.tournamentWinner}`;
+      status.textContent = `Tournament complete. Winner: ${BRACKET_STATE.tournamentWinner}. Bracket archived and Links page reset.`;
     }
   }, 900);
 }
