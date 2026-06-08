@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.7 - Clean Finish Archive
+Tournament Director v4.0.8 - LOPE Deck
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -16,6 +16,10 @@ Tournament Director v4.0.7 - Clean Finish Archive
   Playing = red
   Offline = gray
 - Adds Go to Match from assigned room tables back to the bracket score inputs
+- Adds LOPE tab for Brackelope-style match flow view
+- Shows Active, Ready, and Completed match lists with tournament tools
+- Always shows up to 4 ready matches when available
+- Moves Room Setup access into Links Settings accordion
 ===================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1441,6 +1445,179 @@ body.bracketFullscreenOpen{
   100%{ transform:translateY(105vh) rotate(720deg); opacity:0; }
 }
 
+.lopeShell{
+  max-width:1100px;
+  margin:14px auto;
+  background:#000;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:18px;
+  overflow:hidden;
+  text-align:left;
+}
+
+.lopeTop{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:18px;
+  background:#000;
+}
+
+.lopeCounter{
+  text-align:center;
+  font-weight:1000;
+  color:#fff;
+  text-transform:uppercase;
+}
+
+.lopeCounterNum{
+  font-size:2em;
+  line-height:1;
+}
+
+.lopeCounterLabel{
+  font-size:.85em;
+  color:rgba(255,255,255,.75);
+  letter-spacing:.5px;
+}
+
+.lopeDrawBtn{
+  min-width:220px;
+  border:2px solid rgba(255,255,255,.75);
+  background:#222;
+  color:#fff;
+  border-radius:0;
+  padding:18px 24px;
+  font-size:1.35em;
+  font-weight:1000;
+  text-transform:uppercase;
+}
+
+.lopeFilters{
+  display:flex;
+  justify-content:center;
+  background:#050505;
+  border-top:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.lopeFilterBtn{
+  margin:0;
+  border-radius:0;
+  background:#111;
+  color:#777;
+  border-right:1px solid rgba(255,255,255,.12);
+  padding:14px 22px;
+  font-weight:1000;
+  text-transform:uppercase;
+}
+
+.lopeFilterBtn.active{
+  background:#fff;
+  color:#000;
+}
+
+.lopeSectionTitle{
+  background:#000;
+  color:#fff;
+  font-size:1.55em;
+  font-weight:1000;
+  text-align:center;
+  text-transform:uppercase;
+  padding:8px 12px;
+  letter-spacing:.6px;
+}
+
+.lopeMatch{
+  background:#5f8fbb;
+  color:#fff;
+  border-bottom:2px solid rgba(255,255,255,.25);
+}
+
+.lopeMatchInner{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:18px;
+  align-items:center;
+  padding:16px 18px;
+}
+
+.lopeRound{
+  font-size:.95em;
+  font-weight:1000;
+  text-transform:uppercase;
+  opacity:.92;
+  margin-bottom:6px;
+}
+
+.lopePlayer{
+  font-size:2em;
+  font-weight:1000;
+  line-height:1.05;
+}
+
+.lopePlayer.right{
+  text-align:right;
+}
+
+.lopeCenter{
+  text-align:center;
+  font-size:1.35em;
+  font-weight:1000;
+}
+
+.lopeTable{
+  font-size:.9em;
+  margin-bottom:8px;
+  text-transform:uppercase;
+}
+
+.lopeTimer{
+  font-size:.85em;
+  margin-top:8px;
+}
+
+.lopeTools{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+  border-top:2px solid rgba(255,255,255,.75);
+  background:#222;
+}
+
+.lopeToolBtn{
+  margin:0;
+  border-radius:0;
+  background:#222;
+  color:#fff;
+  border-right:2px solid rgba(255,255,255,.75);
+  border-bottom:0;
+  padding:15px 10px;
+  font-size:1em;
+  font-weight:1000;
+  text-transform:uppercase;
+}
+
+.lopeToolBtn:last-child{
+  border-right:0;
+}
+
+.lopeEmpty{
+  background:#263744;
+  color:rgba(255,255,255,.72);
+  padding:26px;
+  text-align:center;
+  font-weight:900;
+}
+
+.lopeStatusLine{
+  padding:10px 14px;
+  background:#111;
+  color:rgba(255,255,255,.72);
+  font-size:12px;
+  text-align:center;
+}
+
 </style>
 </head>
 
@@ -1475,9 +1652,9 @@ body.bracketFullscreenOpen{
 
 <div class="tabs" id="tabs">
   <button class="tabbtn active" data-tab="tabMatch">Links</button>
-  <button class="tabbtn" data-tab="tabRoomSetup">Room Setup</button>
   <button class="tabbtn" data-tab="tabAYPT">AYPT</button>
   <button class="tabbtn" data-tab="tabBrackets">Brackets</button>
+  <button class="tabbtn" data-tab="tabLope">LOPE</button>
   <button class="tabbtn" type="button" id="btnOpenLiveBracket">Live</button>
   <button class="tabbtn" data-tab="tabResults">Results</button>
   <button class="tabbtn" data-tab="tabArchive">Archive</button>
@@ -1517,7 +1694,6 @@ body.bracketFullscreenOpen{
       </div>
       <div class="row-left">
         <button class="btnTiny primary" id="btnRoomRefreshLinks">Refresh Room</button>
-        <button class="btnTiny" onclick="setTab('tabRoomSetup')">Room Setup</button>
       </div>
     </div>
 
@@ -1553,8 +1729,17 @@ body.bracketFullscreenOpen{
   <details id="matchLog" class="block" style="max-width: 900px; margin-left: auto; margin-right: auto;">
   <summary class="clicky">Settings</summary>
 
-    <details class="block" style="max-width:900px;margin:14px auto" open>
-      <summary class="clicky">Room Timing Stats</summary>
+    <details class="block" style="max-width:900px;margin:14px auto">
+  <summary class="clicky">Room Setup</summary>
+
+  <div style="margin-top:10px; line-height:1.5;">
+    <p><strong>Room Setup</strong> lets you arrange tables, rename tables, rotate tables, and clear table statuses.</p>
+    <button class="btnTiny primary" type="button" onclick="setTab('tabRoomSetup')">Open Room Setup</button>
+  </div>
+</details>
+
+<details class="block" style="max-width:900px;margin:14px auto" open>
+  <summary class="clicky">Room Timing Stats</summary>
 
       <div class="assignPanel" id="roomStatsPanel">
         <div class="row-left" style="justify-content:space-between;">
@@ -1832,6 +2017,40 @@ body.bracketFullscreenOpen{
   </div>
 </div>
 
+<div id="tabLope" class="tabpane">
+  <div class="lopeShell">
+    <div class="lopeTop">
+      <div class="lopeCounter">
+        <div class="lopeCounterNum" id="lopePlayersCount">0/0</div>
+        <div class="lopeCounterLabel">Players</div>
+      </div>
+
+      <div class="lopeCounter">
+        <div class="lopeCounterNum" id="lopeMatchesCount">0</div>
+        <div class="lopeCounterLabel">Matches</div>
+      </div>
+
+      <div class="lopeCounter">
+        <div class="lopeCounterNum" id="lopeArenasCount">0/0</div>
+        <div class="lopeCounterLabel">Arenas</div>
+      </div>
+
+      <button class="lopeDrawBtn" id="btnLopeDrawMatch" type="button">Draw Match</button>
+    </div>
+
+    <div class="lopeFilters">
+      <button class="lopeFilterBtn active" type="button" data-lope-filter="all">All</button>
+      <button class="lopeFilterBtn" type="button" data-lope-filter="active">Active</button>
+      <button class="lopeFilterBtn" type="button" data-lope-filter="ready">Ready</button>
+      <button class="lopeFilterBtn" type="button" data-lope-filter="completed">Completed</button>
+    </div>
+
+    <div class="lopeStatusLine" id="lopeStatusLine">LOPE deck ready.</div>
+
+    <div id="lopeRoot"></div>
+  </div>
+</div>
+
 <div id="tabFull" class="tabpane">
   <div class="card">
     <div class="ctrlbar">
@@ -1925,7 +2144,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.7 - Clean Finish Archive";
+const TD_BUILD = "v4.0.8 - LOPE Deck";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2205,6 +2424,12 @@ function setTab(id){
       renderRoomStats();
     });
   }
+
+if(id === "tabLope"){
+  requestAnimationFrame(() => {
+    renderLope();
+  });
+}
 
   if(id === "tabBrackets"){
     requestAnimationFrame(() => {
@@ -4918,6 +5143,7 @@ function newBracketFromEntrants(){
   saveBracketState();
   renderBracket();
   buildMatchPicker();
+  renderLope();
 
   const autoNote =
   document.getElementById("bracketSizeSelect")?.value === "auto" && raw.length % 2 === 0 && raw.length < 128
@@ -5509,6 +5735,7 @@ function openEditMatchNames(matchRef){
   renderResults();
   renderRoomViews();
   schedulePublish();
+  renderLope();
 
   const status = document.getElementById("bracketStatus");
   if(status){
@@ -5662,6 +5889,7 @@ function addLateEntrant(){
   buildMatchPicker();
   renderResults();
   schedulePublish();
+  renderLope();
 
   $('#lateEntrantName').value = "";
 
@@ -5719,6 +5947,7 @@ function advanceWinner(){
   saveBracketState();
   renderBracket();
   buildMatchPicker();
+  renderLope();
 
   msg.innerHTML = `<span class="ok">Saved</span> winner: ${esc(w==="p1"?m.p1:m.p2)}`;
 
@@ -5873,6 +6102,7 @@ function loadArchiveItem(id){
   renderBracket();
   buildMatchPicker();
   renderResults();
+  renderLope();
 
   $('#bracketStatus').textContent = `Loaded archived bracket: ${item.title}`;
   setTab('tabBrackets');
@@ -5978,6 +6208,8 @@ function resetBracket(){
   $('#resultsTable tbody').innerHTML = "";
   $('#resultsStatus').textContent = "-";
   $('#lateAddMsg').textContent = "Fills eligible Round 1 BYE spots only.";
+  
+  renderLope();
 }
 
 function renderMatchCard(match, lane, editable=false){
@@ -6603,6 +6835,7 @@ function wireBracketChartEditing(){
       renderBracket();
       buildMatchPicker();
       schedulePublish();
+      renderLope();
 
       $('#bracketStatus').textContent = "Cleared result. Downstream not started.";
       return;
@@ -6628,6 +6861,7 @@ function wireBracketChartEditing(){
 	buildMatchPicker();
 	schedulePublish();
 	maybePromptTournamentComplete();
+	renderLope();
   });
 }
 
@@ -7288,6 +7522,7 @@ function importBracketJSONFile(file){
 
       renderBracket();
       buildMatchPicker();
+      renderLope();
 
       $('#bracketStatus').textContent = "Imported bracket JSON.";
 
@@ -7540,6 +7775,489 @@ if ('serviceWorker' in navigator && !SW_OFF) {
 }
 
 /* =========================================================
+  LOPE DECK
+========================================================= */
+let LOPE_FILTER = "all";
+
+function getLopeMatchRoundLabel(lane, m){
+  if(!m) return "Match";
+
+  if(m.label){
+    return m.label.replace(/M\d+$/i, "").trim() || m.label;
+  }
+
+  if(lane === "W") return "Winners";
+  if(lane === "L") return "Losers";
+  return "Finals";
+}
+
+function getLopeMatchTable(lane, matchId){
+  return getRoomTables().find(t =>
+    String(t.matchId || "") === String(matchId || "") &&
+    String(t.matchLane || "") === String(lane || "")
+  ) || null;
+}
+
+function getLopeBuckets(){
+  const buckets = {
+    active: [],
+    ready: [],
+    completed: []
+  };
+
+  if(!BRACKET_STATE){
+    return buckets;
+  }
+
+  getMatchesInCallOrder().forEach(({ lane, m }) => {
+    if(!m) return;
+
+    const state = getPachucaMatchState(m, lane);
+    const table = getLopeMatchTable(lane, m.id);
+
+    const item = {
+      lane,
+      m,
+      state,
+      table,
+      key: `${lane}|${m.id}`
+    };
+
+    if(state.type === "playing" || state.type === "assigned"){
+      buckets.active.push(item);
+      return;
+    }
+
+    if(m.winner){
+      buckets.completed.push(item);
+      return;
+    }
+
+    if(state.type === "ready"){
+      buckets.ready.push(item);
+    }
+  });
+
+  buckets.active.sort((a,b) => Number(a.m.callNumber || 999999) - Number(b.m.callNumber || 999999));
+  buckets.ready.sort((a,b) => Number(a.m.callNumber || 999999) - Number(b.m.callNumber || 999999));
+  buckets.completed.sort((a,b) => Number(b.m.callNumber || 0) - Number(a.m.callNumber || 0));
+
+  buckets.ready = buckets.ready.slice(0, 4);
+  buckets.completed = buckets.completed.slice(0, 4);
+
+  return buckets;
+}
+
+function getLopeArenaCount(){
+  const tables = getRoomTables().filter(t => t.active !== false);
+  const usable = tables.filter(t => t.status !== "offline").length;
+
+  return {
+    usable,
+    total: tables.length
+  };
+}
+
+function getLopePlayerCount(){
+  if(!BRACKET_STATE){
+    return {
+      current: 0,
+      total: 0
+    };
+  }
+
+  const total = (BRACKET_STATE.entrants || []).filter(n => n && n !== "BYE").length;
+  const active = new Set();
+
+  listAllMatches().forEach(({ m }) => {
+    if(!m) return;
+
+    if(!m.winner){
+      if(isRealBracketName(m.p1)) active.add(normalizeName(m.p1).toLowerCase());
+      if(isRealBracketName(m.p2)) active.add(normalizeName(m.p2).toLowerCase());
+    }
+  });
+
+  return {
+    current: active.size || total,
+    total
+  };
+}
+
+function renderLopeCounters(buckets){
+  const playerCount = getLopePlayerCount();
+  const arenaCount = getLopeArenaCount();
+  const allMatches = listAllMatches ? listAllMatches() : [];
+  const completedCount = allMatches.filter(({ m }) => m && m.winner).length;
+
+  const playersEl = document.getElementById("lopePlayersCount");
+  const matchesEl = document.getElementById("lopeMatchesCount");
+  const arenasEl = document.getElementById("lopeArenasCount");
+
+  if(playersEl) playersEl.textContent = `${playerCount.current}/${playerCount.total}`;
+  if(matchesEl) matchesEl.textContent = String(completedCount);
+  if(arenasEl) arenasEl.textContent = `${arenaCount.usable}/${arenaCount.total}`;
+}
+
+function lopeMatchTimer(table){
+  if(!table) return "";
+
+  const timing = getTableLiveTiming(table);
+
+  if(table.status === "playing"){
+    return `Playing ${fmtDuration(timing.playingMs)}`;
+  }
+
+  if(table.status === "assigned"){
+    return `Called ${fmtDuration(timing.calledMs)}`;
+  }
+
+  return "";
+}
+
+function renderLopeMatch(item, mode){
+  const m = item.m;
+  const lane = item.lane;
+  const table = item.table;
+  const callLabel = matchCallLabel(m);
+  const roundLabel = getLopeMatchRoundLabel(lane, m);
+  const timer = lopeMatchTimer(table);
+
+  const div = document.createElement("div");
+  div.className = "lopeMatch";
+  div.dataset.lopeMatch = item.key;
+
+  let tools = "";
+
+  if(mode === "active"){
+    tools = `
+      <button class="lopeToolBtn" type="button" data-lope-winner="${esc(item.key)}|p1">${esc(m.p1)} Wins</button>
+      <button class="lopeToolBtn" type="button" data-lope-winner="${esc(item.key)}|p2">${esc(m.p2)} Wins</button>
+      <button class="lopeToolBtn" type="button" data-lope-change-arena="${esc(item.key)}">Change Arena</button>
+      <button class="lopeToolBtn" type="button" data-lope-update-scores="${esc(item.key)}">Update Scores</button>
+      <button class="lopeToolBtn" type="button" data-lope-postpone="${esc(item.key)}">Postpone Match</button>
+    `;
+  }else if(mode === "ready"){
+    tools = `
+      <button class="lopeToolBtn" type="button" data-lope-hold="${esc(item.key)}">Hold Match</button>
+      <button class="lopeToolBtn" type="button" data-lope-start="${esc(item.key)}">Start Match</button>
+    `;
+  }else{
+    const winnerName = getWinnerNameFromMatch(m);
+    tools = `
+      <button class="lopeToolBtn" type="button" data-lope-go="${esc(item.key)}">Go to Match</button>
+      <button class="lopeToolBtn" type="button" data-lope-fill="${esc(item.key)}">Fill Links</button>
+      <button class="lopeToolBtn" type="button" disabled>Winner: ${esc(winnerName || "")}</button>
+    `;
+  }
+
+  div.innerHTML = `
+    <div class="lopeMatchInner">
+      <div>
+        <div class="lopeRound">${esc(roundLabel)}</div>
+        <div class="lopePlayer">${esc(m.p1 || "")}</div>
+      </div>
+
+      <div class="lopeCenter">
+        <div class="lopeTable">${table ? `Table ${esc(table.number || "")}` : esc(callLabel)}</div>
+        <div>VS</div>
+        ${timer ? `<div class="lopeTimer">${esc(timer)}</div>` : ""}
+      </div>
+
+      <div>
+        <div class="lopeRound" style="text-align:right;">${esc(m.label || m.id || "")}</div>
+        <div class="lopePlayer right">${esc(m.p2 || "")}</div>
+      </div>
+    </div>
+
+    <div class="lopeTools">
+      ${tools}
+    </div>
+  `;
+
+  return div;
+}
+
+function renderLopeSection(root, title, items, mode){
+  const showSection =
+    LOPE_FILTER === "all" ||
+    LOPE_FILTER === mode;
+
+  if(!showSection) return;
+
+  const sectionTitle = document.createElement("div");
+  sectionTitle.className = "lopeSectionTitle";
+  sectionTitle.textContent = title;
+  root.appendChild(sectionTitle);
+
+  if(!items.length){
+    const empty = document.createElement("div");
+    empty.className = "lopeEmpty";
+    empty.textContent = `No ${title.toLowerCase()} matches.`;
+    root.appendChild(empty);
+    return;
+  }
+
+  items.forEach(item => {
+    root.appendChild(renderLopeMatch(item, mode));
+  });
+}
+
+function renderLope(){
+  const root = document.getElementById("lopeRoot");
+  const status = document.getElementById("lopeStatusLine");
+
+  if(!root) return;
+
+  const buckets = getLopeBuckets();
+
+  renderLopeCounters(buckets);
+
+  root.innerHTML = "";
+
+  if(!BRACKET_STATE){
+    root.innerHTML = `<div class="lopeEmpty">No bracket loaded yet.</div>`;
+    if(status) status.textContent = "Build or load a bracket first.";
+    return;
+  }
+
+  renderLopeSection(root, "Active", buckets.active, "active");
+  renderLopeSection(root, "Ready", buckets.ready, "ready");
+  renderLopeSection(root, "Completed", buckets.completed, "completed");
+
+  if(status){
+    status.textContent = `Active ${buckets.active.length} | Ready ${buckets.ready.length} | Completed ${buckets.completed.length}`;
+  }
+}
+
+function lopeGetMatchFromKey(key){
+  const [lane, id] = String(key || "").split("|");
+  const m = findMatch(lane, id);
+
+  if(!m) return null;
+
+  return {
+    lane,
+    id,
+    m
+  };
+}
+
+function lopeFillLinks(key){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  if(!canAssignOrFillMatch(ref.m, ref.lane)){
+    return alert("That match is not ready yet.");
+  }
+
+  document.getElementById("player1").value = ref.m.p1 || "";
+  document.getElementById("player2").value = ref.m.p2 || "";
+
+  setCurrentBracketMatchContext(ref.m, ref.lane);
+
+  setTab("tabMatch");
+
+  const status = document.getElementById("cloudSyncStatus");
+  if(status){
+    status.style.display = "block";
+    status.textContent = `${matchCallLabel(ref.m)} loaded into Links.`;
+    setTimeout(() => { status.style.display = "none"; }, 3000);
+  }
+}
+
+function lopeStartMatch(key){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  openRoomAssign(`${ref.lane}|${ref.id}`);
+}
+
+function lopeChangeArena(key){
+  lopeStartMatch(key);
+}
+
+function lopeGoToMatch(key){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  jumpToBracketMatch({
+    lane: ref.lane,
+    id: ref.id,
+    match: ref.m
+  });
+}
+
+function lopePostponeMatch(key){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  const table = getLopeMatchTable(ref.lane, ref.id);
+
+  if(table){
+    setTableStatus(table, "open");
+  }
+
+  const status = document.getElementById("lopeStatusLine");
+  if(status){
+    status.textContent = `${matchCallLabel(ref.m)} postponed and table cleared.`;
+  }
+
+  renderLope();
+}
+
+function lopeUpdateScores(key){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  const s1 = prompt(`Score for ${ref.m.p1}:`, ref.m.s1 || "");
+  if(s1 === null) return;
+
+  const s2 = prompt(`Score for ${ref.m.p2}:`, ref.m.s2 || "");
+  if(s2 === null) return;
+
+  ref.m.s1 = String(s1).toUpperCase();
+  ref.m.s2 = String(s2).toUpperCase();
+
+  saveBracketState();
+  renderBracket();
+  buildMatchPicker();
+  renderLope();
+  schedulePublish();
+}
+
+function lopeSetWinner(key, which){
+  const ref = lopeGetMatchFromKey(key);
+  if(!ref) return alert("Match not found.");
+
+  const s1 = prompt(`Score for ${ref.m.p1}:`, ref.m.s1 || "");
+  if(s1 === null) return;
+
+  const s2 = prompt(`Score for ${ref.m.p2}:`, ref.m.s2 || "");
+  if(s2 === null) return;
+
+  ref.m.s1 = String(s1).toUpperCase();
+  ref.m.s2 = String(s2).toUpperCase();
+
+  if(!requireScoreBeforeAdvance(ref.m, ref.lane)){
+    return;
+  }
+
+  ref.m.winner = which;
+  ref.m.loser = which === "p1" ? "p2" : "p1";
+
+  BRACKET_STATE.tournamentCompleteConfirmed = false;
+  BRACKET_STATE.tournamentWinner = "";
+  BRACKET_STATE.tournamentCompletedAt = "";
+
+  const table = getLopeMatchTable(ref.lane, ref.id);
+  if(table){
+    setTableStatus(table, "open");
+  }
+
+  propagateWinners();
+  assignCallNumbersToReadyMatches();
+  saveBracketState();
+
+  renderBracket();
+  buildMatchPicker();
+  renderResults();
+  renderLope();
+  schedulePublish();
+  maybePromptTournamentComplete();
+}
+
+function lopeDrawMatch(){
+  const buckets = getLopeBuckets();
+
+  if(!buckets.ready.length){
+    alert("No ready matches available.");
+    return;
+  }
+
+  const item = buckets.ready[0];
+  lopeStartMatch(item.key);
+}
+
+function wireLope(){
+  const root = document.getElementById("tabLope");
+  if(!root) return;
+
+  root.addEventListener("click", e => {
+    const filterBtn = e.target.closest("[data-lope-filter]");
+    if(filterBtn){
+      LOPE_FILTER = filterBtn.getAttribute("data-lope-filter") || "all";
+
+      document.querySelectorAll(".lopeFilterBtn").forEach(btn => {
+        btn.classList.toggle("active", btn === filterBtn);
+      });
+
+      renderLope();
+      return;
+    }
+
+    const drawBtn = e.target.closest("#btnLopeDrawMatch");
+    if(drawBtn){
+      lopeDrawMatch();
+      return;
+    }
+
+    const startBtn = e.target.closest("[data-lope-start]");
+    if(startBtn){
+      lopeStartMatch(startBtn.getAttribute("data-lope-start"));
+      return;
+    }
+
+    const holdBtn = e.target.closest("[data-lope-hold]");
+    if(holdBtn){
+      lopeGoToMatch(holdBtn.getAttribute("data-lope-hold"));
+      return;
+    }
+
+    const changeBtn = e.target.closest("[data-lope-change-arena]");
+    if(changeBtn){
+      lopeChangeArena(changeBtn.getAttribute("data-lope-change-arena"));
+      return;
+    }
+
+    const scoreBtn = e.target.closest("[data-lope-update-scores]");
+    if(scoreBtn){
+      lopeUpdateScores(scoreBtn.getAttribute("data-lope-update-scores"));
+      return;
+    }
+
+    const postponeBtn = e.target.closest("[data-lope-postpone]");
+    if(postponeBtn){
+      lopePostponeMatch(postponeBtn.getAttribute("data-lope-postpone"));
+      return;
+    }
+
+    const goBtn = e.target.closest("[data-lope-go]");
+    if(goBtn){
+      lopeGoToMatch(goBtn.getAttribute("data-lope-go"));
+      return;
+    }
+
+    const fillBtn = e.target.closest("[data-lope-fill]");
+    if(fillBtn){
+      lopeFillLinks(fillBtn.getAttribute("data-lope-fill"));
+      return;
+    }
+
+    const winnerBtn = e.target.closest("[data-lope-winner]");
+    if(winnerBtn){
+      const raw = winnerBtn.getAttribute("data-lope-winner") || "";
+      const parts = raw.split("|");
+      const which = parts.pop();
+      const key = parts.join("|");
+
+      lopeSetWinner(key, which);
+      return;
+    }
+  });
+}
+
+/* =========================================================
   INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async ()=>{
@@ -7719,10 +8437,15 @@ roomTimerInterval = setInterval(() => {
     );
 
   if(!isInteracting){
-    renderRoomViews();
-  }
+  renderRoomViews();
 
-  renderRoomStats();
+  const lopeTab = document.getElementById("tabLope");
+  if(lopeTab && lopeTab.classList.contains("active")){
+    renderLope();
+  }
+}
+
+renderRoomStats();
 }, 1000);
 
   BRACKET_STATE = loadBracketState();
@@ -7732,11 +8455,14 @@ roomTimerInterval = setInterval(() => {
     saveBracketState();
     renderBracket();
     buildMatchPicker();
+    renderLope();
   }
 
   wireBracketChartEditing();
   wireBracketViewTools();
   renderArchive();
+  wireLope();
+  renderLope();
 
   const z = parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10);
   setFullZoomPercent(isFinite(z) ? z : 100);
