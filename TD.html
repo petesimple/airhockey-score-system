@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.8 - LOPE Deck
+Tournament Director v4.0.9 - Social Results
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -2079,11 +2079,12 @@ body.bracketFullscreenOpen{
 <div id="tabResults" class="tabpane">
   <div class="card">
     <div class="row-left">
-      <button class="btnTiny primary" id="btnBuildResults">Build Results</button>
-      <button class="btnTiny" id="btnExportResultsCSV">Export Results CSV</button>
-      <button class="btnTiny" id="btnExportResultsJSON">Export Results JSON</button>
-      <div class="muted" id="resultsStatus">-</div>
-    </div>
+  <button class="btnTiny primary" id="btnBuildResults">Build Results</button>
+  <button class="btnTiny primary" id="btnShareResults">Share Results</button>
+  <button class="btnTiny" id="btnExportResultsCSV">Export Results CSV</button>
+  <button class="btnTiny" id="btnExportResultsJSON">Export Results JSON</button>
+  <div class="muted" id="resultsStatus">-</div>
+</div>
 
     <div class="spacer"></div>
 
@@ -2144,7 +2145,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.8 - LOPE Deck";
+const TD_BUILD = "v4.0.9 - Social Results";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -7486,6 +7487,168 @@ function exportResultsJSON(){
   URL.revokeObjectURL(url);
 }
 
+function ordinalPlace(value){
+  const n = Number(value || 0);
+
+  if(!n) return "";
+
+  const mod100 = n % 100;
+
+  if(mod100 >= 11 && mod100 <= 13){
+    return `${n}th`;
+  }
+
+  switch(n % 10){
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}
+
+function buildResultsShareText(){
+  if(!RESULTS.length){
+    renderResults();
+  }
+
+  if(!RESULTS.length){
+    return "";
+  }
+
+  const tournamentId = getTournamentId() || "Air Hockey Tournament";
+  const completedAt =
+    BRACKET_STATE && BRACKET_STATE.tournamentCompletedAt
+      ? new Date(BRACKET_STATE.tournamentCompletedAt)
+      : new Date();
+
+  const dateText = completedAt.toLocaleDateString([], {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+
+  const podium = RESULTS
+    .filter(result => Number(result.place) <= 3)
+    .map(result => {
+      const medal =
+        Number(result.place) === 1
+          ? "🥇"
+          : Number(result.place) === 2
+            ? "🥈"
+            : "🥉";
+
+      return `${medal} ${ordinalPlace(result.place)}: ${result.name}`;
+    });
+
+  const remaining = RESULTS
+    .filter(result => Number(result.place) > 3)
+    .map(result => `${ordinalPlace(result.place)}: ${result.name}`);
+
+  const lines = [
+    "🏆 AIR HOCKEY TOURNAMENT RESULTS",
+    "",
+    tournamentId,
+    dateText,
+    "",
+    ...podium
+  ];
+
+  if(remaining.length){
+    lines.push("", "Final Standings", ...remaining);
+  }
+
+  lines.push(
+    "",
+    `Players: ${RESULTS.length}`,
+    "",
+    "#AirHockey"
+  );
+
+  return lines.join("\n");
+}
+
+async function shareResults(){
+  if(!RESULTS.length){
+    renderResults();
+  }
+
+  if(!RESULTS.length){
+    alert("No results are available to share.");
+    return;
+  }
+
+  const shareText = buildResultsShareText();
+  const champion = RESULTS.find(result => Number(result.place) === 1);
+  const title = champion
+    ? `${getTournamentId()} Results: ${champion.name} Wins`
+    : `${getTournamentId()} Tournament Results`;
+
+  const status = document.getElementById("resultsStatus");
+  const button = document.getElementById("btnShareResults");
+
+  try{
+    if(navigator.share){
+      await navigator.share({
+        title,
+        text: shareText
+      });
+
+      if(status){
+        status.textContent = "Results shared.";
+      }
+
+      return;
+    }
+
+    await navigator.clipboard.writeText(shareText);
+
+    if(button){
+      button.textContent = "Results Copied";
+    }
+
+    if(status){
+      status.textContent = "Sharing is unavailable in this browser, so the results were copied.";
+    }
+
+    setTimeout(() => {
+      if(button){
+        button.textContent = "Share Results";
+      }
+    }, 2200);
+
+  }catch(error){
+    if(error && error.name === "AbortError"){
+      if(status){
+        status.textContent = "Share canceled.";
+      }
+
+      return;
+    }
+
+    try{
+      await navigator.clipboard.writeText(shareText);
+
+      if(button){
+        button.textContent = "Results Copied";
+      }
+
+      if(status){
+        status.textContent = "Results copied to the clipboard.";
+      }
+
+      setTimeout(() => {
+        if(button){
+          button.textContent = "Share Results";
+        }
+      }, 2200);
+
+    }catch(copyError){
+      console.warn("Results sharing failed:", error, copyError);
+      prompt("Copy these tournament results:", shareText);
+    }
+  }
+}
+
 /* =========================================================
   BRACKET EXPORT / IMPORT
 ========================================================= */
@@ -8336,8 +8499,9 @@ const btnOpenLiveBracket = document.getElementById("btnOpenLiveBracket");
   $('#btnFullFit').addEventListener("click", fullFit);
 
   $('#btnBuildResults').addEventListener("click", renderResults);
-  $('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
-  $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
+$('#btnShareResults').addEventListener("click", shareResults);
+$('#btnExportResultsCSV').addEventListener("click", exportResultsCSV);
+$('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
 
   const btnConfirmTournamentWinner = document.getElementById("btnConfirmTournamentWinner");
   if(btnConfirmTournamentWinner){
