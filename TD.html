@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.9 - Social Results
+Tournament Director v4.0.10 - Late Entry Lock
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -8,6 +8,7 @@ Tournament Director v4.0.9 - Social Results
 - Adds Room Control panel on Links tab
 - Adds Assign Table and Fill Links buttons to bracket matches
 - Adds Live button for brackets.html
+- Locks late entrants after Losers Round 1 has advanced a player
 - Requires score entry before advancing a played match winner
 - Allows score/F entry, with B reserved for actual stored BYE slots only
 - Color codes table status:
@@ -5778,6 +5779,43 @@ function getFeedTargetForWinner(matchId){
   return BRACKET_STATE.feeds[`W|${matchId}|p1`] || null;
 }
 
+function getLateEntrantLockReason(){
+  if(!BRACKET_STATE) return "No bracket loaded.";
+
+  const losersRound1 =
+    BRACKET_STATE.losersRounds && Array.isArray(BRACKET_STATE.losersRounds[0])
+      ? BRACKET_STATE.losersRounds[0]
+      : [];
+
+  const advancedMatch = losersRound1.find(m => {
+    if(!m) return false;
+
+    const winner = m.winner === "p1" ? m.p1 : m.winner === "p2" ? m.p2 : "";
+    return isRealBracketName(winner);
+  });
+
+  if(advancedMatch){
+    return `Late entry is closed because ${advancedMatch.label || advancedMatch.id || "Losers Round 1"} has advanced a player.`;
+  }
+
+  return "";
+}
+
+function refreshLateEntrantUI(){
+  const btn = document.getElementById("btnAddLateEntrant");
+  const input = document.getElementById("lateEntrantName");
+  const msg = document.getElementById("lateAddMsg");
+  const lockReason = getLateEntrantLockReason();
+
+  if(btn) btn.disabled = !!lockReason || !BRACKET_STATE;
+  if(input) input.disabled = !!lockReason || !BRACKET_STATE;
+
+  if(msg){
+    msg.textContent = lockReason || "Fills eligible Round 1 BYE spots only. Late entry closes once Losers Round 1 advances a player.";
+    msg.className = lockReason ? "bad" : "muted";
+  }
+}
+
 function getLateAddCandidates(){
   if(!BRACKET_STATE || !BRACKET_STATE.winnersRounds || !BRACKET_STATE.winnersRounds[0]) return [];
 
@@ -5844,6 +5882,16 @@ function addLateEntrant(){
   if(msg) msg.textContent = "";
 
   if(!BRACKET_STATE) return alert("No bracket loaded.");
+
+  const lockReason = getLateEntrantLockReason();
+  if(lockReason){
+    if(msg){
+      msg.textContent = lockReason;
+      msg.className = "bad";
+    }
+    refreshLateEntrantUI();
+    return alert(lockReason);
+  }
 
   const rawName = $('#lateEntrantName').value;
   const name = normalizeName(rawName);
@@ -6208,7 +6256,7 @@ function resetBracket(){
   $('#bracketStatus').textContent = "Bracket reset.";
   $('#resultsTable tbody').innerHTML = "";
   $('#resultsStatus').textContent = "-";
-  $('#lateAddMsg').textContent = "Fills eligible Round 1 BYE spots only.";
+  refreshLateEntrantUI();
   
   renderLope();
 }
@@ -6624,11 +6672,13 @@ function renderBracket(){
 
   if(!BRACKET_STATE){
     root.textContent = "No bracket loaded yet.";
+    refreshLateEntrantUI();
     return;
   }
 
   root.innerHTML = "";
   root.appendChild(buildBracketChart(BRACKET_STATE, true));
+  refreshLateEntrantUI();
 }
 
 let pendingTournamentWinner = null;
@@ -8464,6 +8514,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   $('#lateEntrantName').addEventListener("keydown", (e)=>{
     if(e.key === "Enter") addLateEntrant();
   });
+  refreshLateEntrantUI();
 
   $('#btnPublishBracket').addEventListener("click", async ()=>{
     if(!BRACKETS_CLOUD_ENABLED) return alert("Bracket cloud publish is disabled in this beta.");
