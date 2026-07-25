@@ -1,6 +1,6 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.10 - Late Entry Lock
+Tournament Director v4.0.11 - Lane Correction
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -2146,7 +2146,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
-const TD_BUILD = "v4.0.10 - Late Entry Lock";
+const TD_BUILD = "v4.0.11 - Lane Correction";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -4711,6 +4711,23 @@ function hasMatchStarted(m){
   return !!(s1 || s2 || w);
 }
 
+function isAutomaticByeAdvance(m){
+  if(!m || !m.winner) return false;
+
+  const hasExactlyOneBye = (m.p1 === "BYE") !== (m.p2 === "BYE");
+  if(!hasExactlyOneBye) return false;
+
+  const s1 = String(m.s1 || "").trim().toUpperCase();
+  const s2 = String(m.s2 || "").trim().toUpperCase();
+  const scoresAreAutomatic = (!s1 || s1 === "B") && (!s2 || s2 === "B");
+
+  return scoresAreAutomatic;
+}
+
+function canRebuildDerivedMatch(m){
+  return !hasMatchStarted(m) || isAutomaticByeAdvance(m);
+}
+
 function hasAnyScoreEntered(m){
   if(!m) return false;
 
@@ -5177,12 +5194,12 @@ function propagateWinners(){
 
   function putIfOpen(match, slot, name){
     if(!match || !slot) return;
-    if(hasMatchStarted(match)) return;
+    if(!canRebuildDerivedMatch(match)) return;
     match[slot] = name || "TBD";
   }
 
   function resetOpenMatch(m){
-    if(!m || hasMatchStarted(m)) return;
+    if(!m || !canRebuildDerivedMatch(m)) return;
     m.p1 = "TBD";
     m.p2 = "TBD";
     m.s1 = "";
@@ -5361,12 +5378,12 @@ function propagateWinners(){
 
   LR.forEach(round => round.forEach(resetOpenMatch));
 
-  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && !hasMatchStarted(BRACKET_STATE.grandFinal[0])){
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] && canRebuildDerivedMatch(BRACKET_STATE.grandFinal[0])){
     BRACKET_STATE.grandFinal[0].p1 = "TBD";
     BRACKET_STATE.grandFinal[0].p2 = "TBD";
   }
 
-  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[1] && !hasMatchStarted(BRACKET_STATE.grandFinal[1])){
+  if(BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[1] && canRebuildDerivedMatch(BRACKET_STATE.grandFinal[1])){
     BRACKET_STATE.grandFinal[1].p1 = "TBD";
     BRACKET_STATE.grandFinal[1].p2 = "TBD";
   }
@@ -5485,7 +5502,7 @@ function propagateWinners(){
   const gf1 = BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[0] ? BRACKET_STATE.grandFinal[0] : null;
   const gf2 = BRACKET_STATE.grandFinal && BRACKET_STATE.grandFinal[1] ? BRACKET_STATE.grandFinal[1] : null;
 
-  if(gf1 && !hasMatchStarted(gf1)){
+  if(gf1 && canRebuildDerivedMatch(gf1)){
     gf1.p1 = wChamp || "TBD";
     gf1.p2 = lChamp || "TBD";
 
@@ -5500,7 +5517,7 @@ function propagateWinners(){
     }
   }
 
-  if(gf2 && !hasMatchStarted(gf2)){
+  if(gf2 && canRebuildDerivedMatch(gf2)){
     gf2.p1 = "TBD";
     gf2.p2 = "TBD";
 
