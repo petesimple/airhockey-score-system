@@ -640,11 +640,12 @@
   </div>
 
   <script>
-    const STATE_KEY = "ahss_brackets_state";
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
     const AUTO_REFRESH_KEY = "AHSS_LIVE_AUTO_REFRESH";
     const TRACKED_PLAYER_KEY = "AHSS_LIVE_TRACKED_PLAYER";
+    const PUBLIC_BRACKET_ENDPOINT = "https://script.google.com/macros/s/AKfycbyjcgJgD_OSobFfk3Vk4Tp5Pt9zgYJbsvh_vn9PvVDtni-3KKgwKqrMFk7PAtiXkxke/exec";
+    const DEFAULT_TOURNAMENT_ID = "7-6-weekly";
 
     let liveZoom = 1;
     let refreshTimer = null;
@@ -653,6 +654,8 @@
     let connectorFrame = 0;
     let connectorResizeObserver = null;
     let selectedPlayer = localStorage.getItem(TRACKED_PLAYER_KEY) || "";
+    let publicBracketUpdatedAt = "";
+    let liveRequestSerial = 0;
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -735,25 +738,30 @@
       return !!(winnersLast && winnersLast.winner) || !!(losersLast && losersLast.winner);
     }
 
-    function loadBracketState(){
-      try{
-        const raw = localStorage.getItem(STATE_KEY);
+    function getPublicTournamentId(){
+      return new URLSearchParams(window.location.search).get("tournament") || DEFAULT_TOURNAMENT_ID;
+    }
 
-        if(!raw){
-          return null;
-        }
+    async function loadBracketState(){
+      const tournamentId = getPublicTournamentId();
+      const url =
+        `${PUBLIC_BRACKET_ENDPOINT}?action=publicBracketGet` +
+        `&tournamentId=${encodeURIComponent(tournamentId)}` +
+        `&t=${Date.now()}`;
 
-        const state = JSON.parse(raw);
+      const response = await fetch(url, { cache:"no-store" });
+      const data = await response.json();
 
-        if(!state || !state.winnersRounds){
-          return null;
-        }
-
-        return state;
-      }catch(e){
-        console.warn("Unable to load bracket state:", e);
-        return null;
+      if(!data || !data.ok){
+        throw new Error((data && data.message) || "Public bracket request failed.");
       }
+
+      if(!data.bracket || !Array.isArray(data.bracket.winnersRounds)){
+        throw new Error("The published bracket snapshot is invalid.");
+      }
+
+      publicBracketUpdatedAt = data.updatedAt || "";
+      return data.bracket;
     }
 
     function countMatches(state){
@@ -1230,7 +1238,7 @@
       }
     }
 
-    function renderEmptyState(){
+    function renderEmptyState(message="No published bracket was found."){
       const root = $("#bracketRoot");
       liveBracketState = null;
 
@@ -1238,30 +1246,36 @@
         <div class="emptyState">
           <h2>No bracket snapshot found</h2>
           <p>
-            Open Tournament Director in this same browser, build or load a bracket,
-            then come back to this page.
+            ${esc(message)}
           </p>
           <p class="mini">
-            This page is read only and uses the saved local bracket snapshot.
+            Ask the tournament desk to publish the active TD bracket.
           </p>
         </div>
       `;
 
       $("#snapshotInfo").textContent = "No snapshot";
-      $("#subtitle").textContent = "Waiting for Tournament Director bracket data";
+      $("#subtitle").textContent = `Waiting for ${getPublicTournamentId()}`;
     }
 
-    function renderLiveBracket(options = {}){
+    async function renderLiveBracket(options = {}){
       const root = $("#bracketRoot");
-      const state = loadBracketState();
+      const requestSerial = ++liveRequestSerial;
+      let state;
 
-      if(!state){
-        renderEmptyState();
+      try{
+        state = await loadBracketState();
+      }catch(error){
+        if(requestSerial !== liveRequestSerial) return;
+        console.warn("Unable to load public bracket:", error);
+        renderEmptyState(error.message || String(error));
         $("#refreshInfo").textContent = autoRefreshEnabled()
           ? `Last check: ${new Date().toLocaleTimeString()}`
           : `Auto refresh off · checked ${new Date().toLocaleTimeString()}`;
         return;
       }
+
+      if(requestSerial !== liveRequestSerial) return;
 
       const viewer = $("#viewer");
       const oldLeft = viewer.scrollLeft;
@@ -1281,7 +1295,9 @@
       $("#refreshInfo").textContent = autoRefreshEnabled()
         ? `Last refresh: ${new Date().toLocaleTimeString()}`
         : `Auto refresh off · refreshed ${new Date().toLocaleTimeString()}`;
-      $("#subtitle").textContent = state.createdAt ? `Snapshot created ${fmtLocal(state.createdAt)}` : "Read only tournament snapshot";
+      $("#subtitle").textContent = publicBracketUpdatedAt
+        ? `${getPublicTournamentId()} · Published ${fmtLocal(publicBracketUpdatedAt)}`
+        : `${getPublicTournamentId()} · Public tournament snapshot`;
 
       if((options.focusActive || shouldAutoFocus) && !selectedPlayer){
         setTimeout(focusActiveBracket, 80);
