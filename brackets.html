@@ -95,6 +95,7 @@
       cursor:pointer;
     }
 
+    .shareQr canvas{
     .shareQr img{
       width:104px;
       height:104px;
@@ -627,6 +628,41 @@
       margin-top:5px;
     }
 
+    .mobilePathStats{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:7px;
+      margin:0 0 12px;
+    }
+
+    .mobilePathStat{
+      min-width:0;
+      padding:10px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      background:rgba(255,255,255,.035);
+    }
+
+    .mobilePathStatLabel{
+      display:block;
+      margin-bottom:3px;
+      color:rgba(255,255,255,.56);
+      font-size:9px;
+      font-weight:1000;
+      letter-spacing:.35px;
+      text-transform:uppercase;
+    }
+
+    .mobilePathStatValue{
+      display:block;
+      overflow:hidden;
+      color:#fff;
+      font-size:14px;
+      font-weight:1000;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
     .mobilePathStep{
       border:1px solid rgba(255,255,255,.14);
       border-radius:16px;
@@ -646,6 +682,16 @@
 
     .mobilePathStep.pending{
       border-color:rgba(255,213,79,.45);
+    }
+
+    .mobilePathStep.upcoming{
+      border-color:#ffd54f;
+      background:rgba(255,213,79,.075);
+      box-shadow:0 0 0 2px rgba(255,213,79,.1), 0 8px 26px rgba(0,0,0,.3);
+    }
+
+    .mobilePathStep.upcoming .mobilePathRound{
+      color:#ffd54f;
     }
 
     .mobilePathStepTop{
@@ -704,6 +750,7 @@
       color:rgba(255,255,255,.68);
     }
 
+    @media (max-width:720px){
     @media (max-width:720px), (max-width:980px) and (pointer:coarse){
       html,
       body{
@@ -738,6 +785,7 @@
       }
 
       .shareQr{
+        display:none;
         order:3;
         display:flex;
         padding:3px;
@@ -874,9 +922,12 @@
     <div class="topbar">
       <div class="brand">
         <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        <div class="shareQr" id="shareQr" title="Scan to open this live bracket on your phone">
+          <canvas id="shareQrCanvas" width="104" height="104" aria-label="QR code for this live bracket"></canvas>
         <button class="shareQr" id="shareQr" type="button" title="Scan or tap to share this live bracket">
           <img src="bracket-share-qr.png" width="104" height="104" alt="QR code for the 7-6 weekly live bracket">
           <div class="shareQrLabel">Scan live bracket</div>
+        </div>
         </button>
         <div>
           <h1>Live Bracket</h1>
@@ -915,6 +966,7 @@
     <div class="viewer" id="viewer">
       <div class="mobilePathPanel" id="mobilePathPanel" aria-live="polite"></div>
       <div class="zoomStage" id="zoomStage">
+        <div id="bracketRoot"></div>
         <div id="bracketRoot">
           <div class="emptyState">
             <h2>Loading live bracket…</h2>
@@ -929,6 +981,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
@@ -1040,24 +1093,41 @@
       return url.href;
     }
 
+    function renderShareQr(){
+      const canvas = $("#shareQrCanvas");
     async function shareLiveBracket(){
       const container = $("#shareQr");
       const shareUrl = getPublicShareUrl();
 
       if(container) container.dataset.shareUrl = shareUrl;
+      if(!canvas || !window.QRCode || typeof window.QRCode.toCanvas !== "function"){
+        const label = container ? container.querySelector(".shareQrLabel") : null;
+        if(label) label.textContent = "QR unavailable";
+        return;
+      }
 
+      window.QRCode.toCanvas(canvas, shareUrl, {
+        width:104,
+        margin:1,
+        errorCorrectionLevel:"M",
+        color:{ dark:"#000000", light:"#ffffff" }
+      }, error => {
+        if(error){
+          console.warn("Unable to render share QR:", error);
       try{
         if(navigator.share){
           await navigator.share({ title:"AHSS Live Bracket", url:shareUrl });
         }else if(navigator.clipboard && navigator.clipboard.writeText){
           await navigator.clipboard.writeText(shareUrl);
           const label = container ? container.querySelector(".shareQrLabel") : null;
+          if(label) label.textContent = "QR unavailable";
           if(label){
             const oldText = label.textContent;
             label.textContent = "Link copied";
             setTimeout(() => { label.textContent = oldText; }, 1800);
           }
         }
+      });
       }catch(error){
         if(error && error.name !== "AbortError") console.warn("Unable to share live bracket:", error);
       }
@@ -1070,6 +1140,8 @@
         `&tournamentId=${encodeURIComponent(tournamentId)}` +
         `&t=${Date.now()}`;
 
+      const response = await fetch(url, { cache:"no-store" });
+      const data = await response.json();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
       let response;
@@ -1179,6 +1251,124 @@
         });
     }
 
+    function matchHasPlayer(match, playerName){
+      const normalized = normalizePlayerName(playerName);
+      return normalizePlayerName(match && match.p1) === normalized ||
+        normalizePlayerName(match && match.p2) === normalized;
+    }
+
+    function getMatchWinnerName(match){
+      if(!match) return "";
+      return match.winner === "p1" ? match.p1 : match.winner === "p2" ? match.p2 : "";
+    }
+
+    function getMatchLoserName(match){
+      if(!match) return "";
+      return match.loser === "p1" ? match.p1 : match.loser === "p2" ? match.p2 : "";
+    }
+
+    function isActuallyPlayedMatch(match){
+      if(!match || !match.winner) return false;
+      if(!isRealBracketName(match.p1) || !isRealBracketName(match.p2)) return false;
+      return String(match.s1 ?? "").trim() !== "" || String(match.s2 ?? "").trim() !== "";
+    }
+
+    function sortPlayedEntries(a, b){
+      const aCall = Number(a.match.callNumber);
+      const bCall = Number(b.match.callNumber);
+      const aHasCall = Number.isFinite(aCall) && aCall > 0;
+      const bHasCall = Number.isFinite(bCall) && bCall > 0;
+
+      if(aHasCall && bHasCall && aCall !== bCall) return aCall - bCall;
+      if(aHasCall !== bHasCall) return aHasCall ? -1 : 1;
+
+      const laneOrder = { W:0, L:1, GF:2 };
+      if(a.lane !== b.lane) return laneOrder[a.lane] - laneOrder[b.lane];
+      return a.roundIndex - b.roundIndex;
+    }
+
+    function isDoubleElimination(state){
+      return !!(state && Array.isArray(state.losersRounds) && state.losersRounds.length);
+    }
+
+    function isTournamentComplete(state){
+      const finals = state && Array.isArray(state.grandFinal) ? state.grandFinal : [];
+      const finalOne = finals[0];
+      const finalTwo = finals[1];
+
+      if(finalTwo && finalTwo.winner) return true;
+      if(!finalOne || !finalOne.winner) return false;
+      if(!isDoubleElimination(state)) return true;
+
+      return normalizePlayerName(getMatchWinnerName(finalOne)) === normalizePlayerName(finalOne.p1);
+    }
+
+    function getPlayedPlayerEntries(state, playerName){
+      return getPlayerPathEntries(state, playerName)
+        .filter(({ match }) => isActuallyPlayedMatch(match))
+        .sort(sortPlayedEntries);
+    }
+
+    function getUpcomingPlayerEntry(state, playerName, losses){
+      if(!state || !playerName || isTournamentComplete(state)) return null;
+      if(isDoubleElimination(state) && losses >= 2) return null;
+      if(!isDoubleElimination(state) && losses >= 1) return null;
+
+      const candidates = getPlayerPathEntries(state, playerName)
+        .filter(({ match }) => matchHasPlayer(match, playerName) && !match.winner)
+        .sort((a, b) => {
+          const aReady = isRealBracketName(a.match.p1) && isRealBracketName(a.match.p2);
+          const bReady = isRealBracketName(b.match.p1) && isRealBracketName(b.match.p2);
+          if(aReady !== bReady) return aReady ? -1 : 1;
+
+          const aCall = Number(a.match.callNumber);
+          const bCall = Number(b.match.callNumber);
+          const aHasCall = Number.isFinite(aCall) && aCall > 0;
+          const bHasCall = Number.isFinite(bCall) && bCall > 0;
+          if(aHasCall !== bHasCall) return aHasCall ? -1 : 1;
+          if(aHasCall && bHasCall && aCall !== bCall) return aCall - bCall;
+          return a.roundIndex - b.roundIndex;
+        });
+
+      return candidates[0] || null;
+    }
+
+    function getPlayerFinishStatus(state, playerName, wins, losses){
+      const normalized = normalizePlayerName(playerName);
+      const finals = state && Array.isArray(state.grandFinal) ? state.grandFinal : [];
+      const finalPlayed = finals.filter(isActuallyPlayedMatch);
+      const finalWinner = finalPlayed.length ? getMatchWinnerName(finalPlayed[finalPlayed.length - 1]) : "";
+      const reachedFinals = finals.some(match => matchHasPlayer(match, playerName));
+
+      if(isTournamentComplete(state) && normalizePlayerName(finalWinner) === normalized) return "Champion";
+      if(isTournamentComplete(state) && reachedFinals) return "Finalist";
+      if(isDoubleElimination(state) && losses >= 2) return "Eliminated";
+      if(!isDoubleElimination(state) && losses >= 1) return "Eliminated";
+      if(reachedFinals) return "At finals";
+      if(wins || losses) return "Active";
+      return "Waiting";
+    }
+
+    function getWinsToGrandFinal(state, upcoming, finishStatus){
+      if(finishStatus === "Champion" || finishStatus === "Finalist" || finishStatus === "At finals"){
+        return "At finals";
+      }
+      if(finishStatus === "Eliminated") return "Eliminated";
+      if(!upcoming) return "Path pending";
+      if(upcoming.lane === "GF") return "At finals";
+
+      const roundCount = upcoming.lane === "W"
+        ? (state.winnersRounds || []).length
+        : (state.losersRounds || []).length;
+      const remainingBracketMatches = Math.max(1, roundCount - upcoming.roundIndex);
+      return `${remainingBracketMatches + 1} win${remainingBracketMatches + 1 === 1 ? "" : "s"}`;
+    }
+
+    function displayScore(value){
+      const text = String(value ?? "").trim();
+      return text === "" ? "–" : text;
+    }
+
     function renderMobilePlayerPath(){
       const panel = $("#mobilePathPanel");
       if(!panel) return;
@@ -1190,24 +1380,44 @@
 
       const normalized = normalizePlayerName(selectedPlayer);
       const entries = getPlayerPathEntries(liveBracketState, selectedPlayer);
+      const entries = getPlayedPlayerEntries(liveBracketState, selectedPlayer);
       let wins = 0;
       let losses = 0;
 
       const steps = entries.map(({ lane, roundIndex, match }, index) => {
+      entries.forEach(({ match }) => {
+        if(normalizePlayerName(getMatchWinnerName(match)) === normalized) wins++;
+        if(normalizePlayerName(getMatchLoserName(match)) === normalized) losses++;
+      });
+
+      const upcoming = getUpcomingPlayerEntry(liveBracketState, selectedPlayer, losses);
+      const finishStatus = getPlayerFinishStatus(liveBracketState, selectedPlayer, wins, losses);
+      const winsToFinal = getWinsToGrandFinal(liveBracketState, upcoming, finishStatus);
+      const timeline = upcoming ? [...entries, { ...upcoming, isUpcoming:true }] : entries;
+
+      const steps = timeline.map(({ lane, roundIndex, match, isUpcoming }, index) => {
         const playerIsP1 = normalizePlayerName(match.p1) === normalized;
         const opponent = playerIsP1 ? match.p2 : match.p1;
         const playerScore = playerIsP1 ? (match.s1 ?? "") : (match.s2 ?? "");
         const opponentScore = playerIsP1 ? (match.s2 ?? "") : (match.s1 ?? "");
         const winnerName = match.winner === "p1" ? match.p1 : match.winner === "p2" ? match.p2 : "";
         const loserName = match.loser === "p1" ? match.p1 : match.loser === "p2" ? match.p2 : "";
+        const winnerName = getMatchWinnerName(match);
+        const loserName = getMatchLoserName(match);
         const won = normalizePlayerName(winnerName) === normalized;
         const lost = normalizePlayerName(loserName) === normalized;
         const status = getMatchStatus(match);
+        const status = isUpcoming ? "upcoming" : getMatchStatus(match);
         const laneLabel = lane === "W" ? `Winners R${roundIndex + 1}` : lane === "L" ? `Losers R${roundIndex + 1}` : "Grand Final";
         const result = won ? "Won" : lost ? "Lost" : getStatusText(status);
         const scoreText = playerScore !== "" || opponentScore !== ""
           ? `${playerScore || "–"} – ${opponentScore || "–"}`
           : "Score pending";
+        const opponentReady = isRealBracketName(opponent);
+        const result = isUpcoming ? (opponentReady ? "Up next" : "Possible next") : won ? "Won" : lost ? "Lost" : getStatusText(status);
+        const scoreText = isUpcoming
+          ? (opponentReady ? "Awaiting score" : "Opponent pending")
+          : `${displayScore(playerScore)} – ${displayScore(opponentScore)}`;
 
         if(won) wins++;
         if(lost) losses++;
@@ -1216,6 +1426,7 @@
           <div class="mobilePathStep ${esc(status)}">
             <div class="mobilePathStepTop">
               <div class="mobilePathRound">${esc(laneLabel)} · ${esc(matchCallLabel(match))}</div>
+              <div class="mobilePathRound">${esc(laneLabel)} · ${esc(isUpcoming && !match.callNumber ? "Match TBD" : matchCallLabel(match))}</div>
               <div class="mobilePathStatus">${esc(result)}</div>
             </div>
             <div class="mobilePathOpponent">vs. ${esc(isRealBracketName(opponent) ? opponent : "Opponent TBD")}</div>
@@ -1225,6 +1436,7 @@
             </div>
           </div>
           ${index < entries.length - 1 ? `<div class="mobilePathArrow">↓</div>` : ""}
+          ${index < timeline.length - 1 ? `<div class="mobilePathArrow">↓</div>` : ""}
         `;
       }).join("");
 
@@ -1233,10 +1445,18 @@
           <div>
             <div class="mobilePathName">${esc(selectedPlayer)}</div>
             <div class="mobilePathSummary">${wins} win${wins === 1 ? "" : "s"} · ${losses} loss${losses === 1 ? "" : "es"} · ${entries.length} match${entries.length === 1 ? "" : "es"}</div>
+            <div class="mobilePathSummary">Played matches only${upcoming ? " · Next possible match included" : ""}</div>
           </div>
           <button class="btn" id="btnMobileClearPath" type="button">Clear</button>
         </div>
         ${steps || `<div class="mobilePathEmpty">No visible matches were found for this player yet.</div>`}
+        <div class="mobilePathStats">
+          <div class="mobilePathStat"><span class="mobilePathStatLabel">Matches played</span><span class="mobilePathStatValue">${entries.length}</span></div>
+          <div class="mobilePathStat"><span class="mobilePathStatLabel">Record</span><span class="mobilePathStatValue">${wins}–${losses}</span></div>
+          <div class="mobilePathStat"><span class="mobilePathStatLabel">Bracket status</span><span class="mobilePathStatValue">${esc(finishStatus)}</span></div>
+          <div class="mobilePathStat"><span class="mobilePathStatLabel">To Grand Final</span><span class="mobilePathStatValue">${esc(winsToFinal)}</span></div>
+        </div>
+        ${steps || `<div class="mobilePathEmpty">No matches have been played for this player yet.${isTournamentComplete(liveBracketState) ? "" : " Their possible next match will appear here once the bracket places them."}</div>`}
       `;
 
       const clearButton = $("#btnMobileClearPath");
@@ -1244,6 +1464,7 @@
     }
 
     function updateMobilePlayerPathView(){
+      const isMobile = window.matchMedia("(max-width:720px)").matches;
       const isMobile = window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches;
       const panel = $("#mobilePathPanel");
       const stage = $("#zoomStage");
@@ -1543,6 +1764,7 @@
       if(status) status.textContent = `Player focus: ${selectedPlayer}`;
       updateMobilePlayerPathView();
 
+      if(scrollToPlayer && (!window.matchMedia("(max-width:720px)").matches || mobileFullChart)){
       if(scrollToPlayer && (!window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches || mobileFullChart)){
         const target =
           trackedCards.find(card => card.classList.contains("ready")) ||
@@ -1977,6 +2199,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
+      renderShareQr();
       const shareQr = $("#shareQr");
       if(shareQr){
         shareQr.dataset.shareUrl = getPublicShareUrl();
