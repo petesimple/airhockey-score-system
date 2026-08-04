@@ -1978,7 +1978,7 @@ body.bracketFullscreenOpen{
   <div class="card">
     <div class="bracketControls">
       <div class="bracketTopBar">
-        <div class="pill">Storage: localStorage + Brackets Sheet</div>
+        <div class="pill">Storage: localStorage + Public Live API</div>
 
         <input id="tournamentId" placeholder="Tournament ID" style="width:100%; margin:0;" />
 
@@ -1996,6 +1996,20 @@ body.bracketFullscreenOpen{
         <input id="importBracketFile" type="file" accept="application/json" style="display:none">
         <div class="muted bracketStatusLine" id="bracketStatus">-</div>
       </div>
+
+      <details class="bracketActionPanel">
+        <summary class="clicky">Public Live Setup</summary>
+        <div class="mini" style="margin:10px 0 6px;">
+          The publishing key stays in this browser only and is never included in GitHub.
+        </div>
+        <div class="row-left">
+          <input id="publicBracketPublishKey" type="password" autocomplete="off" placeholder="Private publishing key" style="width:min(520px, 100%); margin:0;" />
+          <button class="btnTiny primary" id="btnSavePublicBracketKey" type="button">Save Key</button>
+          <button class="btnTiny danger" id="btnClearPublicBracketKey" type="button">Clear Key</button>
+          <button class="btnTiny" id="btnTestPublicBracketApi" type="button">Test Public API</button>
+          <span class="muted" id="publicBracketSetupStatus">Use tournament ID 7-6-weekly for the permanent public link.</span>
+        </div>
+      </details>
 
       <div class="bracketSetupGrid">
         <div class="bracketEntrantsBox">
@@ -2199,13 +2213,14 @@ const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLU
 
 const LOCAL_AHMS_FILE = "file:///home/airhockeyprint/Desktop/AHMS.html";
 
-const BRACKETS_CLOUD_ENABLED = false;
-const BRACKETS_ENDPOINT = "";
+const BRACKETS_CLOUD_ENABLED = true;
+const BRACKETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyjcgJgD_OSobFfk3Vk4Tp5Pt9zgYJbsvh_vn9PvVDtni-3KKgwKqrMFk7PAtiXkxke/exec";
 
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
 const BRACKET_PATHS_KEY = "TD_SHOW_BRACKET_PATH_LINES";
+const PUBLIC_BRACKET_KEY_STORAGE = "AHSS_PUBLIC_BRACKET_PUBLISH_KEY";
 const TD_BUILD = "v4.0.12 - Bracket Path Lines";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
@@ -2513,7 +2528,9 @@ document.addEventListener("click", (e)=>{
 });
 
 function openLiveBracket(){
-  const url = new URL("brackets.html", window.location.href).href;
+  const liveUrl = new URL("brackets.html", window.location.href);
+  liveUrl.searchParams.set("tournament", getTournamentId());
+  const url = liveUrl.href;
 
   const popup = window.open(
     url,
@@ -4745,11 +4762,7 @@ function bracketStateToCloudRows(){
 }
 	
 function defaultTournamentId(){
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,"0");
-  const dd = String(d.getDate()).padStart(2,"0");
-  return `weekly${yyyy}${mm}${dd}`;
+  return "7-6-weekly";
 }
 
 function getTournamentId(){
@@ -4875,6 +4888,58 @@ function clearMatchResult(m){
   m.loser = "";
 }
 
+function wirePublicBracketSetup(){
+  const keyInput = document.getElementById("publicBracketPublishKey");
+  const saveButton = document.getElementById("btnSavePublicBracketKey");
+  const clearButton = document.getElementById("btnClearPublicBracketKey");
+  const testButton = document.getElementById("btnTestPublicBracketApi");
+  const status = document.getElementById("publicBracketSetupStatus");
+
+  if(keyInput){
+    keyInput.value = localStorage.getItem(PUBLIC_BRACKET_KEY_STORAGE) || "";
+  }
+
+  if(saveButton){
+    saveButton.addEventListener("click", () => {
+      const key = String(keyInput ? keyInput.value : "").trim();
+
+      if(!key){
+        if(status) status.textContent = "Enter the private publishing key first.";
+        return;
+      }
+
+      localStorage.setItem(PUBLIC_BRACKET_KEY_STORAGE, key);
+      if(status) status.textContent = "Private publishing key saved in this browser only.";
+    });
+  }
+
+  if(clearButton){
+    clearButton.addEventListener("click", () => {
+      localStorage.removeItem(PUBLIC_BRACKET_KEY_STORAGE);
+      if(keyInput) keyInput.value = "";
+      if(status) status.textContent = "Publishing key cleared from this browser.";
+    });
+  }
+
+  if(testButton){
+    testButton.addEventListener("click", async () => {
+      if(status) status.textContent = "Testing public API...";
+
+      try{
+        const response = await fetch(`${BRACKETS_ENDPOINT}?action=health&t=${Date.now()}`, {
+          cache:"no-store"
+        });
+        const data = await response.json();
+
+        if(!data || !data.ok) throw new Error((data && data.message) || "Health check failed");
+        if(status) status.textContent = "Public API connected ✓";
+      }catch(error){
+        if(status) status.textContent = `Public API test failed: ${error.message || error}`;
+      }
+    });
+  }
+}
+
 async function cloudSaveBracket(state){
   if(!BRACKETS_CLOUD_ENABLED){
     $('#bracketStatus').textContent = "Bracket cloud save is disabled in this beta.";
@@ -4886,12 +4951,18 @@ async function cloudSaveBracket(state){
     return { ok:true, safe:true };
   }
 
-  const rows = bracketStateToCloudRows();
+  const publishKey = localStorage.getItem(PUBLIC_BRACKET_KEY_STORAGE) || "";
+
+  if(!publishKey){
+    $('#bracketStatus').textContent = "Public publish key is missing. Open Public Live Setup.";
+    throw new Error("Enter and save the private publishing key in Public Live Setup.");
+  }
 
   const body = new URLSearchParams({
-    action: "bracketRowsSave",
+    action: "publicBracketSave",
     tournamentId: getTournamentId(),
-    rowsJson: JSON.stringify(rows)
+    publishKey,
+    stateJson: JSON.stringify(state)
   });
 
   try{
@@ -4911,30 +4982,16 @@ async function cloudSaveBracket(state){
     }
 
     if(!data.ok){
-      throw new Error(data.message || "Bracket row publish failed");
+      throw new Error(data.message || "Public bracket publish failed");
     }
 
-    $('#bracketStatus').textContent = `Published live bracket rows ✓ (${rows.length} matches)`;
+    $('#bracketStatus').textContent = `Published public bracket ✓ (${data.matchCount || listAllMatches().length} matches)`;
     return data;
 
   }catch(e){
-    console.warn("Bracket publish normal POST failed, trying no-cors fallback:", e);
-
-    try{
-      await fetch(BRACKETS_ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        cache: "no-store",
-        body
-      });
-
-      $('#bracketStatus').textContent = `Sent bracket rows to sheet. Verify Brackets tab. (${rows.length} matches)`;
-      return { ok:true, noCors:true };
-
-    }catch(err){
-      console.warn("Bracket publish failed:", err);
-      throw new Error(err.message || err);
-    }
+    console.warn("Public bracket publish failed:", e);
+    $('#bracketStatus').textContent = `Publish failed: ${e.message || e}`;
+    throw e;
   }
 }
 
@@ -4947,7 +5004,7 @@ async function cloudLoadBracket(){
   const tid = getTournamentId();
 
   const url =
-    `${BRACKETS_ENDPOINT}?action=bracketRowsGet&tournamentId=${encodeURIComponent(tid)}&t=${Date.now()}`;
+    `${BRACKETS_ENDPOINT}?action=publicBracketGet&tournamentId=${encodeURIComponent(tid)}&t=${Date.now()}`;
 
   const resp = await fetch(url, {
     method: "GET",
@@ -4960,11 +5017,21 @@ async function cloudLoadBracket(){
     throw new Error((data && data.message) || "Cloud load failed");
   }
 
-  const rows = data.rows || [];
+  if(!data.bracket || !Array.isArray(data.bracket.winnersRounds)){
+    throw new Error("Published bracket data is invalid.");
+  }
 
-  $('#bracketStatus').textContent = `Cloud has ${rows.length} bracket rows for ${tid}.`;
+  BRACKET_STATE = data.bracket;
+  propagateWinners();
+  assignCallNumbersToReadyMatches();
+  saveBracketState();
+  renderBracket();
+  buildMatchPicker();
+  renderLope();
 
-  return rows;
+  $('#bracketStatus').textContent = `Loaded public bracket for ${tid}.`;
+
+  return BRACKET_STATE;
 }
 	
 let publishTimer = null;
@@ -8783,8 +8850,13 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   renderMatchLog();
   flushCloudQueue();
 
-  setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || defaultTournamentId());
+  const savedTournamentId = localStorage.getItem("TD_TOURNAMENT_ID") || "";
+  const activeTournamentId = /^weekly\d{8}$/.test(savedTournamentId)
+    ? defaultTournamentId()
+    : (savedTournamentId || defaultTournamentId());
+  setTournamentId(activeTournamentId);
   $('#tournamentId').addEventListener("change", ()=> setTournamentId(getTournamentId()));
+  wirePublicBracketSetup();
 
   const bracketSizeSelect = document.getElementById("bracketSizeSelect");
   if(bracketSizeSelect){
