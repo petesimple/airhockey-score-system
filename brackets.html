@@ -598,26 +598,234 @@
       padding:2px 0 0;
     }
 
+    .mobilePlayerTools,
+    .mobilePathPanel{
+      display:none;
+    }
+
+    .mobilePathHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+
+    .mobilePathName{
+      color:#ffd54f;
+      font-size:22px;
+      font-weight:1000;
+      line-height:1.05;
+    }
+
+    .mobilePathSummary{
+      color:rgba(255,255,255,.68);
+      font-size:12px;
+      margin-top:5px;
+    }
+
+    .mobilePathStep{
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:16px;
+      padding:13px;
+      background:rgba(255,255,255,.045);
+      box-shadow:0 8px 24px rgba(0,0,0,.22);
+    }
+
+    .mobilePathStep.complete{
+      border-color:rgba(61,220,132,.48);
+    }
+
+    .mobilePathStep.ready{
+      border-color:#00eaff;
+      box-shadow:0 0 0 2px rgba(0,234,255,.14), 0 8px 26px rgba(0,0,0,.3);
+    }
+
+    .mobilePathStep.pending{
+      border-color:rgba(255,213,79,.45);
+    }
+
+    .mobilePathStepTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+
+    .mobilePathRound{
+      font-size:12px;
+      font-weight:1000;
+      color:#00eaff;
+      text-transform:uppercase;
+      letter-spacing:.35px;
+    }
+
+    .mobilePathStatus{
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      font-size:10px;
+      font-weight:1000;
+      text-transform:uppercase;
+    }
+
+    .mobilePathOpponent{
+      font-size:16px;
+      font-weight:1000;
+      line-height:1.15;
+    }
+
+    .mobilePathMeta{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:8px;
+      color:rgba(255,255,255,.64);
+      font-size:12px;
+    }
+
+    .mobilePathArrow{
+      height:28px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#ffd54f;
+      font-size:22px;
+      font-weight:1000;
+    }
+
+    .mobilePathEmpty{
+      padding:22px 14px;
+      text-align:center;
+      color:rgba(255,255,255,.68);
+    }
+
     @media (max-width:720px){
+    @media (max-width:720px), (max-width:980px) and (pointer:coarse){
+      html,
+      body{
+        height:100dvh;
+      }
+
       .page{
+        height:100dvh;
+        padding:6px;
+        gap:6px;
+      }
+
+      .topbar{
+        display:block;
         padding:8px;
+        border-radius:12px;
+      }
+
+      .brand{
+        min-width:0;
+        gap:8px;
+      }
+
+      .brand > div:last-child{
+        min-width:0;
+      }
+
+      .shareQr{
+        display:none;
       }
 
       .brand img{
-        max-width:92px;
-      }
-
-      .shareQr canvas{
-        width:82px;
-        height:82px;
+        max-width:54px;
       }
 
       .brand h1{
-        font-size:16px;
+        font-size:17px;
       }
 
       .brand .sub{
-        font-size:12px;
+        max-width:260px;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        font-size:11px;
+      }
+
+      .toolbar{
+        margin-top:8px;
+        display:grid;
+        grid-template-columns:1fr auto;
+        justify-content:stretch;
+      }
+
+      #snapshotInfo,
+      #refreshInfo,
+      #playerFocusInfo,
+      #btnZoomOut,
+      #btnZoomIn,
+      #btnClearPlayer,
+      #btnFocusActive,
+      #btnFit{
+        display:none;
+      }
+
+      .toolbarToggle{
+        min-height:42px;
+        justify-content:center;
+        border-radius:12px;
+      }
+
+      #btnRefresh{
+        min-height:42px;
+        width:100%;
+      }
+
+      .mobilePlayerTools{
+        display:grid;
+        grid-template-columns:minmax(0, 1fr) auto;
+        gap:7px;
+        margin-top:8px;
+      }
+
+      .mobilePlayerTools select{
+        width:100%;
+        min-width:0;
+        min-height:46px;
+        margin:0;
+        padding:9px 10px;
+        border-radius:12px;
+        border:1px solid rgba(255,255,255,.18);
+        background:#18191b;
+        color:#fff;
+        font-size:16px;
+        font-weight:800;
+      }
+
+      .mobilePlayerButtons{
+        display:flex;
+        gap:6px;
+      }
+
+      .mobilePlayerButtons .btn{
+        min-width:44px;
+        min-height:46px;
+        padding:8px 10px;
+      }
+
+      .viewer{
+        padding:6px;
+        border-radius:12px;
+        overscroll-behavior:contain;
+      }
+
+      .mobilePathPanel.active{
+        display:block;
+        width:100%;
+        max-width:520px;
+        margin:0 auto;
+        padding:8px 2px 24px;
+      }
+
+      .zoomStage.mobileFocusHidden{
+        display:none;
       }
 
       .slot{
@@ -629,6 +837,10 @@
         max-width:104px;
         font-size:16px;
         padding:8px 6px;
+      }
+
+      .footer{
+        display:none;
       }
     }
   </style>
@@ -664,9 +876,21 @@
         <button class="btn btn-primary" id="btnFit" type="button">Fit Width</button>
         <button class="btn btn-primary" id="btnRefresh" type="button">Refresh</button>
       </div>
+
+      <div class="mobilePlayerTools" aria-label="Mobile player path controls">
+        <select id="mobilePlayerSelect" aria-label="Choose a player to follow">
+          <option value="">Find my player...</option>
+        </select>
+        <div class="mobilePlayerButtons">
+          <button class="btn" id="btnMobileZoomOut" type="button" aria-label="Zoom out">−</button>
+          <button class="btn" id="btnMobileZoomIn" type="button" aria-label="Zoom in">+</button>
+          <button class="btn btn-primary" id="btnMobileToggleView" type="button">Chart</button>
+        </div>
+      </div>
     </div>
 
     <div class="viewer" id="viewer">
+      <div class="mobilePathPanel" id="mobilePathPanel" aria-live="polite"></div>
       <div class="zoomStage" id="zoomStage">
         <div id="bracketRoot"></div>
       </div>
@@ -696,6 +920,7 @@
     let selectedPlayer = localStorage.getItem(TRACKED_PLAYER_KEY) || "";
     let publicBracketUpdatedAt = "";
     let liveRequestSerial = 0;
+    let mobileFullChart = false;
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -844,6 +1069,170 @@
       (state.grandFinal || []).forEach(() => total += 1);
 
       return total;
+    }
+
+    function getAllBracketMatchEntries(state){
+      const entries = [];
+
+      (state && state.winnersRounds || []).forEach((round, roundIndex) => {
+        (round || []).forEach(match => entries.push({ lane:"W", roundIndex, match }));
+      });
+
+      (state && state.losersRounds || []).forEach((round, roundIndex) => {
+        (round || []).forEach(match => entries.push({ lane:"L", roundIndex, match }));
+      });
+
+      (state && state.grandFinal || []).forEach((match, roundIndex) => {
+        entries.push({ lane:"GF", roundIndex, match });
+      });
+
+      return entries;
+    }
+
+    function getLivePlayerNames(state){
+      const names = new Map();
+
+      const addName = name => {
+        if(!isRealBracketName(name)) return;
+        const normalized = normalizePlayerName(name);
+        if(normalized && !names.has(normalized)) names.set(normalized, String(name).trim());
+      };
+
+      (state && state.entrants || []).forEach(addName);
+      getAllBracketMatchEntries(state).forEach(({ match }) => {
+        addName(match && match.p1);
+        addName(match && match.p2);
+      });
+
+      return Array.from(names.values()).sort((a, b) => a.localeCompare(b));
+    }
+
+    function populateMobilePlayerSelect(state){
+      const select = $("#mobilePlayerSelect");
+      if(!select) return;
+
+      const current = normalizePlayerName(selectedPlayer);
+      select.innerHTML = `<option value="">Find my player...</option>`;
+
+      getLivePlayerNames(state).forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        option.selected = normalizePlayerName(name) === current;
+        select.appendChild(option);
+      });
+    }
+
+    function getPlayerPathEntries(state, playerName){
+      const normalized = normalizePlayerName(playerName);
+
+      return getAllBracketMatchEntries(state)
+        .filter(({ match }) =>
+          normalizePlayerName(match && match.p1) === normalized ||
+          normalizePlayerName(match && match.p2) === normalized
+        )
+        .sort((a, b) => {
+          const aCall = Number(a.match.callNumber || 999999);
+          const bCall = Number(b.match.callNumber || 999999);
+          if(aCall !== bCall) return aCall - bCall;
+          if(a.lane !== b.lane) return a.lane === "W" ? -1 : a.lane === "L" ? 0 : 1;
+          return a.roundIndex - b.roundIndex;
+        });
+    }
+
+    function renderMobilePlayerPath(){
+      const panel = $("#mobilePathPanel");
+      if(!panel) return;
+
+      if(!selectedPlayer || !liveBracketState){
+        panel.innerHTML = "";
+        return;
+      }
+
+      const normalized = normalizePlayerName(selectedPlayer);
+      const entries = getPlayerPathEntries(liveBracketState, selectedPlayer);
+      let wins = 0;
+      let losses = 0;
+
+      const steps = entries.map(({ lane, roundIndex, match }, index) => {
+        const playerIsP1 = normalizePlayerName(match.p1) === normalized;
+        const opponent = playerIsP1 ? match.p2 : match.p1;
+        const playerScore = playerIsP1 ? (match.s1 ?? "") : (match.s2 ?? "");
+        const opponentScore = playerIsP1 ? (match.s2 ?? "") : (match.s1 ?? "");
+        const winnerName = match.winner === "p1" ? match.p1 : match.winner === "p2" ? match.p2 : "";
+        const loserName = match.loser === "p1" ? match.p1 : match.loser === "p2" ? match.p2 : "";
+        const won = normalizePlayerName(winnerName) === normalized;
+        const lost = normalizePlayerName(loserName) === normalized;
+        const status = getMatchStatus(match);
+        const laneLabel = lane === "W" ? `Winners R${roundIndex + 1}` : lane === "L" ? `Losers R${roundIndex + 1}` : "Grand Final";
+        const result = won ? "Won" : lost ? "Lost" : getStatusText(status);
+        const scoreText = playerScore !== "" || opponentScore !== ""
+          ? `${playerScore || "–"} – ${opponentScore || "–"}`
+          : "Score pending";
+
+        if(won) wins++;
+        if(lost) losses++;
+
+        return `
+          <div class="mobilePathStep ${esc(status)}">
+            <div class="mobilePathStepTop">
+              <div class="mobilePathRound">${esc(laneLabel)} · ${esc(matchCallLabel(match))}</div>
+              <div class="mobilePathStatus">${esc(result)}</div>
+            </div>
+            <div class="mobilePathOpponent">vs. ${esc(isRealBracketName(opponent) ? opponent : "Opponent TBD")}</div>
+            <div class="mobilePathMeta">
+              <span>${esc(match.label || match.id || "Match")}</span>
+              <strong>${esc(scoreText)}</strong>
+            </div>
+          </div>
+          ${index < entries.length - 1 ? `<div class="mobilePathArrow">↓</div>` : ""}
+        `;
+      }).join("");
+
+      panel.innerHTML = `
+        <div class="mobilePathHeader">
+          <div>
+            <div class="mobilePathName">${esc(selectedPlayer)}</div>
+            <div class="mobilePathSummary">${wins} win${wins === 1 ? "" : "s"} · ${losses} loss${losses === 1 ? "" : "es"} · ${entries.length} match${entries.length === 1 ? "" : "es"}</div>
+          </div>
+          <button class="btn" id="btnMobileClearPath" type="button">Clear</button>
+        </div>
+        ${steps || `<div class="mobilePathEmpty">No visible matches were found for this player yet.</div>`}
+      `;
+
+      const clearButton = $("#btnMobileClearPath");
+      if(clearButton) clearButton.addEventListener("click", clearPlayerPath);
+    }
+
+    function updateMobilePlayerPathView(){
+      const isMobile = window.matchMedia("(max-width:720px)").matches;
+      const isMobile = window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches;
+      const panel = $("#mobilePathPanel");
+      const stage = $("#zoomStage");
+      const toggle = $("#btnMobileToggleView");
+      const select = $("#mobilePlayerSelect");
+      const hasSelection = !!selectedPlayer && !!liveBracketState;
+
+      if(select && normalizePlayerName(select.value) !== normalizePlayerName(selectedPlayer)){
+        select.value = selectedPlayer || "";
+      }
+
+      if(!isMobile){
+        if(panel) panel.classList.remove("active");
+        if(stage) stage.classList.remove("mobileFocusHidden");
+        return;
+      }
+
+      renderMobilePlayerPath();
+
+      const showFocusedPath = hasSelection && !mobileFullChart;
+      if(panel) panel.classList.toggle("active", showFocusedPath);
+      if(stage) stage.classList.toggle("mobileFocusHidden", showFocusedPath);
+
+      if(toggle){
+        toggle.disabled = !hasSelection;
+        toggle.textContent = mobileFullChart ? "Path" : "Chart";
+      }
     }
 
     function getMatchStatus(m){
@@ -1075,6 +1464,7 @@
         });
         paths.forEach(path => path.classList.remove("trackedConnector", "untrackedConnector"));
         if(status) status.textContent = "Player focus: none";
+        updateMobilePlayerPathView();
         return;
       }
 
@@ -1113,8 +1503,10 @@
       });
 
       if(status) status.textContent = `Player focus: ${selectedPlayer}`;
+      updateMobilePlayerPathView();
 
-      if(scrollToPlayer){
+      if(scrollToPlayer && (!window.matchMedia("(max-width:720px)").matches || mobileFullChart)){
+      if(scrollToPlayer && (!window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches || mobileFullChart)){
         const target =
           trackedCards.find(card => card.classList.contains("ready")) ||
           trackedCards.find(card => !card.classList.contains("complete")) ||
@@ -1138,12 +1530,14 @@
         shouldAutoFocus = false;
       }
 
+      mobileFullChart = false;
       applyPlayerPathHighlight(!!selectedPlayer);
     }
 
     function clearPlayerPath(){
       selectedPlayer = "";
       localStorage.removeItem(TRACKED_PLAYER_KEY);
+      mobileFullChart = false;
       applyPlayerPathHighlight(false);
     }
 
@@ -1313,6 +1707,8 @@
     function renderEmptyState(message="No published bracket was found."){
       const root = $("#bracketRoot");
       liveBracketState = null;
+      populateMobilePlayerSelect(null);
+      updateMobilePlayerPathView();
 
       root.innerHTML = `
         <div class="emptyState">
@@ -1356,6 +1752,7 @@
       liveBracketState = state;
       root.innerHTML = "";
       root.appendChild(buildBracketChart(state));
+      populateMobilePlayerSelect(state);
       applyPlayerPathHighlight(false);
       scheduleConnectorRedraw();
 
@@ -1565,6 +1962,43 @@
       $("#btnFit").addEventListener("click", fitWidth);
       $("#btnFocusActive").addEventListener("click", focusActiveBracket);
       $("#btnClearPlayer").addEventListener("click", clearPlayerPath);
+      $("#btnMobileZoomIn").addEventListener("click", zoomIn);
+      $("#btnMobileZoomOut").addEventListener("click", zoomOut);
+
+      $("#mobilePlayerSelect").addEventListener("change", event => {
+        const playerName = String(event.target.value || "").trim();
+
+        if(!playerName){
+          clearPlayerPath();
+          return;
+        }
+
+        selectedPlayer = playerName;
+        localStorage.setItem(TRACKED_PLAYER_KEY, selectedPlayer);
+        shouldAutoFocus = false;
+        mobileFullChart = false;
+        applyPlayerPathHighlight(false);
+
+        const viewer = $("#viewer");
+        if(viewer){
+          viewer.scrollLeft = 0;
+          viewer.scrollTop = 0;
+        }
+      });
+
+      $("#btnMobileToggleView").addEventListener("click", () => {
+        if(!selectedPlayer) return;
+        mobileFullChart = !mobileFullChart;
+        updateMobilePlayerPathView();
+
+        const viewer = $("#viewer");
+        if(viewer){
+          viewer.scrollLeft = 0;
+          viewer.scrollTop = 0;
+        }
+
+        if(mobileFullChart) scheduleConnectorRedraw();
+      });
 
       $("#bracketRoot").addEventListener("click", event => {
         const name = event.target.closest(".name[data-player]");
@@ -1574,6 +2008,7 @@
 
       wireViewer();
       wireConnectorRedraw();
+      window.addEventListener("resize", updateMobilePlayerPathView, { passive:true });
 
       const savedZoom = parseInt(localStorage.getItem(ZOOM_KEY) || "100", 10);
       setZoomPercent(isFinite(savedZoom) ? savedZoom : 100, false);
