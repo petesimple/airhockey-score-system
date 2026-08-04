@@ -91,11 +91,14 @@
       border:1px solid rgba(255,255,255,.14);
       background:#fff;
       color:#111;
+      font:inherit;
+      cursor:pointer;
     }
 
-    .shareQr canvas{
+    .shareQr img{
       width:104px;
       height:104px;
+      max-width:none;
       display:block;
     }
 
@@ -701,7 +704,6 @@
       color:rgba(255,255,255,.68);
     }
 
-    @media (max-width:720px){
     @media (max-width:720px), (max-width:980px) and (pointer:coarse){
       html,
       body{
@@ -722,15 +724,36 @@
 
       .brand{
         min-width:0;
+        width:100%;
+        display:grid;
+        grid-template-columns:54px minmax(0, 1fr) 62px;
         gap:8px;
       }
 
+      #appLogo{ order:1; }
+
       .brand > div:last-child{
+        order:2;
         min-width:0;
       }
 
       .shareQr{
-        display:none;
+        order:3;
+        display:flex;
+        padding:3px;
+        gap:2px;
+        border-radius:9px;
+      }
+
+      .shareQr img{
+        width:54px;
+        height:54px;
+        max-width:none;
+      }
+
+      .shareQrLabel{
+        font-size:7px;
+        letter-spacing:0;
       }
 
       .brand img{
@@ -851,10 +874,10 @@
     <div class="topbar">
       <div class="brand">
         <img id="appLogo" src="logo.png" alt="AHSS Logo" />
-        <div class="shareQr" id="shareQr" title="Scan to open this live bracket on your phone">
-          <canvas id="shareQrCanvas" width="104" height="104" aria-label="QR code for this live bracket"></canvas>
+        <button class="shareQr" id="shareQr" type="button" title="Scan or tap to share this live bracket">
+          <img src="bracket-share-qr.png" width="104" height="104" alt="QR code for the 7-6 weekly live bracket">
           <div class="shareQrLabel">Scan live bracket</div>
-        </div>
+        </button>
         <div>
           <h1>Live Bracket</h1>
           <div class="sub" id="subtitle">Read only tournament snapshot</div>
@@ -892,7 +915,12 @@
     <div class="viewer" id="viewer">
       <div class="mobilePathPanel" id="mobilePathPanel" aria-live="polite"></div>
       <div class="zoomStage" id="zoomStage">
-        <div id="bracketRoot"></div>
+        <div id="bracketRoot">
+          <div class="emptyState">
+            <h2>Loading live bracket…</h2>
+            <p>Connecting to the latest tournament snapshot.</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -901,7 +929,6 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
@@ -1013,30 +1040,27 @@
       return url.href;
     }
 
-    function renderShareQr(){
-      const canvas = $("#shareQrCanvas");
+    async function shareLiveBracket(){
       const container = $("#shareQr");
       const shareUrl = getPublicShareUrl();
 
       if(container) container.dataset.shareUrl = shareUrl;
-      if(!canvas || !window.QRCode || typeof window.QRCode.toCanvas !== "function"){
-        const label = container ? container.querySelector(".shareQrLabel") : null;
-        if(label) label.textContent = "QR unavailable";
-        return;
-      }
 
-      window.QRCode.toCanvas(canvas, shareUrl, {
-        width:104,
-        margin:1,
-        errorCorrectionLevel:"M",
-        color:{ dark:"#000000", light:"#ffffff" }
-      }, error => {
-        if(error){
-          console.warn("Unable to render share QR:", error);
+      try{
+        if(navigator.share){
+          await navigator.share({ title:"AHSS Live Bracket", url:shareUrl });
+        }else if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(shareUrl);
           const label = container ? container.querySelector(".shareQrLabel") : null;
-          if(label) label.textContent = "QR unavailable";
+          if(label){
+            const oldText = label.textContent;
+            label.textContent = "Link copied";
+            setTimeout(() => { label.textContent = oldText; }, 1800);
+          }
         }
-      });
+      }catch(error){
+        if(error && error.name !== "AbortError") console.warn("Unable to share live bracket:", error);
+      }
     }
 
     async function loadBracketState(){
@@ -1046,8 +1070,23 @@
         `&tournamentId=${encodeURIComponent(tournamentId)}` +
         `&t=${Date.now()}`;
 
-      const response = await fetch(url, { cache:"no-store" });
-      const data = await response.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let response;
+      let data;
+
+      try{
+        response = await fetch(url, { cache:"no-store", signal:controller.signal });
+        if(!response.ok) throw new Error(`Public bracket request returned ${response.status}.`);
+        data = await response.json();
+      }catch(error){
+        if(error && error.name === "AbortError"){
+          throw new Error("The live bracket feed took too long to respond. Tap Refresh to try again.");
+        }
+        throw error;
+      }finally{
+        clearTimeout(timeout);
+      }
 
       if(!data || !data.ok){
         throw new Error((data && data.message) || "Public bracket request failed.");
@@ -1205,7 +1244,6 @@
     }
 
     function updateMobilePlayerPathView(){
-      const isMobile = window.matchMedia("(max-width:720px)").matches;
       const isMobile = window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches;
       const panel = $("#mobilePathPanel");
       const stage = $("#zoomStage");
@@ -1505,7 +1543,6 @@
       if(status) status.textContent = `Player focus: ${selectedPlayer}`;
       updateMobilePlayerPathView();
 
-      if(scrollToPlayer && (!window.matchMedia("(max-width:720px)").matches || mobileFullChart)){
       if(scrollToPlayer && (!window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches || mobileFullChart)){
         const target =
           trackedCards.find(card => card.classList.contains("ready")) ||
@@ -1940,7 +1977,11 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
-      renderShareQr();
+      const shareQr = $("#shareQr");
+      if(shareQr){
+        shareQr.dataset.shareUrl = getPublicShareUrl();
+        shareQr.addEventListener("click", shareLiveBracket);
+      }
 
       const autoRefresh = $("#chkAutoRefresh");
       autoRefresh.checked = autoRefreshEnabled();
