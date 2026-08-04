@@ -1,7 +1,7 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
 Tournament Director v4.0.12 - Bracket Path Lines
-- Adds SVG bracket paths from BRACKET_STATE feeds and redraws them after chart layout changes
+- Adds optional SVG bracket paths on the editable Brackets view; Live displays them by default
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
 - Adds Room Setup tab with draggable top-down table layout
@@ -1237,6 +1237,11 @@ body.bracketFullscreenOpen{
     border-color:rgba(0,234,255,.32);
   }
 
+  .bracketPathsHidden .bracketConnectorLayer,
+  .bracketPathsHidden .chartConnectorNote{
+    display:none;
+  }
+
   .chartHeader{
     display:grid;
     grid-template-columns:1fr 1fr 280px;
@@ -2056,6 +2061,10 @@ body.bracketFullscreenOpen{
 	<button class="btnTiny primary" id="btnJumpFinals" type="button">Jump to Finals</button>
 	<button class="btnTiny primary" id="btnBracketGoLinks" type="button">Links Page</button>
 	<button class="btnTiny" id="btnBracketFullscreen" type="button">Fullscreen</button>
+    <label class="chk" style="margin:0 4px;">
+      <input type="checkbox" id="chkBracketPathLines">
+      Show Path Lines
+    </label>
   </div>
 </div>
 
@@ -2196,6 +2205,7 @@ const BRACKETS_ENDPOINT = "";
 const STATE_KEY = "ahss_brackets_state";
 const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
+const BRACKET_PATHS_KEY = "TD_SHOW_BRACKET_PATH_LINES";
 const TD_BUILD = "v4.0.12 - Bracket Path Lines";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
@@ -6662,6 +6672,7 @@ function buildUnifiedRoundColumn(round, idx, lane, editable, isFuture=false){
 function buildBracketChart(state, editable=false){
   const bracketEl = document.createElement("div");
   bracketEl.className = "bracket unifiedChart";
+  bracketEl.classList.toggle("bracketPathsHidden", !bracketPathLinesEnabled());
 
   const connectorSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   connectorSvg.classList.add("bracketConnectorLayer");
@@ -6761,6 +6772,22 @@ function buildBracketChart(state, editable=false){
 
 let bracketConnectorFrame = 0;
 let bracketConnectorResizeObserver = null;
+
+function bracketPathLinesEnabled(){
+  return localStorage.getItem(BRACKET_PATHS_KEY) === "1";
+}
+
+function setBracketPathLinesEnabled(enabled){
+  localStorage.setItem(BRACKET_PATHS_KEY, enabled ? "1" : "0");
+
+  const bracketEl = document.querySelector("#bracketRoot .bracket.unifiedChart");
+  if(bracketEl) bracketEl.classList.toggle("bracketPathsHidden", !enabled);
+
+  const checkbox = document.getElementById("chkBracketPathLines");
+  if(checkbox) checkbox.checked = enabled;
+
+  if(enabled) scheduleBracketConnectorRedraw();
+}
 
 function getBracketConnectorRoutes(){
   if(!BRACKET_STATE || !BRACKET_STATE.feeds) return [];
@@ -7382,6 +7409,7 @@ function wireBracketViewTools(){
   const jumpFinals = document.getElementById("btnJumpFinals");
   const goLinks = document.getElementById("btnBracketGoLinks");
   const full = document.getElementById("btnBracketFullscreen");
+  const pathLines = document.getElementById("chkBracketPathLines");
   const viewer = getBracketViewer();
 
   if(zin) zin.addEventListener("click", bracketZoomIn);
@@ -7392,6 +7420,10 @@ function wireBracketViewTools(){
   if(jumpFinals) jumpFinals.addEventListener("click", jumpToFinals);
   if(goLinks) goLinks.addEventListener("click", () => setTab("tabMatch"));
   if(full) full.addEventListener("click", toggleBracketFullscreen);
+  if(pathLines){
+    pathLines.checked = bracketPathLinesEnabled();
+    pathLines.addEventListener("change", () => setBracketPathLinesEnabled(pathLines.checked));
+  }
 
   if(viewer){
     viewer.addEventListener("wheel", (e)=>{
