@@ -79,6 +79,35 @@
       display:block;
     }
 
+    .shareQr{
+      flex:0 0 auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      padding:6px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:#fff;
+      color:#111;
+    }
+
+    .shareQr canvas{
+      width:104px;
+      height:104px;
+      display:block;
+    }
+
+    .shareQrLabel{
+      font-size:10px;
+      line-height:1;
+      font-weight:1000;
+      letter-spacing:.25px;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
     .brand h1{
       margin:0;
       font-size:18px;
@@ -578,6 +607,11 @@
         max-width:92px;
       }
 
+      .shareQr canvas{
+        width:82px;
+        height:82px;
+      }
+
       .brand h1{
         font-size:16px;
       }
@@ -605,6 +639,10 @@
     <div class="topbar">
       <div class="brand">
         <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        <div class="shareQr" id="shareQr" title="Scan to open this live bracket on your phone">
+          <canvas id="shareQrCanvas" width="104" height="104" aria-label="QR code for this live bracket"></canvas>
+          <div class="shareQrLabel">Scan live bracket</div>
+        </div>
         <div>
           <h1>Live Bracket</h1>
           <div class="sub" id="subtitle">Read only tournament snapshot</div>
@@ -639,6 +677,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
@@ -646,6 +685,7 @@
     const TRACKED_PLAYER_KEY = "AHSS_LIVE_TRACKED_PLAYER";
     const PUBLIC_BRACKET_ENDPOINT = "https://script.google.com/macros/s/AKfycbyjcgJgD_OSobFfk3Vk4Tp5Pt9zgYJbsvh_vn9PvVDtni-3KKgwKqrMFk7PAtiXkxke/exec";
     const DEFAULT_TOURNAMENT_ID = "7-6-weekly";
+    const PUBLIC_LIVE_PAGE_URL = "https://petesimple.github.io/airhockey-score-system/brackets.html";
 
     let liveZoom = 1;
     let refreshTimer = null;
@@ -740,6 +780,38 @@
 
     function getPublicTournamentId(){
       return new URLSearchParams(window.location.search).get("tournament") || DEFAULT_TOURNAMENT_ID;
+    }
+
+    function getPublicShareUrl(){
+      const url = new URL(PUBLIC_LIVE_PAGE_URL);
+      url.searchParams.set("tournament", getPublicTournamentId());
+      return url.href;
+    }
+
+    function renderShareQr(){
+      const canvas = $("#shareQrCanvas");
+      const container = $("#shareQr");
+      const shareUrl = getPublicShareUrl();
+
+      if(container) container.dataset.shareUrl = shareUrl;
+      if(!canvas || !window.QRCode || typeof window.QRCode.toCanvas !== "function"){
+        const label = container ? container.querySelector(".shareQrLabel") : null;
+        if(label) label.textContent = "QR unavailable";
+        return;
+      }
+
+      window.QRCode.toCanvas(canvas, shareUrl, {
+        width:104,
+        margin:1,
+        errorCorrectionLevel:"M",
+        color:{ dark:"#000000", light:"#ffffff" }
+      }, error => {
+        if(error){
+          console.warn("Unable to render share QR:", error);
+          const label = container ? container.querySelector(".shareQrLabel") : null;
+          if(label) label.textContent = "QR unavailable";
+        }
+      });
     }
 
     async function loadBracketState(){
@@ -1471,6 +1543,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
+      renderShareQr();
 
       const autoRefresh = $("#chkAutoRefresh");
       autoRefresh.checked = autoRefreshEnabled();
