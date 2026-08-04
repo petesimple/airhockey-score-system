@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- AHSS Live Bracket mobile clean build 2026-08-04. Replace the entire published file; do not merge with an older brackets.html. -->
 <html lang="en">
 <head>
   <link rel="manifest" href="manifest.json" />
@@ -95,7 +96,6 @@
       cursor:pointer;
     }
 
-    .shareQr canvas{
     .shareQr img{
       width:104px;
       height:104px;
@@ -750,7 +750,6 @@
       color:rgba(255,255,255,.68);
     }
 
-    @media (max-width:720px){
     @media (max-width:720px), (max-width:980px) and (pointer:coarse){
       html,
       body{
@@ -785,7 +784,6 @@
       }
 
       .shareQr{
-        display:none;
         order:3;
         display:flex;
         padding:3px;
@@ -922,12 +920,9 @@
     <div class="topbar">
       <div class="brand">
         <img id="appLogo" src="logo.png" alt="AHSS Logo" />
-        <div class="shareQr" id="shareQr" title="Scan to open this live bracket on your phone">
-          <canvas id="shareQrCanvas" width="104" height="104" aria-label="QR code for this live bracket"></canvas>
         <button class="shareQr" id="shareQr" type="button" title="Scan or tap to share this live bracket">
           <img src="bracket-share-qr.png" width="104" height="104" alt="QR code for the 7-6 weekly live bracket">
           <div class="shareQrLabel">Scan live bracket</div>
-        </div>
         </button>
         <div>
           <h1>Live Bracket</h1>
@@ -966,7 +961,6 @@
     <div class="viewer" id="viewer">
       <div class="mobilePathPanel" id="mobilePathPanel" aria-live="polite"></div>
       <div class="zoomStage" id="zoomStage">
-        <div id="bracketRoot"></div>
         <div id="bracketRoot">
           <div class="emptyState">
             <h2>Loading live bracket…</h2>
@@ -981,7 +975,6 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
@@ -1093,41 +1086,24 @@
       return url.href;
     }
 
-    function renderShareQr(){
-      const canvas = $("#shareQrCanvas");
     async function shareLiveBracket(){
       const container = $("#shareQr");
       const shareUrl = getPublicShareUrl();
 
       if(container) container.dataset.shareUrl = shareUrl;
-      if(!canvas || !window.QRCode || typeof window.QRCode.toCanvas !== "function"){
-        const label = container ? container.querySelector(".shareQrLabel") : null;
-        if(label) label.textContent = "QR unavailable";
-        return;
-      }
 
-      window.QRCode.toCanvas(canvas, shareUrl, {
-        width:104,
-        margin:1,
-        errorCorrectionLevel:"M",
-        color:{ dark:"#000000", light:"#ffffff" }
-      }, error => {
-        if(error){
-          console.warn("Unable to render share QR:", error);
       try{
         if(navigator.share){
           await navigator.share({ title:"AHSS Live Bracket", url:shareUrl });
         }else if(navigator.clipboard && navigator.clipboard.writeText){
           await navigator.clipboard.writeText(shareUrl);
           const label = container ? container.querySelector(".shareQrLabel") : null;
-          if(label) label.textContent = "QR unavailable";
           if(label){
             const oldText = label.textContent;
             label.textContent = "Link copied";
             setTimeout(() => { label.textContent = oldText; }, 1800);
           }
         }
-      });
       }catch(error){
         if(error && error.name !== "AbortError") console.warn("Unable to share live bracket:", error);
       }
@@ -1140,8 +1116,6 @@
         `&tournamentId=${encodeURIComponent(tournamentId)}` +
         `&t=${Date.now()}`;
 
-      const response = await fetch(url, { cache:"no-store" });
-      const data = await response.json();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
       let response;
@@ -1379,12 +1353,10 @@
       }
 
       const normalized = normalizePlayerName(selectedPlayer);
-      const entries = getPlayerPathEntries(liveBracketState, selectedPlayer);
       const entries = getPlayedPlayerEntries(liveBracketState, selectedPlayer);
       let wins = 0;
       let losses = 0;
 
-      const steps = entries.map(({ lane, roundIndex, match }, index) => {
       entries.forEach(({ match }) => {
         if(normalizePlayerName(getMatchWinnerName(match)) === normalized) wins++;
         if(normalizePlayerName(getMatchLoserName(match)) === normalized) losses++;
@@ -1400,32 +1372,21 @@
         const opponent = playerIsP1 ? match.p2 : match.p1;
         const playerScore = playerIsP1 ? (match.s1 ?? "") : (match.s2 ?? "");
         const opponentScore = playerIsP1 ? (match.s2 ?? "") : (match.s1 ?? "");
-        const winnerName = match.winner === "p1" ? match.p1 : match.winner === "p2" ? match.p2 : "";
-        const loserName = match.loser === "p1" ? match.p1 : match.loser === "p2" ? match.p2 : "";
         const winnerName = getMatchWinnerName(match);
         const loserName = getMatchLoserName(match);
         const won = normalizePlayerName(winnerName) === normalized;
         const lost = normalizePlayerName(loserName) === normalized;
-        const status = getMatchStatus(match);
         const status = isUpcoming ? "upcoming" : getMatchStatus(match);
         const laneLabel = lane === "W" ? `Winners R${roundIndex + 1}` : lane === "L" ? `Losers R${roundIndex + 1}` : "Grand Final";
-        const result = won ? "Won" : lost ? "Lost" : getStatusText(status);
-        const scoreText = playerScore !== "" || opponentScore !== ""
-          ? `${playerScore || "–"} – ${opponentScore || "–"}`
-          : "Score pending";
         const opponentReady = isRealBracketName(opponent);
         const result = isUpcoming ? (opponentReady ? "Up next" : "Possible next") : won ? "Won" : lost ? "Lost" : getStatusText(status);
         const scoreText = isUpcoming
           ? (opponentReady ? "Awaiting score" : "Opponent pending")
           : `${displayScore(playerScore)} – ${displayScore(opponentScore)}`;
 
-        if(won) wins++;
-        if(lost) losses++;
-
         return `
           <div class="mobilePathStep ${esc(status)}">
             <div class="mobilePathStepTop">
-              <div class="mobilePathRound">${esc(laneLabel)} · ${esc(matchCallLabel(match))}</div>
               <div class="mobilePathRound">${esc(laneLabel)} · ${esc(isUpcoming && !match.callNumber ? "Match TBD" : matchCallLabel(match))}</div>
               <div class="mobilePathStatus">${esc(result)}</div>
             </div>
@@ -1435,7 +1396,6 @@
               <strong>${esc(scoreText)}</strong>
             </div>
           </div>
-          ${index < entries.length - 1 ? `<div class="mobilePathArrow">↓</div>` : ""}
           ${index < timeline.length - 1 ? `<div class="mobilePathArrow">↓</div>` : ""}
         `;
       }).join("");
@@ -1444,12 +1404,10 @@
         <div class="mobilePathHeader">
           <div>
             <div class="mobilePathName">${esc(selectedPlayer)}</div>
-            <div class="mobilePathSummary">${wins} win${wins === 1 ? "" : "s"} · ${losses} loss${losses === 1 ? "" : "es"} · ${entries.length} match${entries.length === 1 ? "" : "es"}</div>
             <div class="mobilePathSummary">Played matches only${upcoming ? " · Next possible match included" : ""}</div>
           </div>
           <button class="btn" id="btnMobileClearPath" type="button">Clear</button>
         </div>
-        ${steps || `<div class="mobilePathEmpty">No visible matches were found for this player yet.</div>`}
         <div class="mobilePathStats">
           <div class="mobilePathStat"><span class="mobilePathStatLabel">Matches played</span><span class="mobilePathStatValue">${entries.length}</span></div>
           <div class="mobilePathStat"><span class="mobilePathStatLabel">Record</span><span class="mobilePathStatValue">${wins}–${losses}</span></div>
@@ -1464,7 +1422,6 @@
     }
 
     function updateMobilePlayerPathView(){
-      const isMobile = window.matchMedia("(max-width:720px)").matches;
       const isMobile = window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches;
       const panel = $("#mobilePathPanel");
       const stage = $("#zoomStage");
@@ -1764,7 +1721,6 @@
       if(status) status.textContent = `Player focus: ${selectedPlayer}`;
       updateMobilePlayerPathView();
 
-      if(scrollToPlayer && (!window.matchMedia("(max-width:720px)").matches || mobileFullChart)){
       if(scrollToPlayer && (!window.matchMedia("(max-width:720px), (max-width:980px) and (pointer:coarse)").matches || mobileFullChart)){
         const target =
           trackedCards.find(card => card.classList.contains("ready")) ||
@@ -2199,7 +2155,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
-      renderShareQr();
       const shareQr = $("#shareQr");
       if(shareQr){
         shareQr.dataset.shareUrl = getPublicShareUrl();
