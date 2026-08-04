@@ -141,6 +141,12 @@
       border:none;
     }
 
+    .toolbarToggle input{
+      width:auto;
+      margin:0;
+      accent-color:var(--accent);
+    }
+
     .viewer{
       flex:1 1 auto;
       min-height:0;
@@ -480,6 +486,45 @@
       word-break:break-word;
     }
 
+    .name.clickablePlayer{
+      cursor:pointer;
+      color:#fff;
+      text-decoration:underline;
+      text-decoration-color:rgba(0,234,255,.45);
+      text-underline-offset:3px;
+    }
+
+    .name.clickablePlayer:hover{
+      color:#00eaff;
+    }
+
+    .match.untrackedMatch{
+      opacity:.14;
+      filter:saturate(.3);
+    }
+
+    .match.trackedMatch{
+      opacity:1;
+      filter:none;
+      border-color:#ffd54f;
+      box-shadow:0 0 0 2px rgba(255,213,79,.28), 0 0 28px rgba(255,213,79,.18);
+    }
+
+    .slot.trackedPlayerSlot{
+      border-color:#ffd54f;
+      background:rgba(255,213,79,.11);
+    }
+
+    .bracketConnector.untrackedConnector{
+      opacity:.07;
+    }
+
+    .bracketConnector.trackedConnector{
+      stroke:#ffd54f;
+      stroke-width:4;
+      opacity:1;
+    }
+
     .seed{
       font-size:11px;
       color:rgba(255,255,255,.55);
@@ -569,8 +614,14 @@
       <div class="toolbar">
         <span class="pill" id="snapshotInfo">Loading snapshot...</span>
         <span class="pill" id="refreshInfo">Refresh: 20s</span>
+        <span class="pill" id="playerFocusInfo">Player focus: none</span>
+        <label class="pill toolbarToggle">
+          <input type="checkbox" id="chkAutoRefresh" checked>
+          Auto Refresh
+        </label>
         <button class="btn" id="btnZoomOut" type="button">Zoom Out</button>
         <button class="btn" id="btnZoomIn" type="button">Zoom In</button>
+        <button class="btn" id="btnClearPlayer" type="button">Clear Player</button>
         <button class="btn btn-primary" id="btnFocusActive" type="button">Focus Active</button>
         <button class="btn btn-primary" id="btnFit" type="button">Fit Width</button>
         <button class="btn btn-primary" id="btnRefresh" type="button">Refresh</button>
@@ -592,6 +643,8 @@
     const STATE_KEY = "ahss_brackets_state";
     const REFRESH_MS = 20000;
     const ZOOM_KEY = "AHSS_LIVE_BRACKET_ZOOM";
+    const AUTO_REFRESH_KEY = "AHSS_LIVE_AUTO_REFRESH";
+    const TRACKED_PLAYER_KEY = "AHSS_LIVE_TRACKED_PLAYER";
 
     let liveZoom = 1;
     let refreshTimer = null;
@@ -599,6 +652,7 @@
     let liveBracketState = null;
     let connectorFrame = 0;
     let connectorResizeObserver = null;
+    let selectedPlayer = localStorage.getItem(TRACKED_PLAYER_KEY) || "";
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -623,6 +677,14 @@
 
     function isRealBracketName(name){
       return !!name && name !== "TBD" && name !== "BYE";
+    }
+
+    function normalizePlayerName(name){
+      return String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function autoRefreshEnabled(){
+      return localStorage.getItem(AUTO_REFRESH_KEY) !== "0";
     }
 
     function matchCallLabel(m){
@@ -736,10 +798,14 @@
       const displayName = waitingBye ? "BYE" : rawName;
       const score = which === "p1" ? (match.s1 ?? "") : (match.s2 ?? "");
       const id = match.id || "";
+      const playerClass = isRealBracketName(rawName) ? " clickablePlayer" : "";
+      const playerAttribute = isRealBracketName(rawName) ? ` data-player="${esc(rawName)}"` : "";
+
+      slot.dataset.playerName = normalizePlayerName(rawName);
 
       slot.innerHTML = `
         <div>
-          <div class="name">${esc(displayName)}</div>
+          <div class="name${playerClass}"${playerAttribute}>${esc(displayName)}</div>
           <div class="seed">${esc(id)} ${which.toUpperCase()}</div>
         </div>
         <div class="scoreBox">${esc(score)}</div>
@@ -757,6 +823,8 @@
       card.dataset.matchId = match.id || "";
       card.dataset.lane = lane;
       card.dataset.matchKey = `${lane}|${match.id || ""}`;
+      card.dataset.player1 = normalizePlayerName(match.p1);
+      card.dataset.player2 = normalizePlayerName(match.p2);
 
       const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
 
@@ -914,6 +982,91 @@
       return bracketEl;
     }
 
+    function applyPlayerPathHighlight(scrollToPlayer=false){
+      const normalized = normalizePlayerName(selectedPlayer);
+      const cards = Array.from(document.querySelectorAll("#bracketRoot .match"));
+      const paths = Array.from(document.querySelectorAll("#bracketRoot .bracketConnector"));
+      const status = $("#playerFocusInfo");
+
+      if(!normalized){
+        cards.forEach(card => card.classList.remove("trackedMatch", "untrackedMatch"));
+        document.querySelectorAll("#bracketRoot .slot.trackedPlayerSlot").forEach(slot => {
+          slot.classList.remove("trackedPlayerSlot");
+        });
+        paths.forEach(path => path.classList.remove("trackedConnector", "untrackedConnector"));
+        if(status) status.textContent = "Player focus: none";
+        return;
+      }
+
+      const trackedKeys = new Set();
+      const trackedCards = [];
+
+      cards.forEach(card => {
+        const containsPlayer = card.dataset.player1 === normalized || card.dataset.player2 === normalized;
+        card.classList.toggle("trackedMatch", containsPlayer);
+        card.classList.toggle("untrackedMatch", !containsPlayer);
+
+        card.querySelectorAll(".slot").forEach(slot => {
+          slot.classList.toggle("trackedPlayerSlot", slot.dataset.playerName === normalized);
+        });
+
+        if(containsPlayer){
+          trackedCards.push(card);
+          trackedKeys.add(card.dataset.matchKey || "");
+        }
+      });
+
+      if(!trackedCards.length){
+        selectedPlayer = "";
+        localStorage.removeItem(TRACKED_PLAYER_KEY);
+        applyPlayerPathHighlight(false);
+        return;
+      }
+
+      paths.forEach(path => {
+        const isPlayerPath =
+          trackedKeys.has(path.dataset.sourceMatch || "") &&
+          trackedKeys.has(path.dataset.targetMatch || "");
+
+        path.classList.toggle("trackedConnector", isPlayerPath);
+        path.classList.toggle("untrackedConnector", !isPlayerPath);
+      });
+
+      if(status) status.textContent = `Player focus: ${selectedPlayer}`;
+
+      if(scrollToPlayer){
+        const target =
+          trackedCards.find(card => card.classList.contains("ready")) ||
+          trackedCards.find(card => !card.classList.contains("complete")) ||
+          trackedCards[trackedCards.length - 1];
+
+        if(target){
+          target.scrollIntoView({ behavior:"smooth", block:"center", inline:"center" });
+        }
+      }
+    }
+
+    function selectPlayerPath(playerName){
+      const clean = String(playerName || "").trim();
+
+      if(normalizePlayerName(selectedPlayer) === normalizePlayerName(clean)){
+        selectedPlayer = "";
+        localStorage.removeItem(TRACKED_PLAYER_KEY);
+      }else{
+        selectedPlayer = clean;
+        localStorage.setItem(TRACKED_PLAYER_KEY, selectedPlayer);
+        shouldAutoFocus = false;
+      }
+
+      applyPlayerPathHighlight(!!selectedPlayer);
+    }
+
+    function clearPlayerPath(){
+      selectedPlayer = "";
+      localStorage.removeItem(TRACKED_PLAYER_KEY);
+      applyPlayerPathHighlight(false);
+    }
+
     function getConnectorRoutes(state){
       if(!state || !state.feeds) return [];
 
@@ -1042,9 +1195,13 @@
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", d);
         path.setAttribute("class", `bracketConnector ${getConnectorClass(route)}`);
+        path.dataset.sourceMatch = sourceKey;
+        path.dataset.targetMatch = targetKey;
         svg.appendChild(path);
         targetCard.classList.add("connectorTarget");
       });
+
+      applyPlayerPathHighlight(false);
     }
 
     function scheduleConnectorRedraw(){
@@ -1100,7 +1257,9 @@
 
       if(!state){
         renderEmptyState();
-        $("#refreshInfo").textContent = `Last check: ${new Date().toLocaleTimeString()}`;
+        $("#refreshInfo").textContent = autoRefreshEnabled()
+          ? `Last check: ${new Date().toLocaleTimeString()}`
+          : `Auto refresh off · checked ${new Date().toLocaleTimeString()}`;
         return;
       }
 
@@ -1111,6 +1270,7 @@
       liveBracketState = state;
       root.innerHTML = "";
       root.appendChild(buildBracketChart(state));
+      applyPlayerPathHighlight(false);
       scheduleConnectorRedraw();
 
       const entrants = Array.isArray(state.entrants) ? state.entrants.length : 0;
@@ -1118,10 +1278,12 @@
       const matches = countMatches(state);
 
       $("#snapshotInfo").textContent = `${entrants} entrants | Size ${size} | ${matches} matches`;
-      $("#refreshInfo").textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+      $("#refreshInfo").textContent = autoRefreshEnabled()
+        ? `Last refresh: ${new Date().toLocaleTimeString()}`
+        : `Auto refresh off · refreshed ${new Date().toLocaleTimeString()}`;
       $("#subtitle").textContent = state.createdAt ? `Snapshot created ${fmtLocal(state.createdAt)}` : "Read only tournament snapshot";
 
-      if(options.focusActive || shouldAutoFocus){
+      if((options.focusActive || shouldAutoFocus) && !selectedPlayer){
         setTimeout(focusActiveBracket, 80);
       }else{
         requestAnimationFrame(() => {
@@ -1275,24 +1437,51 @@
     function startAutoRefresh(){
       if(refreshTimer){
         clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+
+      if(!autoRefreshEnabled()){
+        const info = $("#refreshInfo");
+        if(info && !info.textContent.startsWith("Auto refresh off")){
+          info.textContent = "Auto refresh off";
+        }
+        return;
       }
 
       refreshTimer = setInterval(() => {
-        renderLiveBracket({ focusActive:true });
+        renderLiveBracket({ focusActive:!selectedPlayer });
       }, REFRESH_MS);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
 
+      const autoRefresh = $("#chkAutoRefresh");
+      autoRefresh.checked = autoRefreshEnabled();
+      autoRefresh.addEventListener("change", () => {
+        localStorage.setItem(AUTO_REFRESH_KEY, autoRefresh.checked ? "1" : "0");
+        startAutoRefresh();
+
+        if(autoRefresh.checked){
+          renderLiveBracket({ focusActive:!selectedPlayer });
+        }
+      });
+
       $("#btnRefresh").addEventListener("click", () => {
-        renderLiveBracket({ focusActive:true });
+        renderLiveBracket({ focusActive:!selectedPlayer });
       });
 
       $("#btnZoomIn").addEventListener("click", zoomIn);
       $("#btnZoomOut").addEventListener("click", zoomOut);
       $("#btnFit").addEventListener("click", fitWidth);
       $("#btnFocusActive").addEventListener("click", focusActiveBracket);
+      $("#btnClearPlayer").addEventListener("click", clearPlayerPath);
+
+      $("#bracketRoot").addEventListener("click", event => {
+        const name = event.target.closest(".name[data-player]");
+        if(!name) return;
+        selectPlayerPath(name.dataset.player || "");
+      });
 
       wireViewer();
       wireConnectorRedraw();
@@ -1300,7 +1489,7 @@
       const savedZoom = parseInt(localStorage.getItem(ZOOM_KEY) || "100", 10);
       setZoomPercent(isFinite(savedZoom) ? savedZoom : 100, false);
 
-      renderLiveBracket({ focusActive:true });
+      renderLiveBracket({ focusActive:!selectedPlayer });
       startAutoRefresh();
     });
   </script>
