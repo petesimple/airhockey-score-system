@@ -220,6 +220,62 @@
       position:relative;
     }
 
+    .bracketConnectorLayer{
+      position:absolute;
+      top:0;
+      left:0;
+      pointer-events:none;
+      overflow:visible;
+      z-index:2;
+    }
+
+    .pathLegend,
+    .chartHeader,
+    .chartColumnTitle,
+    .chartPlaceholder,
+    .match{
+      position:relative;
+      z-index:3;
+    }
+
+    .pathLegend{
+      margin:0 0 10px;
+      color:rgba(255,255,255,.72);
+      font-size:11px;
+      letter-spacing:.2px;
+    }
+
+    .bracketConnector{
+      fill:none;
+      stroke-width:2.25;
+      vector-effect:non-scaling-stroke;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      opacity:.82;
+    }
+
+    .bracketConnector.winnerPath{
+      stroke:#3ddc84;
+    }
+
+    .bracketConnector.loserPath{
+      stroke:#a56cff;
+    }
+
+    .bracketConnector.dropPath{
+      stroke:#a56cff;
+      stroke-dasharray:7 6;
+    }
+
+    .bracketConnector.finalsPath{
+      stroke:#00eaff;
+      stroke-dasharray:8 6;
+    }
+
+    .match.connectorTarget{
+      border-color:rgba(0,234,255,.32);
+    }
+
     .chartHeader{
       display:grid;
       grid-template-columns:1fr 1fr 280px;
@@ -540,6 +596,9 @@
     let liveZoom = 1;
     let refreshTimer = null;
     let shouldAutoFocus = true;
+    let liveBracketState = null;
+    let connectorFrame = 0;
+    let connectorResizeObserver = null;
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -661,6 +720,7 @@
     function renderSlot(match, lane, which){
       const slot = document.createElement("div");
       slot.className = "slot";
+      slot.dataset.bracketSlot = which;
 
       if(match.winner === which){
         slot.classList.add("win");
@@ -696,6 +756,7 @@
       card.dataset.status = status;
       card.dataset.matchId = match.id || "";
       card.dataset.lane = lane;
+      card.dataset.matchKey = `${lane}|${match.id || ""}`;
 
       const tagText = lane === "W" ? "W" : lane === "L" ? "L" : "GF";
 
@@ -759,11 +820,16 @@
       const bracketEl = document.createElement("div");
       bracketEl.className = "bracket";
 
+      const connectorSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      connectorSvg.classList.add("bracketConnectorLayer");
+      connectorSvg.setAttribute("aria-hidden", "true");
+
       const losersVisible = visibleWindowForRounds(state.losersRounds || []);
       const winnersVisible = visibleWindowForRounds(state.winnersRounds || []);
       const finalsVisible = shouldShowFinals(state);
 
       bracketEl.innerHTML = `
+        <div class="pathLegend">Green: winners · Purple: losers · Dashed purple: winners-to-losers drop · Dashed cyan: finals</div>
         <div class="chartHeader">
           <div class="chartHeaderBox">
             <span>Losers Side</span>
@@ -843,12 +909,173 @@
       body.appendChild(finalsLane);
 
       bracketEl.appendChild(body);
+      bracketEl.appendChild(connectorSvg);
 
       return bracketEl;
     }
 
+    function getConnectorRoutes(state){
+      if(!state || !state.feeds) return [];
+
+      const unique = new Map();
+
+      Object.entries(state.feeds).forEach(([key, feed]) => {
+        if(!feed) return;
+
+        const parts = key.split("|");
+        const sourceLane = parts[0] || "";
+        const sourceId = parts[1] || "";
+        const routes = Array.isArray(feed.paths) && feed.paths.length ? feed.paths : [feed];
+
+        routes.forEach(target => {
+          if(!sourceLane || !sourceId || !target || !target.lane || !target.id) return;
+
+          const routeKey = `${sourceLane}|${sourceId}|${target.lane}|${target.id}|${target.which || ""}`;
+
+          if(!unique.has(routeKey)){
+            unique.set(routeKey, {
+              sourceLane,
+              sourceId,
+              targetLane:target.lane,
+              targetId:target.id,
+              targetWhich:target.which || ""
+            });
+          }
+        });
+      });
+
+      return Array.from(unique.values());
+    }
+
+    function getConnectorClass(route){
+      if(route.sourceLane === "GF" || route.targetLane === "GF") return "finalsPath";
+      if(route.sourceLane === "W" && route.targetLane === "L") return "dropPath";
+      if(route.sourceLane === "L") return "loserPath";
+      return "winnerPath";
+    }
+
+    function drawBracketConnectors(){
+      connectorFrame = 0;
+
+      const bracketEl = $("#bracketRoot .bracket");
+      if(!bracketEl || !liveBracketState) return;
+
+      const svg = bracketEl.querySelector(":scope > .bracketConnectorLayer");
+      if(!svg) return;
+
+      const bracketRect = bracketEl.getBoundingClientRect();
+      const offsetWidth = bracketEl.offsetWidth;
+      const offsetHeight = bracketEl.offsetHeight;
+
+      if(!bracketRect.width || !bracketRect.height || !offsetWidth || !offsetHeight) return;
+
+      const width = Math.max(bracketEl.scrollWidth, offsetWidth, 1);
+      const height = Math.max(bracketEl.scrollHeight, offsetHeight, 1);
+      const scaleX = bracketRect.width / offsetWidth;
+      const scaleY = bracketRect.height / offsetHeight;
+
+      svg.replaceChildren();
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(height));
+      svg.style.width = `${width}px`;
+      svg.style.height = `${height}px`;
+
+      bracketEl.querySelectorAll(".match.connectorTarget").forEach(card => {
+        card.classList.remove("connectorTarget");
+      });
+
+      const toLocalBox = element => {
+        const rect = element.getBoundingClientRect();
+        const left = (rect.left - bracketRect.left) / scaleX;
+        const top = (rect.top - bracketRect.top) / scaleY;
+        const boxWidth = rect.width / scaleX;
+        const boxHeight = rect.height / scaleY;
+
+        return {
+          left,
+          top,
+          right:left + boxWidth,
+          bottom:top + boxHeight,
+          centerX:left + boxWidth / 2,
+          centerY:top + boxHeight / 2
+        };
+      };
+
+      getConnectorRoutes(liveBracketState).forEach(route => {
+        const sourceKey = `${route.sourceLane}|${route.sourceId}`;
+        const targetKey = `${route.targetLane}|${route.targetId}`;
+        const sourceCard = bracketEl.querySelector(`.match[data-match-key="${CSS.escape(sourceKey)}"]`);
+        const targetCard = bracketEl.querySelector(`.match[data-match-key="${CSS.escape(targetKey)}"]`);
+
+        if(!sourceCard || !targetCard || sourceCard === targetCard) return;
+
+        const targetSlot = route.targetWhich
+          ? targetCard.querySelector(`.slot[data-bracket-slot="${CSS.escape(route.targetWhich)}"]`)
+          : null;
+        const sourceBox = toLocalBox(sourceCard);
+        const targetBox = toLocalBox(targetSlot || targetCard);
+
+        let startX;
+        let startY = sourceBox.centerY;
+        let endX;
+        let endY = targetBox.centerY;
+        let d;
+
+        if(Math.abs(targetBox.centerX - sourceBox.centerX) < 12){
+          const movingDown = targetBox.centerY >= sourceBox.centerY;
+          startX = sourceBox.centerX;
+          endX = targetBox.centerX;
+          startY = movingDown ? sourceBox.bottom : sourceBox.top;
+          endY = movingDown ? targetBox.top : targetBox.bottom;
+          const bend = Math.max(32, Math.min(90, Math.abs(endY - startY) * .45));
+          d = `M ${startX} ${startY} C ${startX} ${startY + (movingDown ? bend : -bend)}, ${endX} ${endY + (movingDown ? -bend : bend)}, ${endX} ${endY}`;
+        }else{
+          const movingRight = targetBox.centerX > sourceBox.centerX;
+          startX = movingRight ? sourceBox.right : sourceBox.left;
+          endX = movingRight ? targetBox.left : targetBox.right;
+          const distance = Math.abs(endX - startX);
+          const bend = Math.max(42, Math.min(220, distance * .45));
+          d = `M ${startX} ${startY} C ${startX + (movingRight ? bend : -bend)} ${startY}, ${endX + (movingRight ? -bend : bend)} ${endY}, ${endX} ${endY}`;
+        }
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("class", `bracketConnector ${getConnectorClass(route)}`);
+        svg.appendChild(path);
+        targetCard.classList.add("connectorTarget");
+      });
+    }
+
+    function scheduleConnectorRedraw(){
+      if(connectorFrame) cancelAnimationFrame(connectorFrame);
+
+      connectorFrame = requestAnimationFrame(() => {
+        connectorFrame = requestAnimationFrame(drawBracketConnectors);
+      });
+    }
+
+    function wireConnectorRedraw(){
+      window.addEventListener("resize", scheduleConnectorRedraw, { passive:true });
+
+      if("ResizeObserver" in window){
+        connectorResizeObserver = new ResizeObserver(scheduleConnectorRedraw);
+
+        const root = $("#bracketRoot");
+        const viewer = $("#viewer");
+
+        if(root) connectorResizeObserver.observe(root);
+        if(viewer) connectorResizeObserver.observe(viewer);
+      }
+
+      if(document.fonts && document.fonts.ready){
+        document.fonts.ready.then(scheduleConnectorRedraw).catch(()=>{});
+      }
+    }
+
     function renderEmptyState(){
       const root = $("#bracketRoot");
+      liveBracketState = null;
 
       root.innerHTML = `
         <div class="emptyState">
@@ -881,8 +1108,10 @@
       const oldLeft = viewer.scrollLeft;
       const oldTop = viewer.scrollTop;
 
+      liveBracketState = state;
       root.innerHTML = "";
       root.appendChild(buildBracketChart(state));
+      scheduleConnectorRedraw();
 
       const entrants = Array.isArray(state.entrants) ? state.entrants.length : 0;
       const size = state.bracketSize || "";
@@ -928,6 +1157,7 @@
           viewer.scrollLeft = Math.max(0, centerX * liveZoom - viewer.clientWidth / 2);
           viewer.scrollTop = Math.max(0, centerY * liveZoom - viewer.clientHeight / 2);
         }
+        scheduleConnectorRedraw();
       });
     }
 
@@ -1065,6 +1295,7 @@
       $("#btnFocusActive").addEventListener("click", focusActiveBracket);
 
       wireViewer();
+      wireConnectorRedraw();
 
       const savedZoom = parseInt(localStorage.getItem(ZOOM_KEY) || "100", 10);
       setZoomPercent(isFinite(savedZoom) ? savedZoom : 100, false);
