@@ -3433,6 +3433,7 @@ function setTableStatus(table, nextStatus){
   saveRoomState();
   renderRoomViews();
   renderRoomStats();
+  schedulePublish();
 }
 
 function renderRoomTableEl(table, mode){
@@ -4940,6 +4941,58 @@ function wirePublicBracketSetup(){
   }
 }
 
+function buildPublicCalledMatchFeed(limit = 4){
+  const recent = [];
+  const byMatch = new Map();
+
+  const add = item => {
+    if(!item || (!item.p1 && !item.p2)) return;
+    const key = item.matchId
+      ? `${item.matchLane || ""}|${item.matchId}`
+      : `call|${item.callNumber || ""}|${item.p1 || ""}|${item.p2 || ""}`;
+    byMatch.set(key, item);
+  };
+
+  getRoomStats().forEach(record => add({
+    matchId:record.matchId || "",
+    matchLane:record.matchLane || "",
+    callNumber:record.callNumber || "",
+    tableNumber:record.tableNumber || "",
+    p1:record.p1 || "",
+    p2:record.p2 || "",
+    status:"complete",
+    calledAt:record.assignedAt || "",
+    playingAt:record.playingAt || "",
+    endedAt:record.endedAt || ""
+  }));
+
+  getRoomTables()
+    .filter(table => table && (table.status === "assigned" || table.status === "playing"))
+    .forEach(table => add({
+      matchId:table.matchId || "",
+      matchLane:table.matchLane || "",
+      callNumber:table.callNumber || "",
+      tableNumber:table.number || "",
+      p1:table.p1 || "",
+      p2:table.p2 || "",
+      status:table.status === "playing" ? "playing" : "called",
+      calledAt:table.assignedAt || table.lastStatusAt || "",
+      playingAt:table.playingAt || "",
+      endedAt:""
+    }));
+
+  byMatch.forEach(item => recent.push(item));
+
+  return recent
+    .sort((a, b) => {
+      const aTime = Date.parse(a.calledAt || a.playingAt || a.endedAt || "") || 0;
+      const bTime = Date.parse(b.calledAt || b.playingAt || b.endedAt || "") || 0;
+      if(aTime !== bTime) return bTime - aTime;
+      return Number(b.callNumber || 0) - Number(a.callNumber || 0);
+    })
+    .slice(0, Math.max(1, Number(limit || 4)));
+}
+
 async function cloudSaveBracket(state){
   if(!BRACKETS_CLOUD_ENABLED){
     $('#bracketStatus').textContent = "Bracket cloud save is disabled in this beta.";
@@ -4958,11 +5011,14 @@ async function cloudSaveBracket(state){
     throw new Error("Enter and save the private publishing key in Public Live Setup.");
   }
 
+  const publicState = JSON.parse(JSON.stringify(state));
+  publicState.publicCalledMatches = buildPublicCalledMatchFeed(4);
+
   const body = new URLSearchParams({
     action: "publicBracketSave",
     tournamentId: getTournamentId(),
     publishKey,
-    stateJson: JSON.stringify(state)
+    stateJson: JSON.stringify(publicState)
   });
 
   try{
