@@ -80,6 +80,23 @@
       display:block;
     }
 
+    .logoRefresh{
+      flex:0 0 auto;
+      display:block;
+      margin:0;
+      padding:0;
+      border:0;
+      background:transparent;
+      color:inherit;
+      cursor:pointer;
+    }
+
+    .logoRefresh:focus-visible{
+      outline:3px solid #00eaff;
+      outline-offset:4px;
+      border-radius:10px;
+    }
+
     .shareQr{
       flex:0 0 auto;
       display:flex;
@@ -602,6 +619,91 @@
       padding:2px 0 0;
     }
 
+    .calledFeed{
+      position:fixed;
+      z-index:10000;
+      top:max(8px, env(safe-area-inset-top));
+      left:50%;
+      width:min(920px, calc(100vw - 24px));
+      transform:translateX(-50%);
+      padding:10px;
+      border:1px solid rgba(0,234,255,.48);
+      border-radius:16px;
+      background:rgba(10,12,14,.96);
+      box-shadow:0 18px 60px rgba(0,0,0,.72), 0 0 0 2px rgba(0,234,255,.08);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      cursor:pointer;
+    }
+
+    .calledFeed[hidden]{
+      display:none;
+    }
+
+    .calledFeedHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 2px 8px;
+      color:#00eaff;
+      font-size:12px;
+      font-weight:1000;
+      letter-spacing:.35px;
+      text-transform:uppercase;
+    }
+
+    .calledFeedHint{
+      color:rgba(255,255,255,.58);
+      font-size:9px;
+      letter-spacing:.2px;
+    }
+
+    .calledFeedGrid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:7px;
+    }
+
+    .calledFeedCard{
+      min-width:0;
+      padding:9px;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:11px;
+      background:rgba(255,255,255,.045);
+    }
+
+    .calledFeedCard.playing{ border-color:rgba(255,82,82,.72); }
+    .calledFeedCard.called{ border-color:rgba(255,213,79,.72); }
+    .calledFeedCard.complete{ border-color:rgba(61,220,132,.55); }
+
+    .calledFeedTop,
+    .calledFeedBottom{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      color:rgba(255,255,255,.62);
+      font-size:9px;
+      font-weight:900;
+      text-transform:uppercase;
+    }
+
+    .calledFeedPlayers{
+      overflow:hidden;
+      margin:6px 0;
+      color:#fff;
+      font-size:12px;
+      font-weight:1000;
+      line-height:1.15;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .calledFeedStatus{
+      color:#ffd54f;
+    }
+
     .mobilePlayerTools,
     .mobilePathPanel{
       display:none;
@@ -776,7 +878,7 @@
         gap:8px;
       }
 
-      #appLogo{ order:1; }
+      #btnLogoRefresh{ order:1; }
 
       .brand > div:last-child{
         order:2;
@@ -911,15 +1013,51 @@
       .footer{
         display:none;
       }
+
+      .calledFeed{
+        top:max(5px, env(safe-area-inset-top));
+        width:calc(100vw - 12px);
+        padding:8px;
+        border-radius:13px;
+      }
+
+      .calledFeedHeader{
+        margin-bottom:6px;
+        font-size:10px;
+      }
+
+      .calledFeedGrid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:5px;
+      }
+
+      .calledFeedCard{
+        padding:7px;
+      }
+
+      .calledFeedPlayers{
+        margin:4px 0;
+        font-size:11px;
+      }
     }
   </style>
 </head>
 
 <body>
+  <div class="calledFeed" id="calledFeed" role="button" tabindex="0" aria-label="Recent called matches. Tap to clear." hidden>
+    <div class="calledFeedHeader">
+      <span>Last 4 called matches</span>
+      <span class="calledFeedHint">Tap to clear · Logo restores</span>
+    </div>
+    <div class="calledFeedGrid" id="calledFeedGrid"></div>
+  </div>
+
   <div class="page">
     <div class="topbar">
       <div class="brand">
-        <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        <button class="logoRefresh" id="btnLogoRefresh" type="button" title="Refresh bracket and show called matches" aria-label="Refresh bracket and show called matches">
+          <img id="appLogo" src="logo.png" alt="AHSS Logo" />
+        </button>
         <button class="shareQr" id="shareQr" type="button" title="Scan or tap to share this live bracket">
           <img src="bracket-share-qr.png" width="104" height="104" alt="QR code for the 7-6 weekly live bracket">
           <div class="shareQrLabel">Scan live bracket</div>
@@ -994,6 +1132,7 @@
     let publicBracketUpdatedAt = "";
     let liveRequestSerial = 0;
     let mobileFullChart = false;
+    let calledFeedDismissed = false;
 
     const $ = (sel, root=document) => root.querySelector(sel);
 
@@ -1172,6 +1311,92 @@
       });
 
       return entries;
+    }
+
+    function getCalledFeedItems(state){
+      const allEntries = getAllBracketMatchEntries(state);
+      const findEntry = (lane, id) => allEntries.find(entry => entry.lane === lane && entry.match && entry.match.id === id) || null;
+      const published = state && Array.isArray(state.publicCalledMatches) ? state.publicCalledMatches : [];
+
+      if(published.length){
+        return published.slice(0, 4).map(item => {
+          const entry = findEntry(item.matchLane || "", item.matchId || "");
+          return {
+            lane:item.matchLane || (entry && entry.lane) || "",
+            roundIndex:entry ? entry.roundIndex : -1,
+            match:entry ? entry.match : null,
+            callNumber:item.callNumber || (entry && entry.match && entry.match.callNumber) || "",
+            tableNumber:item.tableNumber || "",
+            p1:item.p1 || (entry && entry.match && entry.match.p1) || "TBD",
+            p2:item.p2 || (entry && entry.match && entry.match.p2) || "TBD",
+            status:item.status || "called",
+            calledAt:item.calledAt || ""
+          };
+        });
+      }
+
+      return allEntries
+        .filter(({ match }) => isActuallyPlayedMatch(match) && Number(match.callNumber || 0) > 0)
+        .sort((a, b) => Number(b.match.callNumber || 0) - Number(a.match.callNumber || 0))
+        .slice(0, 4)
+        .map(entry => ({
+          lane:entry.lane,
+          roundIndex:entry.roundIndex,
+          match:entry.match,
+          callNumber:entry.match.callNumber || "",
+          tableNumber:"",
+          p1:entry.match.p1 || "TBD",
+          p2:entry.match.p2 || "TBD",
+          status:"complete",
+          calledAt:""
+        }));
+    }
+
+    function calledFeedRoundLabel(item){
+      if(item.lane === "GF") return "Grand Final";
+      if(item.lane === "W") return item.roundIndex >= 0 ? `Winners R${item.roundIndex + 1}` : "Winners";
+      if(item.lane === "L") return item.roundIndex >= 0 ? `Losers R${item.roundIndex + 1}` : "Losers";
+      return "Bracket";
+    }
+
+    function renderCalledFeed(state, forceShow=false){
+      const feed = $("#calledFeed");
+      const grid = $("#calledFeedGrid");
+      if(!feed || !grid) return;
+
+      if(forceShow) calledFeedDismissed = false;
+
+      const items = getCalledFeedItems(state);
+      if(calledFeedDismissed || !items.length){
+        feed.hidden = true;
+        grid.innerHTML = "";
+        return;
+      }
+
+      grid.innerHTML = items.map(item => {
+        const match = item.match || {};
+        const status = item.status === "playing" ? "playing" : item.status === "called" ? "called" : "complete";
+        const tableText = item.tableNumber ? `Table ${item.tableNumber}` : calledFeedRoundLabel(item);
+        const scoreText = status === "complete" && (String(match.s1 ?? "").trim() !== "" || String(match.s2 ?? "").trim() !== "")
+          ? `${displayScore(match.s1)}–${displayScore(match.s2)}`
+          : status === "playing" ? "Playing" : status === "called" ? "Called" : "Final";
+
+        return `
+          <div class="calledFeedCard ${esc(status)}">
+            <div class="calledFeedTop"><span>${esc(item.callNumber ? `Match ${item.callNumber}` : calledFeedRoundLabel(item))}</span><span>${esc(tableText)}</span></div>
+            <div class="calledFeedPlayers">${esc(item.p1 || "TBD")} vs. ${esc(item.p2 || "TBD")}</div>
+            <div class="calledFeedBottom"><span>${esc(calledFeedRoundLabel(item))}</span><span class="calledFeedStatus">${esc(scoreText)}</span></div>
+          </div>
+        `;
+      }).join("");
+
+      feed.hidden = false;
+    }
+
+    function dismissCalledFeed(){
+      calledFeedDismissed = true;
+      const feed = $("#calledFeed");
+      if(feed) feed.hidden = true;
     }
 
     function getLivePlayerNames(state){
@@ -1922,6 +2147,7 @@
     function renderEmptyState(message="No published bracket was found."){
       const root = $("#bracketRoot");
       liveBracketState = null;
+      renderCalledFeed(null);
       populateMobilePlayerSelect(null);
       updateMobilePlayerPathView();
 
@@ -1967,6 +2193,7 @@
       liveBracketState = state;
       root.innerHTML = "";
       root.appendChild(buildBracketChart(state));
+      renderCalledFeed(state, !!options.showCalledFeed);
       populateMobilePlayerSelect(state);
       applyPlayerPathHighlight(false);
       scheduleConnectorRedraw();
@@ -2159,6 +2386,25 @@
       if(shareQr){
         shareQr.dataset.shareUrl = getPublicShareUrl();
         shareQr.addEventListener("click", shareLiveBracket);
+      }
+
+      const calledFeed = $("#calledFeed");
+      if(calledFeed){
+        calledFeed.addEventListener("click", dismissCalledFeed);
+        calledFeed.addEventListener("keydown", event => {
+          if(event.key === "Enter" || event.key === " "){
+            event.preventDefault();
+            dismissCalledFeed();
+          }
+        });
+      }
+
+      const logoRefresh = $("#btnLogoRefresh");
+      if(logoRefresh){
+        logoRefresh.addEventListener("click", () => {
+          calledFeedDismissed = false;
+          renderLiveBracket({ focusActive:!selectedPlayer, showCalledFeed:true });
+        });
       }
 
       const autoRefresh = $("#chkAutoRefresh");
