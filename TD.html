@@ -1,6 +1,9 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.12 - Bracket Path Lines
+Tournament Director v4.0.13 - Suggested Referees
+- Suggests the previous winners-side winner or losers-side loser as the next referee on that table
+- Randomizes starting referee suggestions from players outside the opening called matches when possible
+- Keeps referee suggestions editable in the Links referee field
 - Adds optional SVG bracket paths on the editable Brackets view; Live displays them by default
 - Keeps TD match generation, Local AHMS handoff, AYPT signups, bracket builder, results, archive, and table IP tools
 - Passes simplified Room Map handoff into AHMS for match cards
@@ -2223,7 +2226,7 @@ const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
 const BRACKET_PATHS_KEY = "TD_SHOW_BRACKET_PATH_LINES";
 const PUBLIC_BRACKET_KEY_STORAGE = "AHSS_PUBLIC_BRACKET_PUBLISH_KEY";
-const TD_BUILD = "v4.0.12 - Bracket Path Lines";
+const TD_BUILD = "v4.0.13 - Suggested Referees";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2691,7 +2694,8 @@ generatedLocalhostAHMSUrl = `${LOCALHOST_AHMS_FILE}?match=${match}${bracketParam
   matchType: match,
   callNumber: matchNum,
   bracketMatchId,
-  bracketLane
+  bracketLane,
+  referee: refRaw
 });
 }
 
@@ -3181,10 +3185,10 @@ function defaultRoomState(){
   return {
     version: 1,
     tables: [
-      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
-      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
-      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
-      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" }
+      { id:"T1", number:"1", x:80, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", referee:"", startingRefSuggestion:"", startingRefTournamentId:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T2", number:"2", x:260, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", referee:"", startingRefSuggestion:"", startingRefTournamentId:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T3", number:"3", x:440, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", referee:"", startingRefSuggestion:"", startingRefTournamentId:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" },
+      { id:"T4", number:"4", x:620, y:80, rotation:0, status:"open", active:true, p1:"", p2:"", matchId:"", generatedMatchId:"", matchLane:"", referee:"", startingRefSuggestion:"", startingRefTournamentId:"", scoreboardUrl:"", matchSheetUrl:"", localAHMSUrl:"", matchType:"", callNumber:"", assignedAt:"", playingAt:"", lastStatusAt:"" }
       ]
   };
 }
@@ -3210,6 +3214,9 @@ function loadRoomState(){
   matchId:"",
   generatedMatchId:"",
   matchLane:"",
+  referee:"",
+  startingRefSuggestion:"",
+  startingRefTournamentId:"",
   scoreboardUrl:"",
   matchSheetUrl:"",
   localAHMSUrl:"",
@@ -3348,12 +3355,132 @@ function saveRoomStats(arr){
   localStorage.setItem(ROOM_STATS_KEY, JSON.stringify(arr || []));
 }
 
+function isUsableRefereeName(name){
+  const clean = normalizeName(name);
+  const reserved = clean.toUpperCase();
+  return !!clean && reserved !== "BYE" && reserved !== "TBD";
+}
+
+function refereeFromCompletedMatch(lane, matchId){
+  const m = findMatch(lane, matchId);
+  if(!m || !m.winner) return "";
+
+  const which = lane === "L" ? m.loser : m.winner;
+  const name = which === "p1" ? m.p1 : which === "p2" ? m.p2 : "";
+  return isUsableRefereeName(name) ? normalizeName(name) : "";
+}
+
+function previousCompletedRefereeForTable(table){
+  if(!table) return "";
+
+  // The outgoing match may still be on the table when the next one is assigned.
+  const currentMatchRef = refereeFromCompletedMatch(table.matchLane || "", table.matchId || "");
+  if(currentMatchRef) return currentMatchRef;
+
+  const tableNumber = String(table.number || "").trim();
+  const history = getRoomStats();
+
+  for(const record of history){
+    if(String(record.tableNumber || "").trim() !== tableNumber) continue;
+
+    const ref = refereeFromCompletedMatch(record.matchLane || "", record.matchId || "");
+    if(ref) return ref;
+  }
+
+  return "";
+}
+
+function getStartingRefereeSuggestion(table, currentP1 = "", currentP2 = ""){
+  if(!table || !BRACKET_STATE) return "";
+
+  const tournamentId = getTournamentId();
+  if(table.startingRefTournamentId === tournamentId && isUsableRefereeName(table.startingRefSuggestion)){
+    return normalizeName(table.startingRefSuggestion);
+  }
+
+  const allPlayers = [];
+  const seen = new Set();
+  const addPlayer = name => {
+    const clean = normalizeName(name);
+    const key = clean.toLowerCase();
+    if(!isUsableRefereeName(clean) || seen.has(key)) return;
+    seen.add(key);
+    allPlayers.push(clean);
+  };
+
+  (BRACKET_STATE.entrants || []).forEach(addPlayer);
+  if(!allPlayers.length){
+    listAllMatches().forEach(({ m }) => {
+      addPlayer(m && m.p1);
+      addPlayer(m && m.p2);
+    });
+  }
+
+  const called = new Set();
+
+  // Reserve the opening group for play: starting refs should come from matches
+  // beyond the first table wave whenever the field is large enough.
+  const openingTableCount = getRoomTables().filter(t => t.active !== false && t.status !== "offline").length;
+  getMatchesInCallOrder()
+    .filter(({ m }) => m && !m.winner && isCallableMatch(m))
+    .sort((a, b) => Number(a.m.callNumber || 999999) - Number(b.m.callNumber || 999999))
+    .slice(0, openingTableCount)
+    .forEach(({ m }) => {
+      [m.p1, m.p2].forEach(name => {
+        if(isUsableRefereeName(name)) called.add(normalizeName(name).toLowerCase());
+      });
+    });
+
+  getRoomTables().forEach(t => {
+    if(t.status !== "assigned" && t.status !== "playing") return;
+    [t.p1, t.p2].forEach(name => {
+      if(isUsableRefereeName(name)) called.add(normalizeName(name).toLowerCase());
+    });
+  });
+  [currentP1, currentP2].forEach(name => {
+    if(isUsableRefereeName(name)) called.add(normalizeName(name).toLowerCase());
+  });
+
+  const alreadySuggested = new Set(
+    getRoomTables()
+      .filter(t => t !== table && t.startingRefTournamentId === tournamentId)
+      .map(t => normalizeName(t.startingRefSuggestion).toLowerCase())
+      .filter(Boolean)
+  );
+
+  let pool = allPlayers.filter(name => !called.has(name.toLowerCase()) && !alreadySuggested.has(name.toLowerCase()));
+  if(!pool.length) pool = allPlayers.filter(name => !called.has(name.toLowerCase()));
+  if(!pool.length) pool = allPlayers.filter(name => ![currentP1, currentP2].some(p => normalizeName(p).toLowerCase() === name.toLowerCase()));
+  if(!pool.length) pool = allPlayers.slice();
+
+  const suggestion = pool.length ? pool[Math.floor(Math.random() * pool.length)] : "";
+  table.startingRefSuggestion = suggestion;
+  table.startingRefTournamentId = tournamentId;
+  saveRoomState();
+  return suggestion;
+}
+
+function suggestedRefereeForTable(table, currentP1 = "", currentP2 = ""){
+  return previousCompletedRefereeForTable(table) || getStartingRefereeSuggestion(table, currentP1, currentP2);
+}
+
+function populateSuggestedReferee(tableNumber, currentP1 = "", currentP2 = "", force = false){
+  const input = document.getElementById("refName");
+  const table = findRoomTableByNumber(tableNumber);
+  if(!input || !table || (!force && input.value.trim())) return "";
+
+  const suggestion = suggestedRefereeForTable(table, currentP1, currentP2);
+  if(suggestion) input.value = suggestion;
+  return suggestion;
+}
+
 function clearTableAssignmentFields(table){
   table.p1 = "";
   table.p2 = "";
   table.matchId = "";
   table.generatedMatchId = "";
   table.matchLane = "";
+  table.referee = "";
   table.scoreboardUrl = "";
   table.matchSheetUrl = "";
   table.localAHMSUrl = "";
@@ -3645,6 +3772,9 @@ function addRoomTable(){
     matchId: "",
     generatedMatchId:"",
     matchLane: "",
+    referee: "",
+    startingRefSuggestion: "",
+    startingRefTournamentId: "",
     scoreboardUrl: "",
     matchSheetUrl: "",
     localAHMSUrl: "",
@@ -3934,6 +4064,9 @@ function assignPendingMatchToTable(tableId){
     if(!ok) return;
   }
 
+  // Resolve the outgoing match before replacing the table assignment.
+  const suggestedReferee = suggestedRefereeForTable(table, m.p1 || "", m.p2 || "");
+
   table.p1 = m.p1 || "";
   table.p2 = m.p2 || "";
   table.matchId = m.id || "";
@@ -3945,7 +4078,7 @@ function assignPendingMatchToTable(tableId){
   document.getElementById("player1").value = m.p1 || "";
   document.getElementById("player2").value = m.p2 || "";
   document.getElementById("tableNumber").value = table.number || "";
-  document.getElementById("refName").value = "";
+  document.getElementById("refName").value = suggestedReferee;
 
   setCurrentBracketMatchContext(m, pendingAssignMatch.lane || "");
 
@@ -3983,7 +4116,7 @@ function restoreMatchDetailsFromTable(tableId){
   document.getElementById("player1").value = table.p1 || "";
   document.getElementById("player2").value = table.p2 || "";
   document.getElementById("tableNumber").value = table.number || "";
-  document.getElementById("refName").value = "";
+  document.getElementById("refName").value = table.referee || suggestedRefereeForTable(table, table.p1 || "", table.p2 || "");
 
   const matchLength = document.getElementById("matchLength");
   if(matchLength && table.matchType){
@@ -4269,6 +4402,7 @@ function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, generatedMatchId, u
   // The generated weekly match id belongs to the scoreboard/AHMS link, not bracket navigation.
   table.matchId = urls.bracketMatchId || table.matchId || "";
   table.matchLane = urls.bracketLane || table.matchLane || "";
+  table.referee = urls.referee || "";
 
   // Store generated match id separately for display/export later if needed.
   table.generatedMatchId = generatedMatchId || table.generatedMatchId || "";
@@ -8950,6 +9084,17 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   $('#chkSafeMode').addEventListener("change", (e)=> setSafeMode(!!e.target.checked));
   refreshSafeModeUI();
+
+  const tableNumberInput = document.getElementById("tableNumber");
+  if(tableNumberInput){
+    tableNumberInput.addEventListener("change", ()=> {
+      populateSuggestedReferee(
+        tableNumberInput.value,
+        document.getElementById("player1")?.value || "",
+        document.getElementById("player2")?.value || ""
+      );
+    });
+  }
 
   const last = localStorage.getItem("TD_ACTIVE_TAB");
   if(last) setTab(last);
