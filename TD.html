@@ -1729,7 +1729,8 @@ body.bracketFullscreenOpen{
         <option value="4">Best of 7</option>
       </select>
       <button onclick="generateMatchLink()">Generate Match Link</button>
-      <button id="copyLocalAHMSBtn" style="display:none;" class="secondary">Copy Local AHMS Handoff</button>
+      <button id="copyLocalAHMSBtn" style="display:none;" class="secondary">Copy AHMS File</button>
+      <button id="copyLocalhostAHMSBtn" style="display:none;" class="secondary">Copy AHMS Localhost</button>
     </div>
 
     <a id="matchSheetLink" href="#" target="_blank" style="display:none; margin-top: 10px; color: #0f0; text-decoration: underline;">Generate Match Sheet</a>
@@ -2212,6 +2213,7 @@ const AYPT_MATCHLOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbx3f4Yjm
 const AYPT_SIGNUPS_ENDPOINT  = "https://script.google.com/macros/s/AKfycbzoQ7YLUs_S1pi8mQCc7u__44wf7TRZd9k40vKfPBQi4mTBYt5tZPcI9PR5Hx7E0BRU/exec";
 
 const LOCAL_AHMS_FILE = "file:///home/airhockeyprint/Desktop/AHMS.html";
+const LOCALHOST_AHMS_FILE = "http://localhost:8080/AHMS.html";
 
 const BRACKETS_CLOUD_ENABLED = true;
 const BRACKETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyjcgJgD_OSobFfk3Vk4Tp5Pt9zgYJbsvh_vn9PvVDtni-3KKgwKqrMFk7PAtiXkxke/exec";
@@ -2549,6 +2551,7 @@ function openLiveBracket(){
 let generatedUrl = '';
 let generatedMatchSheetUrl = '';
 let generatedLocalAHMSUrl = '';
+let generatedLocalhostAHMSUrl = '';
 let currentBracketCallNumber = '';
 let currentBracketMatchId = '';
 let currentBracketLane = '';
@@ -2597,6 +2600,7 @@ const matchSheetUrl = `${matchSheetBase}?match=${match}${bracketParams}&table=${
 
 generatedMatchSheetUrl = matchSheetUrl;
 generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
+generatedLocalhostAHMSUrl = `${LOCALHOST_AHMS_FILE}?match=${match}${bracketParams}&table=${encodeURIComponent(table)}&ref=${ref}&playerA=${p1}&playerB=${p2}&matchid=${matchId}&scoreboardUrl=${encodeURIComponent(generatedUrl)}${roomMapParam}`;
     
   const matchSheetLink = $('#matchSheetLink');
   matchSheetLink.href = matchSheetUrl;
@@ -2635,7 +2639,13 @@ generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table
   const localAHMSBtn = $('#copyLocalAHMSBtn');
   if (localAHMSBtn) {
     localAHMSBtn.style.display = 'inline-block';
-    localAHMSBtn.innerText = 'Copy Local AHMS Handoff';
+    localAHMSBtn.innerText = 'Copy AHMS File';
+  }
+
+  const localhostAHMSBtn = $('#copyLocalhostAHMSBtn');
+  if (localhostAHMSBtn) {
+    localhostAHMSBtn.style.display = 'inline-block';
+    localhostAHMSBtn.innerText = 'Copy AHMS Localhost';
   }
 
   $('#copyBtn').classList.remove('copied');
@@ -2663,7 +2673,8 @@ generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table
   referee: refRaw || '',
   scoreboardUrl: generatedUrl,
   matchSheetUrl: matchSheetUrl,
-  localAHMSUrl: generatedLocalAHMSUrl
+  localAHMSUrl: generatedLocalAHMSUrl,
+  localhostAHMSUrl: generatedLocalhostAHMSUrl
 };
 
   if(isSafeMode()){
@@ -2676,6 +2687,7 @@ generatedLocalAHMSUrl = `${LOCAL_AHMS_FILE}?match=${match}${bracketParams}&table
   scoreboardUrl: generatedUrl,
   matchSheetUrl: generatedMatchSheetUrl,
   localAHMSUrl: generatedLocalAHMSUrl,
+  localhostAHMSUrl: generatedLocalhostAHMSUrl,
   matchType: match,
   callNumber: matchNum,
   bracketMatchId,
@@ -2703,13 +2715,31 @@ function copyLocalAHMSHandoff() {
 
   navigator.clipboard.writeText(generatedLocalAHMSUrl).then(() => {
     const btn = $('#copyLocalAHMSBtn');
-    if (btn) btn.innerText = "Local AHMS Copied!";
+    if (btn) btn.innerText = "File Link Copied!";
 
     setTimeout(() => {
-      if (btn) btn.innerText = "Copy Local AHMS Handoff";
+      if (btn) btn.innerText = "Copy AHMS File";
     }, 2000);
   }).catch(() => {
-    prompt("Copy this Local AHMS handoff URL:", generatedLocalAHMSUrl);
+    prompt("Copy this AHMS file link:", generatedLocalAHMSUrl);
+  });
+}
+
+function copyLocalhostAHMSHandoff() {
+  if (!generatedLocalhostAHMSUrl) {
+    alert("Generate the match link first.");
+    return;
+  }
+
+  navigator.clipboard.writeText(generatedLocalhostAHMSUrl).then(() => {
+    const btn = $('#copyLocalhostAHMSBtn');
+    if (btn) btn.innerText = "Localhost Copied!";
+
+    setTimeout(() => {
+      if (btn) btn.innerText = "Copy AHMS Localhost";
+    }, 2000);
+  }).catch(() => {
+    prompt("Copy this AHMS localhost link:", generatedLocalhostAHMSUrl);
   });
 }
 
@@ -3183,6 +3213,7 @@ function loadRoomState(){
   scoreboardUrl:"",
   matchSheetUrl:"",
   localAHMSUrl:"",
+  localhostAHMSUrl:"",
   matchType:"",
   callNumber:"",
   assignedAt:"",
@@ -3326,6 +3357,7 @@ function clearTableAssignmentFields(table){
   table.scoreboardUrl = "";
   table.matchSheetUrl = "";
   table.localAHMSUrl = "";
+  table.localhostAHMSUrl = "";
   table.matchType = "";
   table.callNumber = "";
   table.assignedAt = "";
@@ -3616,6 +3648,7 @@ function addRoomTable(){
     scoreboardUrl: "",
     matchSheetUrl: "",
     localAHMSUrl: "",
+    localhostAHMSUrl: "",
     matchType: "",
     callNumber:"",
     assignedAt:"",
@@ -3671,6 +3704,7 @@ function resetLinksPageAfterTournament(){
   generatedUrl = "";
   generatedMatchSheetUrl = "";
   generatedLocalAHMSUrl = "";
+  generatedLocalhostAHMSUrl = "";
 
   const player1 = document.getElementById("player1");
   const player2 = document.getElementById("player2");
@@ -3705,7 +3739,13 @@ function resetLinksPageAfterTournament(){
   const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
   if(localAHMSBtn){
     localAHMSBtn.style.display = "none";
-    localAHMSBtn.innerText = "Copy Local AHMS Handoff";
+    localAHMSBtn.innerText = "Copy AHMS File";
+  }
+
+  const localhostAHMSBtn = document.getElementById("copyLocalhostAHMSBtn");
+  if(localhostAHMSBtn){
+    localhostAHMSBtn.style.display = "none";
+    localhostAHMSBtn.innerText = "Copy AHMS Localhost";
   }
 
   const copyBtn = document.getElementById("copyBtn");
@@ -3953,6 +3993,9 @@ function restoreMatchDetailsFromTable(tableId){
   generatedUrl = table.scoreboardUrl || "";
   generatedMatchSheetUrl = table.matchSheetUrl || "";
   generatedLocalAHMSUrl = table.localAHMSUrl || "";
+  generatedLocalhostAHMSUrl = table.localhostAHMSUrl || (generatedLocalAHMSUrl
+    ? generatedLocalAHMSUrl.replace(LOCAL_AHMS_FILE, LOCALHOST_AHMS_FILE)
+    : "");
   currentBracketCallNumber = table.callNumber ? String(table.callNumber) : "";
   currentBracketMatchId = table.matchId ? String(table.matchId) : "";
   currentBracketLane = table.matchLane ? String(table.matchLane) : "";
@@ -3978,7 +4021,13 @@ function restoreMatchDetailsFromTable(tableId){
   const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
   if(localAHMSBtn && generatedLocalAHMSUrl){
     localAHMSBtn.style.display = "inline-block";
-    localAHMSBtn.innerText = "Copy Local AHMS Handoff";
+    localAHMSBtn.innerText = "Copy AHMS File";
+  }
+
+  const localhostAHMSBtn = document.getElementById("copyLocalhostAHMSBtn");
+  if(localhostAHMSBtn && generatedLocalhostAHMSUrl){
+    localhostAHMSBtn.style.display = "inline-block";
+    localhostAHMSBtn.innerText = "Copy AHMS Localhost";
   }
 
   const copyBtn = document.getElementById("copyBtn");
@@ -4227,6 +4276,7 @@ function syncRoomTableFromGeneratedLink(tableNumber, p1, p2, generatedMatchId, u
   table.scoreboardUrl = urls.scoreboardUrl || table.scoreboardUrl || "";
   table.matchSheetUrl = urls.matchSheetUrl || table.matchSheetUrl || "";
   table.localAHMSUrl = urls.localAHMSUrl || table.localAHMSUrl || "";
+  table.localhostAHMSUrl = urls.localhostAHMSUrl || table.localhostAHMSUrl || "";
   table.matchType = urls.matchType || table.matchType || "";
   table.callNumber = urls.callNumber || table.callNumber || "";
 
@@ -4737,6 +4787,7 @@ function bracketStateToCloudRows(){
       matchSheetUrl: table ? table.matchSheetUrl || "" : "",
       scoreboardUrl: table ? table.scoreboardUrl || "" : "",
       localAHMSUrl: table ? table.localAHMSUrl || "" : "",
+      localhostAHMSUrl: table ? table.localhostAHMSUrl || "" : "",
       assignedAt: table ? table.assignedAt || "" : "",
       playingAt: table ? table.playingAt || "" : "",
       completedAt: m.winner ? now : "",
@@ -9010,6 +9061,9 @@ $('#btnExportResultsJSON').addEventListener("click", exportResultsJSON);
 
   const localAHMSBtn = document.getElementById("copyLocalAHMSBtn");
   if (localAHMSBtn) localAHMSBtn.addEventListener("click", copyLocalAHMSHandoff);
+
+  const localhostAHMSBtn = document.getElementById("copyLocalhostAHMSBtn");
+  if (localhostAHMSBtn) localhostAHMSBtn.addEventListener("click", copyLocalhostAHMSHandoff);
 
   const localAHMSDisplayBtn = document.getElementById("copyLocalAHMSDisplayBtn");
   if (localAHMSDisplayBtn) localAHMSDisplayBtn.addEventListener("click", copyLocalAHMSInfo);
