@@ -1,6 +1,11 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.13 - Suggested Referees
+Tournament Director v4.0.14 - Recoverable Workspace Reset
+- Reset Bracket now creates a recoverable full tournament workspace backup before clearing data
+- Resets Links, Room Control assignments/statuses, Room Timing Stats, local Logs, and queued log updates
+- Preserves room layout/positions/rotation/labels, room name, table IPs, custom logo, publishing key, zoom, and general settings
+- Adds local reset-backup restore, individual export, full export, and delete controls
+- Keeps TD Safe Mode unchecked by default and after reset/restore
 - Suggests the previous winners-side winner or losers-side loser as the next referee on that table
 - Randomizes starting referee suggestions from players outside the opening called matches when possible
 - Keeps referee suggestions editable in the Links referee field
@@ -2001,6 +2006,18 @@ body.bracketFullscreenOpen{
         <div class="muted bracketStatusLine" id="bracketStatus">-</div>
       </div>
 
+      <details class="bracketActionPanel" id="resetBackupsPanel">
+        <summary class="clicky">Reset Backups</summary>
+        <div class="mini" style="margin:10px 0 8px;">
+          Reset Bracket saves the complete tournament workspace here before clearing it. Backups stay on this device/browser.
+        </div>
+        <div class="row-left" style="margin-bottom:10px;">
+          <button class="btnTiny" id="btnExportAllResetBackups" type="button">Export All Reset Backups</button>
+          <span class="muted" id="resetBackupsStatus">-</span>
+        </div>
+        <div id="resetBackupsList"></div>
+      </details>
+
       <details class="bracketActionPanel">
         <summary class="clicky">Public Live Setup</summary>
         <div class="mini" style="margin:10px 0 6px;">
@@ -2226,7 +2243,9 @@ const LS_SAFE_MODE = "TD_SAFE_MODE";
 const ARCHIVE_KEY = "TD_BRACKET_ARCHIVE_V1";
 const BRACKET_PATHS_KEY = "TD_SHOW_BRACKET_PATH_LINES";
 const PUBLIC_BRACKET_KEY_STORAGE = "AHSS_PUBLIC_BRACKET_PUBLISH_KEY";
-const TD_BUILD = "v4.0.13 - Suggested Referees";
+const RESET_BACKUPS_KEY = "TD_RESET_WORKSPACE_BACKUPS_V1";
+const RESET_BACKUP_LIMIT = 8;
+const TD_BUILD = "v4.0.14 - Recoverable Workspace Reset";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -6649,19 +6668,364 @@ function importArchiveFile(file){
 /* =========================================================
   RESET / RENDER
 ========================================================= */
-function resetBracket(){
-  if(!confirm("Reset bracket state?")) return;
+function resetBackupStorageKeys(){
+  return [
+    STATE_KEY,
+    "matchLog",
+    QUEUE_KEY,
+    ROOM_KEY,
+    ROOM_STATS_KEY,
+    "TD_TOURNAMENT_ID",
+    LS_SAFE_MODE,
+    ARCHIVE_KEY,
+    BRACKET_PATHS_KEY,
+    PUBLIC_BRACKET_KEY_STORAGE,
+    ROOM_NAME_KEY,
+    "TD_ROOM_ZOOM",
+    "TD_BRACKET_ZOOM",
+    "TD_FULL_ZOOM",
+    "TD_BRACKET_SIZE",
+    "TD_ACTIVE_TAB",
+    "customLogo",
+    LS_KEY_IPS
+  ];
+}
 
+function captureStorageSnapshot(){
+  const out = {};
+  resetBackupStorageKeys().forEach(key => {
+    out[key] = localStorage.getItem(key);
+  });
+  return out;
+}
+
+function captureWorkspaceUi(){
+  const value = id => document.getElementById(id)?.value || "";
+  const checked = id => !!document.getElementById(id)?.checked;
+  const display = id => document.getElementById(id)?.style.display || "";
+  const html = id => document.getElementById(id)?.innerHTML || "";
+
+  return {
+    links: {
+      player1: value("player1"),
+      player2: value("player2"),
+      tableNumber: value("tableNumber"),
+      refName: value("refName"),
+      matchLength: value("matchLength"),
+      generatedUrl: generatedUrl || "",
+      generatedMatchSheetUrl: generatedMatchSheetUrl || "",
+      generatedLocalAHMSUrl: generatedLocalAHMSUrl || "",
+      generatedLocalhostAHMSUrl: generatedLocalhostAHMSUrl || "",
+      resultHtml: html("result"),
+      resultDisplay: display("result"),
+      localDisplayHtml: html("localAHMSDisplay"),
+      localDisplayDisplay: display("localAHMSDisplay"),
+      matchSheetDisplay: display("matchSheetLink"),
+      copyDisplay: display("copyBtn"),
+      localCopyDisplay: display("copyLocalAHMSDisplayBtn"),
+      fileCopyDisplay: display("copyLocalAHMSBtn"),
+      localhostCopyDisplay: display("copyLocalhostAHMSBtn")
+    },
+    bracketSetup: {
+      entrants: value("entrantsBox"),
+      doubleElim: checked("chkDoubleElim"),
+      shuffle: checked("chkShuffle"),
+      bracketSize: value("bracketSizeSelect")
+    },
+    currentMatch: {
+      callNumber: currentBracketCallNumber || "",
+      matchId: currentBracketMatchId || "",
+      lane: currentBracketLane || ""
+    }
+  };
+}
+
+function loadResetBackups(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(RESET_BACKUPS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  }catch{
+    return [];
+  }
+}
+
+function saveResetBackups(backups){
+  let trimmed = (Array.isArray(backups) ? backups : []).slice(0, RESET_BACKUP_LIMIT);
+  let lastError = null;
+
+  if(!trimmed.length){
+    localStorage.setItem(RESET_BACKUPS_KEY, "[]");
+    return [];
+  }
+
+  while(trimmed.length){
+    try{
+      localStorage.setItem(RESET_BACKUPS_KEY, JSON.stringify(trimmed));
+      return trimmed;
+    }catch(error){
+      lastError = error;
+      trimmed = trimmed.slice(0, -1);
+    }
+  }
+
+  throw lastError || new Error("Local backup storage is unavailable.");
+}
+
+function createWorkspaceBackup(reason = "Reset Bracket"){
+  const now = new Date();
+  const tournamentId = getTournamentId();
+  const backup = {
+    schemaVersion: 1,
+    appBuild: TD_BUILD,
+    id: `reset_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    createdAt: now.toISOString(),
+    reason,
+    title: tournamentId || `Tournament ${now.toLocaleDateString()}`,
+    tournamentId,
+    storage: captureStorageSnapshot(),
+    ui: captureWorkspaceUi()
+  };
+
+  const saved = saveResetBackups([backup, ...loadResetBackups()]);
+  const stored = saved.find(item => item.id === backup.id);
+  if(!stored) throw new Error("The workspace is too large for local backup storage.");
+
+  renderResetBackups();
+  return backup;
+}
+
+function downloadJson(data, filename){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function resetBackupFilename(backup){
+  const stamp = String(backup.createdAt || new Date().toISOString()).replace(/[:.]/g,"-");
+  const name = String(backup.tournamentId || "tournament").replace(/[^a-z0-9_-]/gi,"_");
+  return `TD_Reset_Backup_${name}_${stamp}.json`;
+}
+
+function exportResetBackup(id){
+  const backup = loadResetBackups().find(item => item.id === id);
+  if(!backup) return alert("Reset backup not found.");
+  downloadJson(backup, resetBackupFilename(backup));
+}
+
+function exportAllResetBackups(){
+  const backups = loadResetBackups();
+  if(!backups.length) return alert("No reset backups to export.");
+  downloadJson(backups, `TD_Reset_Backups_${new Date().toISOString().slice(0,10)}.json`);
+}
+
+function deleteResetBackup(id){
+  saveResetBackups(loadResetBackups().filter(item => item.id !== id));
+  renderResetBackups();
+}
+
+function applyWorkspaceUi(ui){
+  const links = ui?.links || {};
+  const setup = ui?.bracketSetup || {};
+  const match = ui?.currentMatch || {};
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if(el) el.value = value ?? "";
+  };
+  const setDisplay = (id, value) => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = value || "none";
+  };
+
+  setValue("player1", links.player1);
+  setValue("player2", links.player2);
+  setValue("tableNumber", links.tableNumber);
+  setValue("refName", links.refName);
+  setValue("matchLength", links.matchLength || "4");
+  setValue("entrantsBox", setup.entrants);
+  setValue("bracketSizeSelect", setup.bracketSize || localStorage.getItem("TD_BRACKET_SIZE") || "auto");
+
+  const doubleElim = document.getElementById("chkDoubleElim");
+  if(doubleElim) doubleElim.checked = setup.doubleElim !== false;
+  const shuffle = document.getElementById("chkShuffle");
+  if(shuffle) shuffle.checked = !!setup.shuffle;
+
+  generatedUrl = links.generatedUrl || "";
+  generatedMatchSheetUrl = links.generatedMatchSheetUrl || "";
+  generatedLocalAHMSUrl = links.generatedLocalAHMSUrl || "";
+  generatedLocalhostAHMSUrl = links.generatedLocalhostAHMSUrl || "";
+  currentBracketCallNumber = match.callNumber || "";
+  currentBracketMatchId = match.matchId || "";
+  currentBracketLane = match.lane || "";
+
+  const result = document.getElementById("result");
+  if(result){
+    result.innerHTML = links.resultHtml || "";
+    result.style.display = links.resultDisplay || "";
+  }
+
+  const localDisplay = document.getElementById("localAHMSDisplay");
+  if(localDisplay) localDisplay.innerHTML = links.localDisplayHtml || "";
+  setDisplay("localAHMSDisplay", links.localDisplayDisplay);
+  setDisplay("matchSheetLink", links.matchSheetDisplay);
+  setDisplay("copyBtn", links.copyDisplay);
+  setDisplay("copyLocalAHMSDisplayBtn", links.localCopyDisplay);
+  setDisplay("copyLocalAHMSBtn", links.fileCopyDisplay);
+  setDisplay("copyLocalhostAHMSBtn", links.localhostCopyDisplay);
+
+  const matchSheetLink = document.getElementById("matchSheetLink");
+  if(matchSheetLink) matchSheetLink.href = generatedMatchSheetUrl || "#";
+
+  const qr = document.getElementById("qrcode");
+  if(qr && generatedUrl && window.QRCode?.toCanvas){
+    QRCode.toCanvas(qr, generatedUrl, { width:220 }, () => {});
+  }
+}
+
+function restoreResetBackup(id){
+  const backup = loadResetBackups().find(item => item.id === id);
+  if(!backup) return alert("Reset backup not found.");
+  if(!confirm(`Restore the workspace backup from ${fmtLocal(backup.createdAt)}? The current workspace will be backed up first.`)) return;
+
+  try{
+    createWorkspaceBackup("Before backup restore");
+
+    const snapshot = backup.storage || {};
+    resetBackupStorageKeys().forEach(key => {
+      if(key === ARCHIVE_KEY) return;
+      const value = snapshot[key];
+      if(value === null || typeof value === "undefined") localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    });
+
+    setSafeMode(false);
+    ROOM_STATE = loadRoomState();
+    BRACKET_STATE = loadBracketState();
+    if(BRACKET_STATE){
+      propagateWinners();
+      assignCallNumbersToReadyMatches();
+      saveBracketState();
+    }
+
+    setTournamentId(localStorage.getItem("TD_TOURNAMENT_ID") || backup.tournamentId || defaultTournamentId());
+    applyWorkspaceUi(backup.ui || {});
+
+    const savedLogo = localStorage.getItem("customLogo");
+    const logo = document.getElementById("logo");
+    if(logo) logo.src = savedLogo || "TDlogo.png";
+
+    const roomNameInput = document.getElementById("roomNameInput");
+    if(roomNameInput) roomNameInput.value = localStorage.getItem(ROOM_NAME_KEY) || "";
+
+    const publicKeyInput = document.getElementById("publicBracketPublishKey");
+    if(publicKeyInput) publicKeyInput.value = localStorage.getItem(PUBLIC_BRACKET_KEY_STORAGE) || "";
+
+    renderIpEditor();
+    setRoomZoomPercent(parseInt(localStorage.getItem("TD_ROOM_ZOOM") || "100", 10) || 100, false);
+    setBracketZoomPercent(parseInt(localStorage.getItem("TD_BRACKET_ZOOM") || "100", 10) || 100, false);
+    setFullZoomPercent(parseInt(localStorage.getItem("TD_FULL_ZOOM") || "100", 10) || 100);
+    setBracketPathLinesEnabled(bracketPathLinesEnabled());
+    renderMatchLog();
+    renderRoomViews();
+    renderRoomStats();
+    renderBracket();
+    renderFullBracket();
+    buildMatchPicker();
+    renderResults();
+    renderLope();
+    refreshLateEntrantUI();
+    renderResetBackups();
+
+    $('#bracketStatus').textContent = `Restored workspace backup from ${fmtLocal(backup.createdAt)}. Safe Mode remains off.`;
+  }catch(error){
+    alert("Workspace restore failed: " + (error.message || error));
+  }
+}
+
+function renderResetBackups(){
+  const list = document.getElementById("resetBackupsList");
+  const status = document.getElementById("resetBackupsStatus");
+  if(!list || !status) return;
+
+  const backups = loadResetBackups().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  status.textContent = `${backups.length} reset backup${backups.length === 1 ? "" : "s"} stored locally`;
+  list.innerHTML = "";
+
+  if(!backups.length){
+    list.innerHTML = '<div class="muted">No reset backups yet.</div>';
+    return;
+  }
+
+  backups.forEach(backup => {
+    const item = document.createElement("div");
+    item.className = "archiveItem";
+    const entrants = (() => {
+      try{
+        const state = JSON.parse(backup.storage?.[STATE_KEY] || "null");
+        return state?.entrants?.length || 0;
+      }catch{ return 0; }
+    })();
+
+    item.innerHTML = `
+      <div class="row-left" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:900;">${esc(backup.title || backup.tournamentId || "Tournament workspace")}</div>
+          <div class="mini">Saved: ${esc(fmtLocal(backup.createdAt))}</div>
+          <div class="mini">Reason: ${esc(backup.reason || "Reset Bracket")} · Entrants: ${esc(entrants)}</div>
+        </div>
+        <div class="row-left">
+          <button class="btnTiny primary" type="button" data-reset-restore="${esc(backup.id)}">Restore</button>
+          <button class="btnTiny" type="button" data-reset-export="${esc(backup.id)}">Export JSON</button>
+          <button class="btnTiny danger" type="button" data-reset-delete="${esc(backup.id)}">Delete</button>
+        </div>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function resetBracket(){
+  if(!confirm("Back up and reset this tournament workspace? Bracket state, Links, Room Control statuses, Room Timing Stats, and local Logs will be cleared. Room layout and general settings will stay.")) return;
+
+  let backup;
+  try{
+    backup = createWorkspaceBackup("Reset Bracket");
+  }catch(error){
+    alert("Reset cancelled because the workspace backup could not be saved: " + (error.message || error));
+    return;
+  }
+
+  resetLinksPageAfterTournament();
+  getRoomTables().forEach(table => {
+    table.startingRefSuggestion = "";
+    table.startingRefTournamentId = "";
+  });
+  saveRoomState();
   localStorage.removeItem(STATE_KEY);
+  localStorage.removeItem("matchLog");
+  localStorage.removeItem(QUEUE_KEY);
+  localStorage.removeItem(ROOM_STATS_KEY);
+  setSafeMode(false);
+
   BRACKET_STATE = null;
+  pendingAssignMatch = null;
+  const entrants = document.getElementById("entrantsBox");
+  if(entrants) entrants.value = "";
 
   $('#bracketRoot').textContent = "No bracket loaded yet.";
   $('#fullRoot').textContent = "No bracket loaded yet.";
-  $('#bracketStatus').textContent = "Bracket reset.";
+  $('#bracketStatus').textContent = `Workspace backed up at ${fmtLocal(backup.createdAt)} and reset. Safe Mode remains off.`;
   $('#resultsTable tbody').innerHTML = "";
   $('#resultsStatus').textContent = "-";
   refreshLateEntrantUI();
-  
+  renderMatchLog();
+  renderRoomViews();
+  renderRoomStats();
+  renderResetBackups();
   renderLope();
 }
 
@@ -9079,7 +9443,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     el.textContent = `Tournament Director ${TD_BUILD}`;
   });
   if(localStorage.getItem(LS_SAFE_MODE) === null){
-    localStorage.setItem(LS_SAFE_MODE, "1");
+    localStorage.setItem(LS_SAFE_MODE, "0");
   }
 
   $('#chkSafeMode').addEventListener("change", (e)=> setSafeMode(!!e.target.checked));
@@ -9122,6 +9486,18 @@ document.addEventListener("DOMContentLoaded", async ()=>{
 
   $('#btnNewBracket').addEventListener("click", newBracketFromEntrants);
   $('#btnResetBracket').addEventListener("click", resetBracket);
+  $('#btnExportAllResetBackups').addEventListener("click", exportAllResetBackups);
+  $('#resetBackupsList').addEventListener("click", (e)=>{
+    const restoreId = e.target.getAttribute("data-reset-restore");
+    const exportId = e.target.getAttribute("data-reset-export");
+    const deleteId = e.target.getAttribute("data-reset-delete");
+
+    if(restoreId) return restoreResetBackup(restoreId);
+    if(exportId) return exportResetBackup(exportId);
+    if(deleteId && confirm("Delete this reset backup? This cannot be undone unless it was exported.")){
+      deleteResetBackup(deleteId);
+    }
+  });
   $('#btnAdvanceSelected').addEventListener("click", advanceWinner);
   $('#btnExportBracketJSON').addEventListener("click", exportBracketJSON);
   $('#btnImportBracketJSON').addEventListener("click", ()=>$('#importBracketFile').click());
@@ -9297,6 +9673,7 @@ renderRoomStats();
   wireBracketViewTools();
   wireBracketConnectorRedraw();
   renderArchive();
+  renderResetBackups();
   wireLope();
   renderLope();
 
