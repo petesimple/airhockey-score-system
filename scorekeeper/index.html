@@ -1,1 +1,376 @@
-score keeper page
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Beginner-friendly setup guide for the Pi Scorekeeper Hub and referee-device firmware.">
+  <meta name="color-scheme" content="dark">
+  <title>Pi Scorekeeper Hub — Setup Guide</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-2: #0b0f14;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9da7b3;
+      --accent: #58a6ff;
+      --accent-2: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --shadow: 0 10px 32px rgba(0, 0, 0, .28);
+      --radius: 14px;
+      --max: 980px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); }
+    a:hover { text-decoration-thickness: 2px; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+    .hero {
+      border-bottom: 1px solid var(--border);
+      background:
+        radial-gradient(circle at 85% 10%, rgba(88, 166, 255, .17), transparent 34rem),
+        linear-gradient(180deg, #111820 0%, var(--bg) 100%);
+    }
+    .wrap { width: min(calc(100% - 32px), var(--max)); margin-inline: auto; }
+    .hero .wrap { padding-block: 64px 52px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      color: #a5d6ff;
+      font-size: .82rem;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 15px var(--accent-2); }
+    h1 { max-width: 780px; margin: 0; font-size: clamp(2.1rem, 7vw, 4.6rem); line-height: 1.02; letter-spacing: -.045em; }
+    .lede { max-width: 720px; margin: 22px 0 0; color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.22rem); }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .badge { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: rgba(22, 27, 34, .7); color: var(--muted); font-size: .82rem; }
+
+    main { padding-block: 30px 72px; }
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; }
+    nav { position: sticky; top: 18px; padding: 15px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+    nav strong { display: block; margin: 0 8px 8px; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    nav a { display: block; padding: 7px 8px; border-radius: 7px; color: var(--text); text-decoration: none; font-size: .92rem; }
+    nav a:hover { background: rgba(88, 166, 255, .1); color: #a5d6ff; }
+
+    article { min-width: 0; }
+    section { scroll-margin-top: 18px; padding: 26px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+    h2 { margin: 0 0 14px; font-size: clamp(1.35rem, 4vw, 1.8rem); line-height: 1.25; }
+    h3 { margin: 25px 0 8px; font-size: 1.08rem; }
+    p { margin: 9px 0; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: 7px; }
+    .step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; margin: 22px 0; }
+    .step-number { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #07121f; font-weight: 850; }
+    .step h3 { margin: 2px 0 7px; }
+    .step > div > :last-child { margin-bottom: 0; }
+    .note { margin: 18px 0; padding: 13px 15px; border-left: 4px solid var(--accent); border-radius: 7px; background: rgba(88, 166, 255, .08); }
+    .note.warning { border-color: var(--warning); background: rgba(210, 153, 34, .08); }
+    .note strong { color: #fff; }
+    .muted { color: var(--muted); }
+
+    .code-wrap { position: relative; margin: 12px 0; }
+    pre { overflow-x: auto; margin: 0; padding: 16px 62px 16px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); color: #d2e4f7; font-size: .89rem; line-height: 1.55; tab-size: 2; }
+    .copy { position: absolute; top: 8px; right: 8px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; background: #21262d; color: var(--text); cursor: pointer; font: inherit; font-size: .78rem; }
+    .copy:hover { border-color: #6e7681; background: #30363d; }
+    :not(pre) > code { padding: .12em .38em; border: 1px solid var(--border); border-radius: 5px; background: var(--panel-2); color: #d2e4f7; font-size: .9em; }
+    .checklist { list-style: none; padding: 0; }
+    .checklist li { position: relative; padding-left: 28px; }
+    .checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-2); font-weight: 800; }
+    footer { color: var(--muted); text-align: center; font-size: .88rem; padding: 0 16px 42px; }
+
+    @media (max-width: 760px) {
+      .hero .wrap { padding-block: 42px 36px; }
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; display: flex; gap: 5px; overflow-x: auto; padding: 9px; white-space: nowrap; }
+      nav strong { display: none; }
+      nav a { flex: 0 0 auto; }
+      section { padding: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Air Hockey Score System</p>
+      <h1>Pi Scorekeeper Hub setup</h1>
+      <p class="lede">A practical guide for installing Pi Scorekeeper Hub v1.6 on a Raspberry Pi and flashing the scorekeeper firmware to the referee device.</p>
+      <div class="badges" aria-label="Guide highlights">
+        <span class="badge">Beginner friendly</span>
+        <span class="badge">Raspberry Pi</span>
+        <span class="badge">Arduino IDE</span>
+        <span class="badge">No cloud required</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="layout">
+      <nav aria-label="On this page">
+        <strong>On this page</strong>
+        <a href="#requirements">Requirements</a>
+        <a href="#pi-install">Pi install</a>
+        <a href="#service">Service checks</a>
+        <a href="#network">Find the Hub</a>
+        <a href="#update">Update / reinstall</a>
+        <a href="#firmware">Flash firmware</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#safety">Safety / backup</a>
+      </nav>
+
+      <article>
+        <section id="requirements">
+          <h2>1. What you need</h2>
+          <ul class="checklist">
+            <li>A Raspberry Pi with a microSD card and power supply</li>
+            <li>Raspberry Pi OS installed, with network access</li>
+            <li>A keyboard and screen, or SSH access to the Pi</li>
+            <li>The <strong>Pi Scorekeeper Hub v1.6</strong> ZIP from this repository's <code>scorekeeper</code> folder</li>
+            <li>A computer with Arduino IDE for flashing the referee device</li>
+            <li>A USB data cable that fits the referee device</li>
+          </ul>
+          <div class="note"><strong>Before you begin:</strong> connect the Pi and the phone/computer that will open the scorekeeper page to the same local network.</div>
+        </section>
+
+        <section id="pi-install">
+          <h2>2. Install the Pi Scorekeeper Hub</h2>
+
+          <div class="step">
+            <span class="step-number">1</span>
+            <div>
+              <h3>Update Raspberry Pi OS</h3>
+              <p>Open a terminal on the Pi and run:</p>
+              <div class="code-wrap"><pre><code>sudo apt update
+sudo apt full-upgrade -y
+sudo reboot</code></pre><button class="copy" type="button">Copy</button></div>
+              <p class="muted">After the reboot, reconnect to the Pi and open the terminal again.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <span class="step-number">2</span>
+            <div>
+              <h3>Copy the v1.6 ZIP to the Pi</h3>
+              <p>Download the ZIP from the repository's <code>scorekeeper</code> folder, then place it in the Pi user's <code>Downloads</code> folder. You can use a browser, USB drive, file sharing, or <code>scp</code>.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <span class="step-number">3</span>
+            <div>
+              <h3>Extract the app</h3>
+              <p>First list the files so you can confirm the ZIP's exact name:</p>
+              <div class="code-wrap"><pre><code>cd ~/Downloads
+ls</code></pre><button class="copy" type="button">Copy</button></div>
+              <p>Then extract it. Replace the quoted filename below if the downloaded file has a slightly different name.</p>
+              <div class="code-wrap"><pre><code>mkdir -p ~/scorekeeper-hub
+unzip "Pi Scorekeeper Hub v1.6.zip" -d ~/scorekeeper-hub
+cd ~/scorekeeper-hub
+ls</code></pre><button class="copy" type="button">Copy</button></div>
+              <div class="note warning"><strong>If <code>unzip</code> is missing:</strong> install it with <code>sudo apt install unzip -y</code>, then repeat the extraction command.</div>
+            </div>
+          </div>
+
+          <div class="step">
+            <span class="step-number">4</span>
+            <div>
+              <h3>Follow the package installer</h3>
+              <p>Open the README included in the extracted package and use its install command. Package contents can change, so its instructions are the authority for required software and paths.</p>
+              <div class="code-wrap"><pre><code>find ~/scorekeeper-hub -maxdepth 2 -iname "README*" -print</code></pre><button class="copy" type="button">Copy</button></div>
+              <p>If the package contains an <code>install.sh</code> file and its README tells you to use it, change into that file's folder and run:</p>
+              <div class="code-wrap"><pre><code>chmod +x install.sh
+sudo ./install.sh</code></pre><button class="copy" type="button">Copy</button></div>
+              <p>Do not guess at missing packages. If the installer reports an error, copy the complete message before making changes.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="service">
+          <h2>3. Check the background service</h2>
+          <p>The Pi app normally runs as a system service named <code>scorekeeper-hub</code>. Check it with:</p>
+          <div class="code-wrap"><pre><code>sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>Look for <strong>active (running)</strong>. Press <code>q</code> to leave the status screen.</p>
+
+          <h3>Start it now and at every boot</h3>
+          <div class="code-wrap"><pre><code>sudo systemctl enable --now scorekeeper-hub</code></pre><button class="copy" type="button">Copy</button></div>
+
+          <h3>Restart after a change</h3>
+          <div class="code-wrap"><pre><code>sudo systemctl restart scorekeeper-hub
+sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="button">Copy</button></div>
+
+          <h3>Read recent logs</h3>
+          <div class="code-wrap"><pre><code>sudo journalctl -u scorekeeper-hub -n 100 --no-pager</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="note warning"><strong>“Unit not found”?</strong> The app's installer has not created the service yet, or the package uses a different service name. Return to the package README instead of creating a guessed service file.</div>
+        </section>
+
+        <section id="network">
+          <h2>4. Find and open the Hub</h2>
+          <p>If mDNS is configured, try this address from another device on the same network:</p>
+          <div class="code-wrap"><pre><code>http://scorekeeper.local:8081</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>If that does not open, find the Pi's IP address:</p>
+          <div class="code-wrap"><pre><code>hostname -I</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>Use the first normal local address shown, for example:</p>
+          <div class="code-wrap"><pre><code>http://192.168.1.42:8081</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>You can also check the Pi's hostname:</p>
+          <div class="code-wrap"><pre><code>hostname</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="note"><strong>Tip:</strong> bookmark the working address. A router may assign a different IP later; <code>scorekeeper.local</code> avoids that when mDNS works on both devices.</div>
+        </section>
+
+        <section id="update">
+          <h2>5. Update or reinstall</h2>
+          <p>Keep the previous working folder until the new version has been tested. This gives you a simple rollback.</p>
+          <ol>
+            <li>Download the replacement ZIP from the repository.</li>
+            <li>Stop the running service.</li>
+            <li>Back up the current app folder and any configuration or score data.</li>
+            <li>Extract the replacement package into a clean folder.</li>
+            <li>Follow the new package README or installer, then restart and test.</li>
+          </ol>
+          <div class="code-wrap"><pre><code>sudo systemctl stop scorekeeper-hub
+cp -a ~/scorekeeper-hub ~/scorekeeper-hub-backup
+
+# Extract the new ZIP by following the install steps above.
+# Then follow its README before starting the service again.
+
+sudo systemctl start scorekeeper-hub
+sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="button">Copy</button></div>
+          <div class="note warning"><strong>Reinstalling?</strong> Do not delete the old folder or overwrite configuration until you know where the package stores settings and data. Back those items up first.</div>
+        </section>
+
+        <section id="firmware">
+          <h2>6. Flash the referee-device firmware</h2>
+          <p>The exact board and serial-port names depend on the referee hardware and your computer. Use the markings on the board and the project's firmware notes—do not choose a board at random.</p>
+
+          <div class="step">
+            <span class="step-number">1</span>
+            <div>
+              <h3>Install Arduino IDE</h3>
+              <p>Download and install the current Arduino IDE from the official Arduino website for your operating system.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span>
+            <div>
+              <h3>Open the firmware sketch</h3>
+              <p>In the repository's scorekeeper firmware folder, locate the <code>.ino</code> file. Open it in Arduino IDE. If the sketch uses a folder of the same name, keep all companion files together.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span>
+            <div>
+              <h3>Connect and identify the board</h3>
+              <p>Disconnect external power from the referee device, then connect it to the computer with a USB <em>data</em> cable. Read the board model printed on the hardware or check the project documentation.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">4</span>
+            <div>
+              <h3>Select the board and port</h3>
+              <p>In Arduino IDE, choose <strong>Tools → Board</strong> and select the model that matches the device. If its board package is not installed, Arduino IDE will offer it through Boards Manager.</p>
+              <p>Next choose <strong>Tools → Port</strong>. A reliable way to identify it is to note the port list, unplug the device, then reconnect it—the newly appearing port is usually the correct one.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">5</span>
+            <div>
+              <h3>Verify and upload</h3>
+              <p>Select <strong>Verify</strong> first. If Arduino IDE reports a missing library, install only the library named by the compiler and confirmed by the project documentation. When verification succeeds, select <strong>Upload</strong> and wait for completion before unplugging the device.</p>
+              <p>Some boards require a reset/boot button sequence. Use the instructions for the exact board model if Arduino IDE cannot begin the upload.</p>
+            </div>
+          </div>
+          <div class="note warning"><strong>Important:</strong> flashing replaces the firmware already on the referee device. Save a known-good firmware copy before changing it.</div>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>7. Troubleshooting</h2>
+          <h3>The web page does not open</h3>
+          <ul>
+            <li>Confirm the Pi and viewing device are on the same network.</li>
+            <li>Try both <code>http://scorekeeper.local:8081</code> and the Pi's IP address with <code>:8081</code>.</li>
+            <li>Check <code>sudo systemctl status scorekeeper-hub</code>.</li>
+            <li>Read the service logs for the actual error.</li>
+            <li>Confirm something is listening on port 8081:</li>
+          </ul>
+          <div class="code-wrap"><pre><code>sudo ss -ltnp | grep ':8081'</code></pre><button class="copy" type="button">Copy</button></div>
+
+          <h3><code>scorekeeper.local</code> does not work</h3>
+          <p>Use the numeric IP address. If that works, the app is running and the remaining issue is local hostname/mDNS discovery. On Raspberry Pi OS, check the mDNS service:</p>
+          <div class="code-wrap"><pre><code>sudo systemctl status avahi-daemon</code></pre><button class="copy" type="button">Copy</button></div>
+
+          <h3>The service starts and then stops</h3>
+          <p>Look at the latest logs. Common clues include a missing file, a wrong path, a port already in use, or a permission problem:</p>
+          <div class="code-wrap"><pre><code>sudo journalctl -u scorekeeper-hub -n 100 --no-pager</code></pre><button class="copy" type="button">Copy</button></div>
+
+          <h3>Arduino IDE shows no serial port</h3>
+          <ul>
+            <li>Try a known USB data cable; many charging cables carry no data.</li>
+            <li>Try another USB port and reconnect the device.</li>
+            <li>Close other programs that may be using the serial port.</li>
+            <li>Install the USB driver only if the exact board documentation requires one.</li>
+          </ul>
+
+          <h3>Firmware upload fails</h3>
+          <ul>
+            <li>Recheck the selected board model and serial port.</li>
+            <li>Disconnect anything that could interfere with flashing, following the board maker's instructions.</li>
+            <li>Use the exact board's documented boot/reset procedure.</li>
+            <li>Copy the full error message; its first specific error is usually the most useful clue.</li>
+          </ul>
+        </section>
+
+        <section id="safety">
+          <h2>8. Safety and backups</h2>
+          <ul>
+            <li>Shut down the Pi cleanly before removing power: <code>sudo poweroff</code>.</li>
+            <li>Disconnect the referee device's external power before connecting USB unless its hardware documentation explicitly says otherwise.</li>
+            <li>Back up configuration, stored data, the known-good firmware, and the working app folder before updating.</li>
+            <li>Do not change wiring or pin assignments without the correct hardware diagram.</li>
+          </ul>
+          <div class="note"><strong>Finished:</strong> when the service is active, the Hub opens in a browser, and the referee firmware uploads without errors, your scorekeeper system is ready for a functional test.</div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer>Pi Scorekeeper Hub v1.6 setup guide · Air Hockey Score System</footer>
+
+  <script>
+    document.querySelectorAll('.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const text = button.previousElementSibling.innerText;
+        try {
+          await navigator.clipboard.writeText(text);
+          const oldLabel = button.textContent;
+          button.textContent = 'Copied';
+          window.setTimeout(() => { button.textContent = oldLabel; }, 1400);
+        } catch (_) {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(button.previousElementSibling);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          button.textContent = 'Selected';
+          window.setTimeout(() => { button.textContent = 'Copy'; }, 1400);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
