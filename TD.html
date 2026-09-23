@@ -1,6 +1,9 @@
 <!-- =====================
 TD.html - Tournament Director (Integrated)
-Tournament Director v4.0.14 - Recoverable Workspace Reset
+Tournament Director v4.0.15 - Referee Conflict Guard
+- Never recommends either player in the assigned match as that match's referee
+- Rechecks cached and previous-match referee suggestions as players advance
+- Uses TBD when no eligible referee is available
 - Reset Bracket now creates a recoverable full tournament workspace backup before clearing data
 - Resets Links, Room Control assignments/statuses, Room Timing Stats, local Logs, and queued log updates
 - Preserves room layout/positions/rotation/labels, room name, table IPs, custom logo, publishing key, zoom, and general settings
@@ -2245,7 +2248,7 @@ const BRACKET_PATHS_KEY = "TD_SHOW_BRACKET_PATH_LINES";
 const PUBLIC_BRACKET_KEY_STORAGE = "AHSS_PUBLIC_BRACKET_PUBLISH_KEY";
 const RESET_BACKUPS_KEY = "TD_RESET_WORKSPACE_BACKUPS_V1";
 const RESET_BACKUP_LIMIT = 8;
-const TD_BUILD = "v4.0.14 - Recoverable Workspace Reset";
+const TD_BUILD = "v4.0.15 - Referee Conflict Guard";
 const GOLDEN_128_CROSSOVER_MAP = {
   "2": {
     "source": [
@@ -2590,7 +2593,19 @@ function generateMatchLink() {
   const bracketMatchId = currentBracketMatchId || "";
   const bracketLane = currentBracketLane || "";
   const table = $('#tableNumber').value.trim();
-  const refRaw = $('#refName').value.trim();
+  let refRaw = $('#refName').value.trim();
+
+  // A stale or manually entered recommendation must never assign one of the
+  // players in this match as its referee. Re-resolve it at link-generation
+  // time because this is the final handoff to the scoreboard and AHMS.
+  if(isCurrentMatchPlayer(refRaw, p1Raw, p2Raw)){
+    const roomTable = findRoomTableByNumber(table);
+    refRaw = roomTable
+      ? suggestedRefereeForTable(roomTable, p1Raw, p2Raw)
+      : "TBD";
+    $('#refName').value = refRaw;
+  }
+
   const ref = encodeURIComponent(refRaw);
 
   if(!p1Raw || !p2Raw){
@@ -3380,6 +3395,19 @@ function isUsableRefereeName(name){
   return !!clean && reserved !== "BYE" && reserved !== "TBD";
 }
 
+function isCurrentMatchPlayer(name, currentP1 = "", currentP2 = ""){
+  const key = normalizeName(name).toLowerCase();
+  if(!key) return false;
+
+  return [currentP1, currentP2].some(player =>
+    normalizeName(player).toLowerCase() === key
+  );
+}
+
+function isEligibleRefereeName(name, currentP1 = "", currentP2 = ""){
+  return isUsableRefereeName(name) && !isCurrentMatchPlayer(name, currentP1, currentP2);
+}
+
 function refereeFromCompletedMatch(lane, matchId){
   const m = findMatch(lane, matchId);
   if(!m || !m.winner) return "";
@@ -3389,12 +3417,12 @@ function refereeFromCompletedMatch(lane, matchId){
   return isUsableRefereeName(name) ? normalizeName(name) : "";
 }
 
-function previousCompletedRefereeForTable(table){
+function previousCompletedRefereeForTable(table, currentP1 = "", currentP2 = ""){
   if(!table) return "";
 
   // The outgoing match may still be on the table when the next one is assigned.
   const currentMatchRef = refereeFromCompletedMatch(table.matchLane || "", table.matchId || "");
-  if(currentMatchRef) return currentMatchRef;
+  if(isEligibleRefereeName(currentMatchRef, currentP1, currentP2)) return currentMatchRef;
 
   const tableNumber = String(table.number || "").trim();
   const history = getRoomStats();
@@ -3403,7 +3431,7 @@ function previousCompletedRefereeForTable(table){
     if(String(record.tableNumber || "").trim() !== tableNumber) continue;
 
     const ref = refereeFromCompletedMatch(record.matchLane || "", record.matchId || "");
-    if(ref) return ref;
+    if(isEligibleRefereeName(ref, currentP1, currentP2)) return ref;
   }
 
   return "";
@@ -3413,7 +3441,10 @@ function getStartingRefereeSuggestion(table, currentP1 = "", currentP2 = ""){
   if(!table || !BRACKET_STATE) return "";
 
   const tournamentId = getTournamentId();
-  if(table.startingRefTournamentId === tournamentId && isUsableRefereeName(table.startingRefSuggestion)){
+  if(
+    table.startingRefTournamentId === tournamentId &&
+    isEligibleRefereeName(table.startingRefSuggestion, currentP1, currentP2)
+  ){
     return normalizeName(table.startingRefSuggestion);
   }
 
@@ -3467,10 +3498,15 @@ function getStartingRefereeSuggestion(table, currentP1 = "", currentP2 = ""){
       .filter(Boolean)
   );
 
-  let pool = allPlayers.filter(name => !called.has(name.toLowerCase()) && !alreadySuggested.has(name.toLowerCase()));
-  if(!pool.length) pool = allPlayers.filter(name => !called.has(name.toLowerCase()));
-  if(!pool.length) pool = allPlayers.filter(name => ![currentP1, currentP2].some(p => normalizeName(p).toLowerCase() === name.toLowerCase()));
-  if(!pool.length) pool = allPlayers.slice();
+  const eligiblePlayers = allPlayers.filter(name =>
+    isEligibleRefereeName(name, currentP1, currentP2)
+  );
+
+  let pool = eligiblePlayers.filter(name =>
+    !called.has(name.toLowerCase()) && !alreadySuggested.has(name.toLowerCase())
+  );
+  if(!pool.length) pool = eligiblePlayers.filter(name => !called.has(name.toLowerCase()));
+  if(!pool.length) pool = eligiblePlayers;
 
   const suggestion = pool.length ? pool[Math.floor(Math.random() * pool.length)] : "";
   table.startingRefSuggestion = suggestion;
@@ -3480,13 +3516,18 @@ function getStartingRefereeSuggestion(table, currentP1 = "", currentP2 = ""){
 }
 
 function suggestedRefereeForTable(table, currentP1 = "", currentP2 = ""){
-  return previousCompletedRefereeForTable(table) || getStartingRefereeSuggestion(table, currentP1, currentP2);
+  return previousCompletedRefereeForTable(table, currentP1, currentP2) ||
+    getStartingRefereeSuggestion(table, currentP1, currentP2) ||
+    "TBD";
 }
 
 function populateSuggestedReferee(tableNumber, currentP1 = "", currentP2 = "", force = false){
   const input = document.getElementById("refName");
   const table = findRoomTableByNumber(tableNumber);
-  if(!input || !table || (!force && input.value.trim())) return "";
+  if(!input || !table) return "";
+
+  const existingReferee = input.value.trim();
+  if(!force && existingReferee && !isCurrentMatchPlayer(existingReferee, currentP1, currentP2)) return "";
 
   const suggestion = suggestedRefereeForTable(table, currentP1, currentP2);
   if(suggestion) input.value = suggestion;
@@ -4135,7 +4176,10 @@ function restoreMatchDetailsFromTable(tableId){
   document.getElementById("player1").value = table.p1 || "";
   document.getElementById("player2").value = table.p2 || "";
   document.getElementById("tableNumber").value = table.number || "";
-  document.getElementById("refName").value = table.referee || suggestedRefereeForTable(table, table.p1 || "", table.p2 || "");
+  const savedReferee = isCurrentMatchPlayer(table.referee, table.p1 || "", table.p2 || "")
+    ? ""
+    : table.referee;
+  document.getElementById("refName").value = savedReferee || suggestedRefereeForTable(table, table.p1 || "", table.p2 || "");
 
   const matchLength = document.getElementById("matchLength");
   if(matchLength && table.matchType){
