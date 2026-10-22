@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Beginner-friendly setup guide for the Pi Scorekeeper Hub and referee-device firmware.">
+  <meta name="description" content="Scorekeeper v1.7 and newer: connect one CYD to a tablet, or use a Pi server with multiple CYDs. Includes the printed quick-setup card and installation help.">
   <meta name="color-scheme" content="dark">
-  <title>Pi Scorekeeper Hub — Setup Guide</title>
+  <title>Scorekeeper v1.7+ — Setup & More Info</title>
   <style>
     :root {
       color-scheme: dark;
@@ -104,18 +104,39 @@
       section { padding: 20px; }
     }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    .setup-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:22px; }
+    .setup-card { padding:20px; border:1px solid var(--border); border-top:3px solid var(--accent); border-radius:12px; background:var(--panel-2); min-width:0; }
+    .setup-card h3 { margin:8px 0; font-size:1.3rem; }
+    .pi-card { border-top-color:#f0883e; }
+    .setup-tag { color:var(--accent); font-size:.82rem; font-weight:750; }
+    .pi-card .setup-tag { color:#f0883e; }
+    .flow { color:var(--muted); font-size:.88rem; padding-bottom:14px; border-bottom:1px solid var(--border); }
+    .quick-steps { padding-left:1.2em; }
+    .quick-steps li { padding-left:3px; margin:16px 0; }
+    .quick-steps strong { color:#fff; }
+    .setup-card a,.small-link a { overflow-wrap:anywhere; }
+    .address-list { display:grid; gap:8px; margin:18px 0; }
+    .address-list a { display:flex; flex-wrap:wrap; gap:8px 20px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; text-decoration:none; overflow-wrap:anywhere; }
+    .address-list span { color:var(--text); font-weight:750; min-width:72px; }
+    .download { display:inline-block; padding:11px 16px; margin:8px 0; border-radius:8px; background:var(--accent); color:#07121f; font-weight:750; text-decoration:none; }
+    .small-link { font-size:.92rem; }
+    #quick-start .eyebrow,#postcard .eyebrow { margin-bottom:10px; }
+    @media(min-width:761px) { #quick-start { padding:24px; } .setup-card { padding:16px; } }
+    @media(max-width:900px) { .setup-grid { grid-template-columns:1fr; } }
+    @media print { :root{color-scheme:light;--bg:#fff;--panel:#fff;--panel-2:#f5f5f5;--text:#111;--muted:#444;--border:#ccc;--accent:#075d95} body{background:white;color:#111} .hero{background:white} .hero .wrap{padding-block:24px} h1{font-size:30px} nav,.copy{display:none} .layout{display:block} section{box-shadow:none;break-inside:avoid} .quick-steps strong,.note strong{color:#111} .setup-grid{grid-template-columns:1fr 1fr} a{color:#075d95} }
   </style>
 </head>
 <body>
   <header class="hero">
     <div class="wrap">
       <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Air Hockey Score System</p>
-      <h1>Pi Scorekeeper Hub setup</h1>
-      <p class="lede">A practical guide for installing Pi Scorekeeper Hub v1.6 on a Raspberry Pi and flashing the scorekeeper firmware to the referee device.</p>
+      <h1>Your scoreboard.<br>Your setup.</h1>
+      <p class="lede">For Scorekeeper <strong>v1.7 and newer</strong>. Use one CYD with a tablet, or connect multiple CYDs to a Pi server. Both work together. Start with the quick steps below; installation help is further down.</p>
       <div class="badges" aria-label="Guide highlights">
-        <span class="badge">Beginner friendly</span>
-        <span class="badge">Raspberry Pi</span>
-        <span class="badge">Arduino IDE</span>
+        <span class="badge">v1.7 and newer</span>
+        <span class="badge">Tablet or Pi + multiple CYDs</span>
+        <span class="badge">Same local network</span>
         <span class="badge">No cloud required</span>
       </div>
     </div>
@@ -125,6 +146,9 @@
     <div class="layout">
       <nav aria-label="On this page">
         <strong>On this page</strong>
+        <a href="#quick-start">Quick setup</a>
+        <a href="#table-addresses">Table addresses</a>
+        <a href="#postcard">Lost your card?</a>
         <a href="#requirements">Requirements</a>
         <a href="#pi-install">Pi install</a>
         <a href="#service">Service checks</a>
@@ -136,21 +160,85 @@
       </nav>
 
       <article>
+        <section id="quick-start">
+          <p class="eyebrow">Already installed? Start here</p>
+          <h2>Two simple ways to play</h2>
+          <p>These steps are for CYDs and a Pi Hub running <strong>v1.7 or newer</strong>. No firmware change is needed to switch between the two setups.</p>
+          <div class="setup-grid">
+            <div class="setup-card">
+              <span class="setup-tag">A · One table</span>
+              <h3>CYD + tablet</h3>
+              <p class="flow" aria-label="CYD to tablet browser">CYD <span aria-hidden="true">→</span> Tablet browser</p>
+              <ol class="quick-steps">
+                <li><strong>Power on.</strong> Connect the USB-C battery. Set the CYD's table number, from 1 to 30.</li>
+                <li><strong>Join Wi-Fi.</strong> On the CYD, tap <strong>WIFI</strong> and join your network. Connect the tablet to the same network.</li>
+                <li><strong>Open your table.</strong> For Table 1, open <a href="http://scorekeeper-t1.local">http://scorekeeper-t1.local</a> in the tablet browser. Change <strong>t1</strong> to your table number.</li>
+                <li><strong>Play.</strong> Start a manual match on the CYD. Tap scores on the CYD; watch them update on the tablet.</li>
+              </ol>
+              <p class="muted">The CYD hosts its own scoreboard. No Pi or internet connection is needed for this local view.</p>
+            </div>
+            <div class="setup-card pi-card">
+              <span class="setup-tag">B · Multiple tables</span>
+              <h3>Pi server + CYDs</h3>
+              <p class="flow" aria-label="CYDs to Pi server to browser">CYDs <span aria-hidden="true">→</span> Pi <span aria-hidden="true">→</span> Browser</p>
+              <ol class="quick-steps">
+                <li><strong>Power on.</strong> Start the Pi with Scorekeeper Hub installed. Connect each CYD to its USB-C battery.</li>
+                <li><strong>Use one network.</strong> Connect the Pi, CYDs and viewing tablet or computer to the same router.</li>
+                <li><strong>Number the tables.</strong> Give each CYD a different table number, from 1 to 30. Each CYD finds the Pi automatically.</li>
+                <li><strong>Open and play.</strong> Browse to <code>http://PI-IP:8081</code>, replacing <code>PI-IP</code> with your Pi's address. Start matches on the CYDs. Tap <strong>Jumbotron</strong> for one table.</li>
+              </ol>
+              <p class="muted">On the Pi itself, open <a href="http://localhost:8081">http://localhost:8081</a>.</p>
+            </div>
+          </div>
+          <div class="note"><strong>Both at once:</strong> each CYD's direct table URL keeps working while that same CYD reports to the Pi. A tablet can show one table while the Pi shows all tables.</div>
+          <p class="muted">Scores are entered on the CYD. Closing a viewing browser does not stop scoring.</p>
+        </section>
+
+        <section id="table-addresses">
+          <h2>Find your table's scoreboard</h2>
+          <p>Use <strong>http://scorekeeper-tNUMBER.local</strong>, replacing <strong>NUMBER</strong> with the number set on the CYD.</p>
+          <div class="address-list">
+            <a href="http://scorekeeper-t1.local"><span>Table 1</span>http://scorekeeper-t1.local</a>
+            <a href="http://scorekeeper-t2.local"><span>Table 2</span>http://scorekeeper-t2.local</a>
+            <a href="http://scorekeeper-t30.local"><span>Table 30</span>http://scorekeeper-t30.local</a>
+          </div>
+          <p>Tables <strong>1 through 30</strong> follow the same pattern. Type the full address, including <code>http://</code>, into the browser's address bar.</p>
+          <p class="muted">These are local addresses. Your tablet or computer must be on the same network as the CYD. If a .local name does not resolve, use the CYD's local IP address instead.</p>
+        </section>
+
+        <section id="postcard">
+          <p class="eyebrow">Your setup card, online</p>
+          <h2>Lost the card? You're in the right place.</h2>
+          <p>The printed quick-setup card's QR code points to this page. The two setup paths above repeat the card's directions, so you can get going without the paper copy.</p>
+          <p><a class="download" href="Scorekeeper_Quick_Setup.pdf" download>Download the quick-setup card (PDF)</a></p>
+          <p class="muted">Print one landscape page. Keep it with your scorekeeper kit.</p>
+          <p class="small-link">Bookmark or share this page:<br><a href="http://petesimple.github.io/airhockey-score-system/scorekeeper/">petesimple.github.io/airhockey-score-system/scorekeeper/</a></p>
+        </section>
+
         <section id="requirements">
-          <h2>1. What you need</h2>
+          <h2>Installing from scratch?</h2>
+          <p>If your CYD already has v1.7 or newer installed, use <a href="#quick-start">Quick setup</a>. Arduino IDE is only needed when installing or updating firmware.</p>
+          <h3>For one CYD + tablet</h3>
           <ul class="checklist">
-            <li>A Raspberry Pi with a microSD card and power supply</li>
-            <li>Raspberry Pi OS installed, with network access</li>
-            <li>A keyboard and screen, or SSH access to the Pi</li>
-            <li>The <strong>Pi Scorekeeper Hub v1.6</strong> ZIP from this repository's <code>scorekeeper</code> folder</li>
-            <li>A computer with Arduino IDE for flashing the referee device</li>
-            <li>A USB data cable that fits the referee device</li>
+            <li>A CYD with enclosure and Scorekeeper v1.7 or newer</li>
+            <li>A USB-C battery and suitable cable</li>
+            <li>A tablet or computer with a browser</li>
+            <li>A shared Wi-Fi network</li>
           </ul>
-          <div class="note"><strong>Before you begin:</strong> connect the Pi and the phone/computer that will open the scorekeeper page to the same local network.</div>
+          <h3>For a Pi server + multiple CYDs, also bring</h3>
+          <ul class="checklist">
+            <li>A Raspberry Pi with Raspberry Pi OS, microSD card and power supply</li>
+            <li>A keyboard and screen, or SSH access to the Pi</li>
+            <li>The Pi Scorekeeper Hub v1.7 or newer package from the repository's <code>scorekeeper</code> folder</li>
+            <li>A unique table number on each CYD</li>
+          </ul>
+          <p><a href="https://github.com/petesimple/airhockey-score-system">Open the project repository</a> and look in the <code>scorekeeper</code> folder for the current package and its README.</p>
+          <div class="note"><strong>One network:</strong> use a router that lets connected devices communicate with each other. Guest Wi-Fi with device isolation can block both setups.</div>
         </section>
 
         <section id="pi-install">
-          <h2>2. Install the Pi Scorekeeper Hub</h2>
+          <h2>Install the Pi Scorekeeper Hub</h2>
+          <p>Only the multi-table Pi setup needs this section. Use the current v1.7 or newer package and its included README.</p>
 
           <div class="step">
             <span class="step-number">1</span>
@@ -167,7 +255,7 @@ sudo reboot</code></pre><button class="copy" type="button">Copy</button></div>
           <div class="step">
             <span class="step-number">2</span>
             <div>
-              <h3>Copy the v1.6 ZIP to the Pi</h3>
+              <h3>Copy the current ZIP to the Pi</h3>
               <p>Download the ZIP from the repository's <code>scorekeeper</code> folder, then place it in the Pi user's <code>Downloads</code> folder. You can use a browser, USB drive, file sharing, or <code>scp</code>.</p>
             </div>
           </div>
@@ -179,9 +267,9 @@ sudo reboot</code></pre><button class="copy" type="button">Copy</button></div>
               <p>First list the files so you can confirm the ZIP's exact name:</p>
               <div class="code-wrap"><pre><code>cd ~/Downloads
 ls</code></pre><button class="copy" type="button">Copy</button></div>
-              <p>Then extract it. Replace the quoted filename below if the downloaded file has a slightly different name.</p>
+              <p>Then extract it. Replace <code>YOUR_DOWNLOADED_ZIP.zip</code> below with the exact filename you downloaded.</p>
               <div class="code-wrap"><pre><code>mkdir -p ~/scorekeeper-hub
-unzip "Pi Scorekeeper Hub v1.6.zip" -d ~/scorekeeper-hub
+unzip "YOUR_DOWNLOADED_ZIP.zip" -d ~/scorekeeper-hub
 cd ~/scorekeeper-hub
 ls</code></pre><button class="copy" type="button">Copy</button></div>
               <div class="note warning"><strong>If <code>unzip</code> is missing:</strong> install it with <code>sudo apt install unzip -y</code>, then repeat the extraction command.</div>
@@ -196,14 +284,14 @@ ls</code></pre><button class="copy" type="button">Copy</button></div>
               <div class="code-wrap"><pre><code>find ~/scorekeeper-hub -maxdepth 2 -iname "README*" -print</code></pre><button class="copy" type="button">Copy</button></div>
               <p>If the package contains an <code>install.sh</code> file and its README tells you to use it, change into that file's folder and run:</p>
               <div class="code-wrap"><pre><code>chmod +x install.sh
-sudo ./install.sh</code></pre><button class="copy" type="button">Copy</button></div>
-              <p>Do not guess at missing packages. If the installer reports an error, copy the complete message before making changes.</p>
+./install.sh</code></pre><button class="copy" type="button">Copy</button></div>
+              <p>Run the installer as your normal Pi user. It will request administrator access where needed. If it reports an error, keep the complete message for troubleshooting.</p>
             </div>
           </div>
         </section>
 
         <section id="service">
-          <h2>3. Check the background service</h2>
+          <h2>Check the Pi background service</h2>
           <p>The Pi app normally runs as a system service named <code>scorekeeper-hub</code>. Check it with:</p>
           <div class="code-wrap"><pre><code>sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="button">Copy</button></div>
           <p>Look for <strong>active (running)</strong>. Press <code>q</code> to leave the status screen.</p>
@@ -221,25 +309,25 @@ sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="but
         </section>
 
         <section id="network">
-          <h2>4. Find and open the Hub</h2>
-          <p>If mDNS is configured, try this address from another device on the same network:</p>
+          <h2>Find and open the Pi Hub</h2>
+          <p>If your Pi's hostname is <code>scorekeeper</code> and mDNS is available, try this address from another device on the same network:</p>
           <div class="code-wrap"><pre><code>http://scorekeeper.local:8081</code></pre><button class="copy" type="button">Copy</button></div>
           <p>If that does not open, find the Pi's IP address:</p>
           <div class="code-wrap"><pre><code>hostname -I</code></pre><button class="copy" type="button">Copy</button></div>
-          <p>Use the first normal local address shown, for example:</p>
+          <p>Choose the Pi's address on the same network as your CYDs, for example:</p>
           <div class="code-wrap"><pre><code>http://192.168.1.42:8081</code></pre><button class="copy" type="button">Copy</button></div>
           <p>You can also check the Pi's hostname:</p>
           <div class="code-wrap"><pre><code>hostname</code></pre><button class="copy" type="button">Copy</button></div>
-          <div class="note"><strong>Tip:</strong> bookmark the working address. A router may assign a different IP later; <code>scorekeeper.local</code> avoids that when mDNS works on both devices.</div>
+          <div class="note"><strong>Tip:</strong> bookmark the working address. A router may assign a different IP later. A hostname such as <code>scorekeeper.local</code> helps when it matches your Pi's configured hostname and mDNS works on both devices.</div>
         </section>
 
         <section id="update">
-          <h2>5. Update or reinstall</h2>
+          <h2>Update or reinstall the Pi Hub</h2>
           <p>Keep the previous working folder until the new version has been tested. This gives you a simple rollback.</p>
           <ol>
             <li>Download the replacement ZIP from the repository.</li>
             <li>Stop the running service.</li>
-            <li>Back up the current app folder and any configuration or score data.</li>
+            <li>Back up the current app folder, configuration and score database. The shared database may live outside the app folder; check the package README.</li>
             <li>Extract the replacement package into a clean folder.</li>
             <li>Follow the new package README or installer, then restart and test.</li>
           </ol>
@@ -255,7 +343,8 @@ sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="but
         </section>
 
         <section id="firmware">
-          <h2>6. Flash the referee-device firmware</h2>
+          <h2>Install or update CYD firmware</h2>
+          <p>Use the v1.7 or newer CYD sketch supplied with your release. It supports the local table webpage and Pi reporting together. Skip this section if your device is already ready to play.</p>
           <p>The exact board and serial-port names depend on the referee hardware and your computer. Use the markings on the board and the project's firmware notes—do not choose a board at random.</p>
 
           <div class="step">
@@ -299,8 +388,12 @@ sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="but
         </section>
 
         <section id="troubleshooting">
-          <h2>7. Troubleshooting</h2>
-          <h3>The web page does not open</h3>
+          <h2>Troubleshooting</h2>
+          <h3>The direct CYD page does not open</h3>
+          <ul><li>Check power and confirm the CYD and tablet joined the same Wi-Fi.</li><li>Check the CYD table number. Table 3 uses <code>http://scorekeeper-t3.local</code>.</li><li>Use <code>http://</code> and enter the address directly, rather than searching for it.</li><li>If .local fails, try the CYD's local IP address. Do not add the Pi port <code>:8081</code> to a direct CYD address.</li><li>Avoid guest networks or router settings that isolate devices.</li></ul>
+          <h3>One table is missing from the Pi</h3>
+          <p>Check that every CYD has a unique table number and shares the Pi's network. Confirm the Pi Hub is running. The direct table webpage can still be used while you check the hub connection.</p>
+          <h3>The Pi Hub page does not open</h3>
           <ul>
             <li>Confirm the Pi and viewing device are on the same network.</li>
             <li>Try both <code>http://scorekeeper.local:8081</code> and the Pi's IP address with <code>:8081</code>.</li>
@@ -336,20 +429,20 @@ sudo systemctl status scorekeeper-hub</code></pre><button class="copy" type="but
         </section>
 
         <section id="safety">
-          <h2>8. Safety and backups</h2>
+          <h2>Backups and shutdown</h2>
           <ul>
             <li>Shut down the Pi cleanly before removing power: <code>sudo poweroff</code>.</li>
             <li>Disconnect the referee device's external power before connecting USB unless its hardware documentation explicitly says otherwise.</li>
             <li>Back up configuration, stored data, the known-good firmware, and the working app folder before updating.</li>
             <li>Do not change wiring or pin assignments without the correct hardware diagram.</li>
           </ul>
-          <div class="note"><strong>Finished:</strong> when the service is active, the Hub opens in a browser, and the referee firmware uploads without errors, your scorekeeper system is ready for a functional test.</div>
+          <div class="note"><strong>Ready to play:</strong> start a test match, add a point on the CYD, and confirm it appears in the browser. For a Pi setup, check the same table on the Hub too.</div>
         </section>
       </article>
     </div>
   </main>
 
-  <footer>Pi Scorekeeper Hub v1.6 setup guide · Air Hockey Score System</footer>
+  <footer>Scorekeeper v1.7 and newer · Air Hockey Score System · Quick setup + more info</footer>
 
   <script>
     document.querySelectorAll('.copy').forEach((button) => {
